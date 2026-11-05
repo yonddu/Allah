@@ -10,15 +10,23 @@ export class Community {
     this.sql.exec('CREATE TABLE IF NOT EXISTS posts (id TEXT PRIMARY KEY, category TEXT NOT NULL, author_id TEXT NOT NULL, author TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, created INTEGER NOT NULL)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS posts_category_created ON posts(category,created DESC)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS rate_limits (actor TEXT NOT NULL, kind TEXT NOT NULL, bucket INTEGER NOT NULL, count INTEGER NOT NULL, PRIMARY KEY(actor,kind,bucket))');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS chat_preferences (owner TEXT PRIMARY KEY, public_chat INTEGER NOT NULL DEFAULT 1, whispers INTEGER NOT NULL DEFAULT 1)');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS blocks (owner TEXT NOT NULL, target TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY(owner,target))');
   }
   one(query,...args){return this.sql.exec(query,...args).toArray()[0];}
   friends(id){return this.sql.exec('SELECT u.id,u.code,u.name FROM friendships f JOIN users u ON u.id=CASE WHEN f.sender=? THEN f.receiver ELSE f.sender END WHERE (f.sender=? OR f.receiver=?) AND f.accepted=1',id,id,id).toArray();}
+  privacy(id){
+    const prefs=this.one('SELECT public_chat,whispers FROM chat_preferences WHERE owner=?',id);
+    return {publicChat:prefs?.public_chat!==0,whispers:prefs?.whispers!==0,blocked:this.sql.exec('SELECT u.id,u.name FROM blocks b JOIN users u ON u.id=b.target WHERE b.owner=? ORDER BY b.created DESC',id).toArray()};
+  }
   access(id){
     const user=this.one('SELECT id,name,premium_until FROM users WHERE id=?',id);
-    return user?{id:user.id,name:user.name,premium:user.premium_until>Date.now(),friends:this.friends(id).map(f=>f.id)}:null;
+    if(!user)return null;
+    const privacy=this.privacy(id),blocked=privacy.blocked.map(p=>p.id);
+    return {id:user.id,name:user.name,premium:user.premium_until>Date.now(),friends:this.friends(id).map(f=>f.id).filter(friend=>!blocked.includes(friend)),publicChat:privacy.publicChat,whispers:privacy.whispers,blocked};
   }
   view(user){
-    return {id:user.id,name:user.name,code:user.code,premium:user.premium_until>Date.now(),friends:this.friends(user.id),
+    return {id:user.id,name:user.name,code:user.code,premium:user.premium_until>Date.now(),friends:this.friends(user.id),...this.privacy(user.id),
       incoming:this.sql.exec('SELECT u.id,u.name,u.code FROM friendships f JOIN users u ON u.id=f.sender WHERE f.receiver=? AND f.accepted=0',user.id).toArray(),
       outgoing:this.sql.exec('SELECT u.id,u.name,u.code FROM friendships f JOIN users u ON u.id=f.receiver WHERE f.sender=? AND f.accepted=0',user.id).toArray()};
   }
@@ -76,12 +84,28 @@ export class Community {
     }
     if(!user)return json({error:'이 기기의 접속 정보를 먼저 만들어주세요.'},401);
     if(path==='/api/social'&&request.method==='GET')return json(this.view(user));
+    if(path==='/api/chat/preferences'&&request.method==='POST'){
+      if(typeof data.publicChat!=='boolean'||typeof data.whispers!=='boolean')return json({error:'입력 형식을 확인해주세요.'},400);
+      this.sql.exec('INSERT INTO chat_preferences(owner,public_chat,whispers) VALUES(?,?,?) ON CONFLICT(owner) DO UPDATE SET public_chat=excluded.public_chat,whispers=excluded.whispers',user.id,Number(data.publicChat),Number(data.whispers));
+      return json(this.view(user));
+    }
+    if(path==='/api/blocks'&&request.method==='POST'){
+      const target=typeof data.id==='string'?data.id:'';
+      if(typeof data.blocked!=='boolean'||target===user.id||!this.one('SELECT id FROM users WHERE id=?',target))return json({error:'입력 형식을 확인해주세요.'},400);
+      if(!this.rate(user.id,'block',120,3600))return json({error:'잠시 후 다시 시도해주세요.'},429);
+      if(data.blocked){
+        if(this.privacy(user.id).blocked.length>=200&&!this.one('SELECT target FROM blocks WHERE owner=? AND target=?',user.id,target))return json({error:'차단 목록은 최대 200명입니다.'},400);
+        this.sql.exec('INSERT OR IGNORE INTO blocks(owner,target,created) VALUES(?,?,?)',user.id,target,Date.now());
+      }else this.sql.exec('DELETE FROM blocks WHERE owner=? AND target=?',user.id,target);
+      return json(this.view(user));
+    }
     if(path==='/api/friends/request'&&request.method==='POST'){
       if(!this.rate(user.id,'friend',20,3600)||!this.rate(ipHash,'friend-ip',60,3600))return json({error:'친구 요청이 많습니다. 잠시 후 다시 시도해주세요.'},429);
       if(this.friends(user.id).length>=100)return json({error:'친구는 최대 100명까지 등록할 수 있습니다.'},400);
       const code=typeof data.code==='string'?data.code.replaceAll('-','').toUpperCase().trim():'';
       const target=this.one('SELECT id FROM users WHERE code=?',code);
       if(!target||target.id===user.id)return json({error:'친구 코드를 확인해주세요.'},400);
+      if(this.one('SELECT owner FROM blocks WHERE (owner=? AND target=?) OR (owner=? AND target=?)',user.id,target.id,target.id,user.id))return json({error:'친구 코드를 확인해주세요.'},400);
       if(this.one('SELECT sender FROM friendships WHERE (sender=? AND receiver=?) OR (sender=? AND receiver=?)',user.id,target.id,target.id,user.id))return json({error:'이미 친구이거나 요청이 대기 중입니다.'},409);
       this.sql.exec('INSERT INTO friendships(sender,receiver,accepted,created) VALUES(?,?,0,?)',user.id,target.id,Date.now());return json(this.view(user));
     }

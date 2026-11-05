@@ -52,3 +52,20 @@ test('Boards persist across requests, paginate separately, rate-limit and enforc
     assert.equal((await call(c,'/api/posts/'+post.id)).status,404);
   }finally{db.close();}
 });
+
+test('Chat preferences and blocks persist across Community restarts and are owner-scoped',async()=>{
+  const {community:c,db}=setup();
+  try{
+    const a=await session(c,'A'),b=await session(c,'B');
+    let r=await call(c,'/api/chat/preferences','POST',{publicChat:false,whispers:true},a.cookie);assert.equal(r.status,200);
+    r=await call(c,'/api/blocks','POST',{id:b.view.id,blocked:true},a.cookie);assert.equal((await r.json()).blocked[0].id,b.view.id);
+    const sql=c.sql,restarted=new Community({storage:{sql}},{});
+    const av=await (await call(restarted,'/api/social','GET',null,a.cookie)).json();assert.equal(av.publicChat,false);assert.equal(av.whispers,true);assert.equal(av.blocked.length,1);
+    const bv=await (await call(restarted,'/api/social','GET',null,b.cookie)).json();assert.equal(bv.publicChat,true);assert.equal(bv.blocked.length,0);
+    const internal=await (await restarted.fetch(new Request('https://community.internal/access?ids='+a.view.id))).json();assert.deepEqual(internal[a.view.id].blocked,[b.view.id]);
+    assert.equal((await call(c,'/api/blocks','POST',{id:a.view.id,blocked:true},a.cookie)).status,400);
+    assert.equal((await call(c,'/api/blocks','POST',{id:b.view.id,blocked:true},a.cookie,'https://evil.example')).status,403);
+    assert.equal((await call(c,'/api/friends/request','POST',{code:a.view.code},b.cookie)).status,400);
+    r=await call(restarted,'/api/blocks','POST',{id:b.view.id,blocked:false},a.cookie);assert.equal((await r.json()).blocked.length,0);
+  }finally{db.close();}
+});

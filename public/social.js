@@ -2,6 +2,7 @@ import {t} from './i18n.js';
 export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
   const $=id=>document.getElementById(id);
   let session=null,category='suggestion',page=0,currentPost=null,requestVersion=0,startPromise=null;
+  let channel='chat',messages=[],collapsed=false,unread=0;const players=new Map();
   const open=id=>$(id).showModal();
   const date=value=>new Intl.DateTimeFormat(document.documentElement.lang||'en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(value));
   const element=(tag,className,text)=>Object.assign(document.createElement(tag),{className:className||'',textContent:text||''});
@@ -11,7 +12,21 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
     if(!response.ok)throw new Error(result.error||'요청을 처리하지 못했습니다.');
     return result;
   }
-  function sessionUpdated(data){if(data.premium&&(!session?.premium||JSON.stringify(session?.friends?.map(f=>f.id))!==JSON.stringify(data.friends.map(f=>f.id))))$('chatMessages').replaceChildren();session=data;onSession(data);$('myFriendCode').textContent=data.code;$('friendBadge').textContent=data.incoming.length?'('+data.incoming.length+')':'';$('chatMode').textContent=data.premium?'친구 전용 채팅 · 친구의 글과 내 글만 표시됩니다.':'현재 서버의 전체 채팅';$('premiumTag').textContent=data.premium?'이용 중':'미리보기';}
+  function sessionUpdated(data){
+    session=data;session.blocked??=[];onSession(data);
+    $('myFriendCode').textContent=data.code;$('friendBadge').textContent=data.incoming.length?'('+data.incoming.length+')':'';
+    $('premiumTag').textContent=data.premium?'이용 중':'미리보기';
+    $('publicChatOff').checked=data.publicChat===false;$('whispersOff').checked=data.whispers===false;
+    // Purge disabled or newly blocked content immediately, including old whispers.
+    messages=messages.filter(visibleMessage);renderChat();renderPeople();
+  }
+  const isBlocked=id=>session?.blocked.some(p=>p.id===id);
+  function visibleMessage(message){
+    if(!session||isBlocked(message.accountId)||isBlocked(message.to))return false;
+    if(message.type==='whisper')return session.whispers!==false;
+    return session.publicChat!==false&&(!session.premium||message.accountId===session.id||session.friends.some(p=>p.id===message.accountId));
+  }
+
   function start(){
     if(startPromise)return startPromise;
     startPromise=api('/api/session','POST',{name:getName()}).then(data=>{sessionUpdated(data);return data;}).finally(()=>{startPromise=null;});
@@ -73,15 +88,77 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
   handler('friendsButton','click',async()=>{open('friendsDialog');$('friendStatus').textContent='친구 정보를 불러오고 있습니다…';try{await refreshFriends();$('friendStatus').textContent='친구 요청은 상대방이 수락하면 연결됩니다.';}catch(e){$('friendStatus').textContent=e.message;}});
   handler('copyFriendCode','click',async()=>{if(!session)return;try{await navigator.clipboard.writeText(session.code);toast('친구 코드를 복사했습니다.');}catch{toast('친구 코드: '+session.code);}});
   handler('friendForm','submit',async e=>{e.preventDefault();if(!session)await start();await friendAction('/api/friends/request',{code:$('friendCodeInput').value});$('friendCodeInput').value='';});
-  handler('chatButton','click',async()=>{open('chatDialog');try{await refreshFriends();}catch{}});
+  function setCollapsed(value){collapsed=value;$('chatBody').hidden=value;$('collapseChatButton').setAttribute('aria-expanded',String(!value));$('collapseChatButton').textContent=value?'⌃':'⌄';}
+  function selectChannel(value){
+    channel=value;if(value==='whisper')unread=0;
+    renderChat();
+  }
+  function renderChat(){
+    const disabled=channel==='chat'?session?.publicChat===false:session?.whispers===false;
+    $('publicChatTab').setAttribute('aria-selected',String(channel==='chat'));
+    $('whisperChatTab').setAttribute('aria-selected',String(channel==='whisper'));
+    $('whisperUnread').textContent=unread?' · '+unread:'';
+    $('whisperTargetRow').hidden=channel!=='whisper'||disabled;
+    $('chatMode').textContent=channel==='whisper'?'같은 서버의 상대에게만 전달됩니다.':session?.premium?'친구 전용 채팅 · 친구의 글과 내 글만 표시됩니다.':'현재 서버의 전체 채팅';
+    $('chatDisabledStatus').hidden=!disabled;$('chatForm').hidden=disabled;
+    $('chatMessages').replaceChildren();
+    for(const message of messages.filter(m=>m.type===channel&&visibleMessage(m))){
+      const row=element('div','chat-message'),name=message.accountId===session.id&&message.type==='whisper'?'→ '+message.toName:message.name;
+      const author=element('button','chat-author',name);author.type='button';
+      const id=message.accountId===session.id?message.to:message.accountId;
+      author.addEventListener('click',()=>beginWhisper(id));
+      const body=element('span','',message.text);row.append(author,body);$('chatMessages').append(row);
+    }
+    $('chatMessages').scrollTop=$('chatMessages').scrollHeight;
+  }
+  function roomPeople(){
+    return [...new Map([...players.values()].filter(p=>p.accountId!==session?.id&&!isBlocked(p.accountId)).map(p=>[p.accountId,{id:p.accountId,name:p.profile.name}])).values()];
+  }
+  function renderPeople(){
+    const current=$('whisperTarget').value;
+    $('whisperTarget').replaceChildren(new Option(t('귓속말 상대 선택'),''));
+    const people=roomPeople();for(const person of people)$('whisperTarget').append(new Option(person.name,person.id));
+    if(people.some(p=>p.id===current))$('whisperTarget').value=current;
+    $('roomPeople').replaceChildren();$('blockedPeople').replaceChildren();
+    for(const p of people)$('roomPeople').append(friendRow(p,[['귓속말',()=>{beginWhisper(p.id);$('peopleDialog').close();}],['차단',()=>block(p.id,true)]]));
+    for(const p of session?.blocked||[])$('blockedPeople').append(friendRow(p,[['차단 해제',()=>block(p.id,false)]]));
+    for(const id of ['roomPeople','blockedPeople'])if(!$(id).children.length)$(id).append(element('p','field-note','아직 없습니다.'));
+  }
+  function beginWhisper(id){
+    if(!roomPeople().some(p=>p.id===id)){toast('귓속말 상대를 선택해주세요.');return;}
+    selectChannel('whisper');setCollapsed(false);$('whisperTarget').value=id;$('chatInput').focus();
+  }
+  async function block(id,blocked){
+    if(!session)await start();sessionUpdated(await api('/api/blocks','POST',{id,blocked}));
+  }
+  handler('publicChatTab','click',()=>selectChannel('chat'));
+  handler('whisperChatTab','click',()=>selectChannel('whisper'));
+  handler('collapseChatButton','click',()=>setCollapsed(!collapsed));
+  handler('chatButton','click',()=>{setCollapsed(!collapsed);});
+  handler('peopleButton','click',async()=>{open('peopleDialog');await refreshFriends();renderPeople();});
+  for(const id of ['publicChatOff','whispersOff'])handler(id,'change',async()=>{
+    const data={publicChat:!$('publicChatOff').checked,whispers:!$('whispersOff').checked};
+    $('publicChatOff').disabled=$('whispersOff').disabled=true;
+    try{if(!session)await start();sessionUpdated(await api('/api/chat/preferences','POST',data));}
+    catch(e){if(session)sessionUpdated(session);throw e;}
+    finally{$('publicChatOff').disabled=$('whispersOff').disabled=false;}
+  });
   handler('chatForm','submit',e=>{
     e.preventDefault();const text=$('chatInput').value.trim();if(!text)return;
-    if(sendChat(text))$('chatInput').value='';else toast('온라인 서버에 연결된 뒤 채팅할 수 있습니다.');
+    if(channel==='chat'?session?.publicChat===false:session?.whispers===false)return;
+    const to=channel==='whisper'?$('whisperTarget').value:null;
+    if(channel==='whisper'&&!to){toast('귓속말 상대를 선택해주세요.');return;}
+    if(sendChat(text,to))$('chatInput').value='';else toast('온라인 서버에 연결된 뒤 채팅할 수 있습니다.');
   });
   function chat(message){
-    const row=element('div','chat-message'),title=element('strong','',message.name);title.append(element('small','',date(message.at)));row.append(title,element('p','',message.text));
-    $('chatMessages').append(row);while($('chatMessages').children.length>80)$('chatMessages').firstElementChild.remove();$('chatMessages').scrollTop=$('chatMessages').scrollHeight;
+    if(!visibleMessage(message))return;
+    messages.push(message);if(messages.length>100)messages.shift();
+    if(message.type==='whisper'&&message.accountId!==session.id&&(channel!=='whisper'||collapsed))unread=Math.min(99,unread+1);
+    renderChat();
   }
-  window.addEventListener('languagechange',()=>{if($('boardDialog').open)loadPosts();if($('friendsDialog').open)renderFriends();});
-  return {start,chat,refresh:refreshFriends,get session(){return session;},updateName:async()=>{if(session)sessionUpdated(await api('/api/session','POST',{name:getName()}));}};
+  function player(p){const old=players.get(p.id);players.set(p.id,p);if(!old||old.profile.name!==p.profile.name||old.accountId!==p.accountId)renderPeople();}
+  function leave(id){players.delete(id);renderPeople();}
+  function clear(){players.clear();messages=[];unread=0;renderChat();renderPeople();}
+  window.addEventListener('languagechange',()=>{if($('boardDialog').open)loadPosts();if($('friendsDialog').open)renderFriends();renderChat();renderPeople();});
+  return {start,chat,player,leave,clear,refresh:refreshFriends,get session(){return session;},updateName:async()=>{if(session)sessionUpdated(await api('/api/session','POST',{name:getName()}));}};
 }

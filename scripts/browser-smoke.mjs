@@ -53,6 +53,47 @@ try{
   const after=await page.evaluate(()=>window.__noorScene.diagnostics());
   assert.ok(Math.hypot(after.position.x-before.x,after.position.z-before.z)>.1);
   assert.deepEqual(after.joystick,{x:0,y:0});assert.equal(after.tier,'low');
+  // The play HUD leaves the middle open; chat and movement occupy separate bottom corners.
+  assert.equal(await page.locator('#customPanel').isVisible(),false);
+  const dock=await page.locator('#chatDock').boundingBox(),action=await page.locator('.actionbar').boundingBox();
+  assert.ok(dock.x>=stick.x+stick.width&&dock.y>500&&dock.y+dock.height<=action.y,JSON.stringify({dock,action,stick}));
+  await page.locator('#collapseChatButton').click();assert.equal(await page.locator('#chatBody').isVisible(),false);
+  await page.locator('#collapseChatButton').click();
+  const mainId=await page.evaluate(async()=>{const r=await fetch('/api/social');return (await r.json()).id;});
+  const peerContexts=[];
+  for(const name of ['Chat guest','Uninvolved guest']){
+    const ctx=await browser.newContext(),peer=await ctx.newPage();peerContexts.push(ctx);
+    await peer.goto('http://127.0.0.1:8787/api/health');
+    await peer.evaluate(async name=>{
+      const r=await fetch('/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});window.chatIdentity=await r.json();
+      window.chatReceived=[];await new Promise((resolve,reject)=>{window.chatSocket=new WebSocket('ws://127.0.0.1:8787/api/room?room=zayed:1');window.chatSocket.onmessage=e=>{const m=JSON.parse(e.data);window.chatReceived.push(m);if(m.type==='welcome')resolve();};window.chatSocket.onerror=reject;});
+    },name);
+  }
+  const guest=peerContexts[0].pages()[0],other=peerContexts[1].pages()[0],guestId=await guest.evaluate(()=>window.chatIdentity.id);
+  await page.locator('#peopleButton').click();
+  await page.locator('#roomPeople .friend-row').filter({hasText:'Chat guest'}).getByRole('button',{name:'귓속말',exact:true}).click();
+  await page.locator('#chatInput').fill('Private browser test');await page.locator('#sendChatButton').click();
+  await guest.waitForFunction(()=>window.chatReceived.some(m=>m.type==='whisper'&&m.text==='Private browser test'));
+  assert.equal(await other.evaluate(()=>window.chatReceived.some(m=>m.type==='whisper')),false);
+  await page.locator('#peopleButton').click();await page.locator('#whispersOff').check();
+  await page.waitForFunction(()=>!document.getElementById('whispersOff').disabled);
+  await guest.evaluate(id=>window.chatSocket.send(JSON.stringify({type:'whisper',to:id,text:'Must not appear'})),mainId);
+  await guest.waitForFunction(()=>window.chatReceived.some(m=>m.type==='notice'));
+  assert.equal(await page.locator('#chatMessages').textContent(),'');
+  await page.locator('#publicChatOff').check();await page.waitForFunction(()=>!document.getElementById('publicChatOff').disabled);
+  const saved=await page.evaluate(async()=>{const r=await fetch('/api/social');return r.json();});assert.equal(saved.publicChat,false);assert.equal(saved.whispers,false);
+  await page.locator('#roomPeople .friend-row').filter({hasText:'Chat guest'}).getByRole('button',{name:'차단',exact:true}).click();
+  await page.waitForFunction(id=>window.__noorScene.blockedIds.has(id),guestId);
+  await delay(100);
+  const blocked=await page.evaluate(id=>[...window.__noorScene.remote.values()].filter(a=>a.accountId===id).every(a=>!a.hips.visible&&!a.simple.visible&&!a.label.visible),guestId);assert.equal(blocked,true);
+  await page.locator('#blockedPeople').getByRole('button',{name:'차단 해제',exact:true}).click();
+  await page.waitForFunction(id=>!window.__noorScene.blockedIds.has(id),guestId);
+  await page.locator('#publicChatOff').uncheck();await page.waitForFunction(()=>!document.getElementById('publicChatOff').disabled);
+  await page.locator('#whispersOff').uncheck();await page.waitForFunction(()=>!document.getElementById('whispersOff').disabled);
+  await page.locator('#peopleDialog [data-close]').click();
+  for(const ctx of peerContexts)await ctx.close();
+  await page.waitForFunction(()=>window.__noorScene.remote.size===0);
+  await page.locator('#publicChatTab').click();
   // Render 32 total avatars locally; no test messages are sent to a public room.
   await page.evaluate(async()=>{
     const {sanitizeProfile}=await import('/core.js'),scene=window.__noorScene;scene.cameraAngle=0;const origin={...scene.position};

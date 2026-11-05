@@ -101,14 +101,14 @@ network=new RoomConnection({
     if(scene.praying)network.send({type:'prayer',active:true,pose:scene.pose});
   },
   self:p=>{if(p.correction&&Math.hypot(p.correction.x,p.correction.z)>.08)scene.position={x:scene.position.x+p.correction.x,z:scene.position.z+p.correction.z};scene.protected=p.protected;},
-  player:p=>scene.syncPlayer(p),leave:id=>scene.removePlayer(id),clear:()=>{scene.clearPlayers();$('chatMessages').replaceChildren();},
+  player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.clearPlayers();community?.clear();},
   count:n=>$('onlineCount').textContent=n+'명 접속',
   recount:()=>$('onlineCount').textContent=(scene.remote.size+1)+'명 접속',
   notice:toast,chat:message=>community?.chat(message)
 });
 community=initCommunity({
-  getName:()=>profile.name,toast,onSession:session=>{scene.accountId=session.id;scene.friendIds=session.friends.map(p=>p.id);},
-  sendChat:text=>network.send({type:'chat',text}),reconnect:()=>network.connect(currentRoom)
+  getName:()=>profile.name,toast,onSession:session=>{scene.accountId=session.id;scene.blockedIds=new Set(session.blocked.map(p=>p.id));scene.friendIds=session.friends.map(p=>p.id).filter(id=>!scene.blockedIds.has(id));},
+  sendChat:(text,to)=>network.send(to?{type:'whisper',text,to}:{type:'chat',text}),reconnect:()=>network.connect(currentRoom)
 });
 $('reconnectButton').addEventListener('click',async()=>{try{await community.start();network.retry=0;network.connect(currentRoom);$('settingsDialog').close();}catch(e){toast(e.message);}});
 let chosenMap=parseRoom(currentRoom).map,chosenServer=parseRoom(currentRoom).server,roomsVersion=0;

@@ -52,3 +52,56 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 #entryCharacterHost fieldset{margin-bottom:20px}#entryCharacterHost .swatch{width:31px;height:31px}
 @media(min-width:700px){.entry-dialog.character-step{max-width:760px}#entryStepCharacter{display:grid;grid-template-columns:1fr 1fr;gap:0 25px}#entryStepCharacter>h2{grid-column:1/3}.entry-avatar-preview{height:390px}#entryCharacterHost .custom-panel{padding-top:20px}}
 @media(max-width:480px){.entry-progress{gap:6px}.entry-progress>span{font-size:9px;gap:5px}.entry-avatar-preview{height:185px}.entry-navigation button{min-width:90px}.entry-dialog .entry-language{margin-top:24px}}
+
+/* Play HUD: keep the avatar's central viewing area clear. */
+#app{min-height:320px}
+.brand,.scene-caption,.scene-label{display:none}
+.topbar{padding:10px 12px 0 158px;gap:8px;align-items:flex-start;z-index:6;direction:ltr}
+.room-pill{position:static;transform:none;margin:0;max-width:min(48vw,360px);padding:9px 12px;min-height:38px;gap:7px;font-size:10px}
+.top-actions{margin-left:auto;gap:5px}.top-actions .icon-button{width:38px;height:38px}
+.utilitybar,html[dir=rtl] .utilitybar{left:auto;right:12px;top:54px;display:flex;gap:5px;z-index:6}
+.utilitybar button{min-height:36px;padding:7px 10px;font-size:10px}
+.qibla-card,html[dir=rtl] .qibla-card{left:12px;right:auto;top:10px;bottom:auto;width:132px;padding:12px;z-index:7;max-height:calc(100dvh - 210px);border-radius:12px}
+.qibla-card .qibla-heading{position:absolute;right:5px;top:4px}.qibla-heading>div{display:none}
+.qibla-card .compass-row{margin:7px 0 2px;gap:13px;flex-direction:column;align-items:center}
+.qibla-card .compass{width:58px;height:58px}.qibla-card .compass-arrow{inset:9px 24px}
+.qibla-card .bearing-info{display:flex;align-items:baseline;gap:5px;max-width:100%}.qibla-card .bearing-info strong{font-size:18px}
+.qibla-card .bearing-info p,.qibla-card .bearing-info small,.qibla-card .button-pair{display:none}
+.qibla-card:has(#qiblaDetails:not([hidden])){width:228px;overflow:auto}
+.qibla-card:has(#qiblaDetails:not([hidden])) .compass-row{flex-direction:row;justify-content:center;margin:12px 0 18px}
+.qibla-card:has(#qiblaDetails:not([hidden])) .button-pair{display:flex}
+.qibla-card:has(#qiblaDetails:not([hidden])) .bearing-info{display:block}
+.qibla-card:has(#qiblaDetails:not([hidden])) .bearing-info p,.qibla-card:has(#qiblaDetails:not([hidden])) .bearing-info small{display:block}
+.qibla-card .qibla-expand{width:26px;height:26px;background:#17382c}
+.custom-panel,html[dir=rtl] .custom-panel{display:none;top:94px;bottom:76px;left:12px;right:auto;max-height:calc(100dvh - 170px);width:300px;z-index:15}
+.custom-panel.open{display:block}.custom-panel .mobile-only{display:grid}.custom-panel .desktop-only{display:none}
+.actionbar,html:not([lang=ko]) .actionbar{bottom:calc(10px + env(safe-area-inset-bottom));padding:5px 7px;gap:4px!important;max-width:calc(100% - 20px);border-radius:13px;z-index:6;white-space:nowrap}
+.actionbar .action-secondary,html:not([lang=ko]) .action-secondary{font-size:11px;padding:10px 8px;min-height:38px}
+.actionbar .prayer-button,html:not([lang=ko]) .prayer-button{font-size:11px;padding:10px 14px;min-width:110px;min-height:40px}
+.actionbar .preview-tag{display:none}.actionbar .action-secondary>span:first-child{font-size:18px}
+.joystick,html[dir=rtl] .joystick{left:14px;right:auto;bottom:calc(78px + env(safe-area-inset-bottom));width:100px;height:100px;z-index:6}
+.chat-dock{position:absolute;right:14px;bottom:calc(76px + env(safe-area-inset-bottom));width:320px;border-radius:11px;z-index:8;overflow:hidden;background:#102b25e0}
+.chat-toolbar{display:flex;align-items:center;gap:2px;padding:3px 5px;border-bottom:1px solid var(--line)}
+.chat-toolbar [role=tablist]{display:flex;flex:1;min-width:0;gap:3px}.chat-toolbar button{min-height:34px;background:transparent;color:var(--muted);font-size:11px;padding:5px 9px}
+.chat-toolbar [aria-selected=true]{color:var(--gold);background:#d6b57b16}.chat-toolbar>button{font-size:20px;width:35px;flex-shrink:0;padding:0}
+.chat-dock .chat-mode{font-size:9px;line-height:1.4;margin:5px 9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-dock .chat-messages{height:68px;border:0;border-radius:0;padding:2px 9px;margin:0;background:transparent;scrollbar-width:thin}
+.chat-dock .chat-message{font-size:11px;line-height:1.6;margin-bottom:3px;overflow-wrap:anywhere}
+.chat-author{font-size:10px;font-weight:600;color:var(--gold);background:none;padding:0;margin-inline-end:7px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.chat-dock .inline-form{margin:3px 5px 5px;gap:4px}.chat-dock input{padding:6px 8px;height:34px;font-size:12px;background:#09231caa}
+.chat-dock .inline-form button{padding:4px 10px;min-width:36px;height:34px}
+#whisperTargetRow{margin:4px 8px}#whisperTarget{padding:4px 7px;font-size:10px;min-height:28px}
+#whisperUnread{color:#f1d39a}#peopleDialog .friend-row{gap:8px}#peopleDialog .friend-row>div:first-child{overflow-wrap:anywhere;min-width:0}#peopleDialog .friend-row small{display:none}
+#peopleDialog .toggle-row{gap:16px;margin:16px 0}#peopleDialog .friend-row button{min-height:36px}
+.toast{bottom:calc(250px + env(safe-area-inset-bottom));max-width:calc(100% - 30px);z-index:25;pointer-events:none}
+@media(max-width:600px){
+ .topbar{padding:8px 8px 0 120px;gap:4px}.top-actions{gap:3px}.top-actions .icon-button{width:34px;height:34px}
+ .room-pill{font-size:9px;padding:6px 8px;gap:5px;max-width:calc(100vw - 240px);min-height:34px;flex:1}.room-pill #currentMapName{max-width:none}.room-pill #onlineCount,.room-pill .pill-divider{display:none}
+ .utilitybar,html[dir=rtl] .utilitybar{right:8px;top:47px;gap:3px}.utilitybar button{font-size:9px;padding:5px 9px;min-height:34px}
+ .qibla-card,html[dir=rtl] .qibla-card{left:8px;top:8px;width:104px;padding:12px 10px 7px}.qibla-card .compass-row{gap:10px;margin:6px 0 0}.qibla-card .compass{width:48px;height:48px}.qibla-card .compass-arrow{inset:7px 20px}.qibla-card .bearing-info strong{font-size:16px}.qibla-card .qibla-expand{width:24px;height:24px;font-size:14px;transform:translate(3px,-3px)}
+ .qibla-card:has(#qiblaDetails:not([hidden])){width:215px}.qibla-card:has(#qiblaDetails:not([hidden])) .compass-row{gap:20px}
+ .chat-dock{right:8px;bottom:calc(70px + env(safe-area-inset-bottom));width:calc(100% - 122px);max-width:320px}.chat-dock .chat-mode{font-size:8px}.chat-toolbar{padding:2px 3px}.chat-toolbar button{font-size:10px;padding:4px 7px}.chat-toolbar>button{font-size:19px;width:30px}.chat-dock .chat-messages{height:55px}.chat-dock .chat-message{font-size:10px}
+ .joystick,html[dir=rtl] .joystick{left:10px;bottom:calc(74px + env(safe-area-inset-bottom));width:96px;height:96px}
+ .actionbar .action-secondary,html:not([lang=ko]) .action-secondary{font-size:9px;padding:8px 5px}.actionbar .prayer-button,html:not([lang=ko]) .prayer-button{font-size:10px;min-width:91px;padding:9px 10px}.actionbar .action-divider{margin:0 1px}
+}
+@media(max-height:500px){.chat-dock .chat-messages{height:36px}.chat-dock .chat-mode{display:none}.qibla-card,html[dir=rtl] .qibla-card{max-height:calc(100dvh - 150px)}.custom-panel,html[dir=rtl] .custom-panel{top:8px;bottom:68px;max-height:calc(100dvh - 76px)}}

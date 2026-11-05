@@ -26,7 +26,7 @@ export default {
       headers.set('X-Noor-Account',user.id);headers.set('X-Noor-Name',encodeURIComponent(user.name));
       return env.ROOMS.get(env.ROOMS.idFromName(room)).fetch(new Request(request,{headers}));
     }
-    if(['/api/session','/api/social','/api/posts','/api/friends/request','/api/friends/respond','/api/friends/remove'].includes(url.pathname)||/^\/api\/posts\/[a-f0-9-]{36}$/.test(url.pathname))return env.COMMUNITY.get(env.COMMUNITY.idFromName('community')).fetch(request);
+    if(['/api/session','/api/social','/api/posts','/api/friends/request','/api/friends/respond','/api/friends/remove','/api/chat/preferences','/api/blocks'].includes(url.pathname)||/^\/api\/posts\/[a-f0-9-]{36}$/.test(url.pathname))return env.COMMUNITY.get(env.COMMUNITY.idFromName('community')).fetch(request);
     if(url.pathname.startsWith('/api/'))return new Response('Not found',{status:404});
     return env.ASSETS.fetch(request);
   }
@@ -70,15 +70,27 @@ export class PrayerRoom {
     let data;
     try{data=JSON.parse(message);}catch{ws.serializeAttachment(state);return;}
     if(!data||typeof data!=='object'){ws.serializeAttachment(state);return;}
-    if(data.type==='chat'){
+    if(data.type==='chat'||data.type==='whisper'){
       const text=typeof data.text==='string'?data.text.trim().slice(0,280):'';
       if(!text||now-(state.chatAt||0)<1200){ws.serializeAttachment(state);return;}
       state.chatAt=now;ws.serializeAttachment(state);
       const peers=this.players(),access=await this.access(peers.map(p=>p.state.accountId));
+      const sender=access[state.accountId];if(!sender)return;
+      const fail=()=>this.send(ws,{type:'notice',message:'메시지를 전달할 수 없습니다. 채팅 설정과 접속 상태를 확인해주세요.'});
+      const blocked=(a,id)=>(a?.blocked||[]).includes(id);
+      if(data.type==='whisper'){
+        const targetId=typeof data.to==='string'?data.to:'',recipient=access[targetId];
+        if(targetId===state.accountId||sender.whispers===false||!recipient||recipient.whispers===false||blocked(recipient,state.accountId)||blocked(sender,targetId)||!peers.some(p=>p.state.accountId===targetId)){fail();return;}
+        const item={type:'whisper',id:crypto.randomUUID(),accountId:state.accountId,name:state.profile.name,to:targetId,toName:recipient.name,text,at:now};
+        // A private message is delivered to these two accounts only, including their other room tabs.
+        for(const peer of peers)if(peer.state.accountId===state.accountId||peer.state.accountId===targetId)this.send(peer.ws,item);
+        return;
+      }
+      if(sender.publicChat===false){fail();return;}
       const item={type:'chat',id:crypto.randomUUID(),accountId:state.accountId,name:state.profile.name,text,at:now};
       for(const peer of peers){
         const viewer=access[peer.state.accountId];
-        if(viewer&&(!viewer.premium||peer.state.accountId===state.accountId||viewer.friends.includes(state.accountId)))this.send(peer.ws,item);
+        if(viewer&&viewer.publicChat!==false&&!blocked(viewer,state.accountId)&&!blocked(sender,peer.state.accountId)&&(!viewer.premium||peer.state.accountId===state.accountId||viewer.friends.includes(state.accountId)))this.send(peer.ws,item);
       }
       return;
     }

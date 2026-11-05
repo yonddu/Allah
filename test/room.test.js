@@ -36,3 +36,22 @@ test('Worker blocks cross-origin sockets before forwarding any identity',async()
   const bad=await worker.fetch(new Request('https://noor.example/api/room?room=unknown',{headers:{Upgrade:'websocket',Origin:'https://noor.example'}}),{});
   assert.equal(bad.status,404);
 });
+
+test('Whispers are private to the two accounts and cannot forge sender identity',async()=>{
+  const {room,socket}=setup(),a=socket('a','u1'),aTab=socket('a-tab','u1'),b=socket('b','u2'),c=socket('c','u3');
+  await room.webSocketMessage(a,JSON.stringify({type:'whisper',to:'u2',text:'private',accountId:'u3',name:'forged'}));
+  for(const ws of [a,aTab,b]){const dm=ws.messages.find(m=>m.type==='whisper');assert.equal(dm.accountId,'u1');assert.equal(dm.name,'a');assert.equal(dm.to,'u2');}
+  assert.deepEqual(c.messages,[]);
+});
+test('Server enforces independent mute settings, blocks in both directions and absent recipients',async()=>{
+  const {room,socket,access}=setup(),a=socket('a','u1'),b=socket('b','u2'),c=socket('c','u3');
+  async function send(data){const state=a.deserializeAttachment();state.chatAt=0;a.serializeAttachment(state);await room.webSocketMessage(a,JSON.stringify(data));}
+  access.u2.publicChat=false;await send({type:'chat',text:'public'});assert.equal(b.messages.length,0);assert.equal(c.messages.length,1);
+  await send({type:'whisper',to:'u2',text:'dm allowed'});assert.equal(b.messages.length,1);
+  access.u2.whispers=false;await send({type:'whisper',to:'u2',text:'muted'});assert.equal(b.messages.length,1);
+  access.u2.whispers=true;access.u2.blocked=['u1'];await send({type:'whisper',to:'u2',text:'blocked'});assert.equal(b.messages.length,1);
+  access.u2.blocked=[];access.u1.blocked=['u2'];await send({type:'whisper',to:'u2',text:'reverse block'});assert.equal(b.messages.length,1);
+  await send({type:'whisper',to:'absent',text:'absent'});assert.equal(c.messages.length,1);
+  access.u1.whispers=false;access.u1.blocked=[];await send({type:'whisper',to:'u2',text:'sender muted'});assert.equal(b.messages.length,1);
+  assert.ok(a.messages.some(m=>m.type==='notice'));
+});

@@ -277,7 +277,7 @@ export class Sanctuary {
     this.local.root.position.set(this.position.x,0,this.position.z);
     this.local.root.rotation.y=this.yaw;
     this.applyPose(this.local,this.pose,this.praying,time,this.moving,dt);
-    const nearby=[...this.remote.values()].sort((a,b)=>a.target.distanceToSquared(this.local.root.position)-b.target.distanceToSquared(this.local.root.position)).slice(0,this.visitorDetailLimit||budget.detailedVisitors);
+    const nearby=[...this.remote.values()].filter(a=>!this.blockedIds?.has(a.accountId)).sort((a,b)=>a.target.distanceToSquared(this.local.root.position)-b.target.distanceToSquared(this.local.root.position)).slice(0,this.visitorDetailLimit||budget.detailedVisitors);
     for(const a of this.remote.values()){
       const detailed=nearby.includes(a)&&a.target.distanceToSquared(this.local.root.position)<144;
       a.hips.visible=detailed;a.simple.visible=!detailed;a.label.visible=a.target.distanceToSquared(this.local.root.position)<225;
@@ -290,6 +290,8 @@ export class Sanctuary {
         a.simple.scale.y=a.pose==='standing'?1:.62;a.simple.position.y=a.pose==='standing'?0:.02;
       }
       a.protection.visible=!!a.protected&&a.praying;
+      // Preserve an occupied fence boundary while hiding this visitor's appearance.
+      if(this.blockedIds?.has(a.accountId)){a.hips.visible=a.simple.visible=a.label.visible=a.rug.visible=a.fringe.visible=false;}
     }
     this.fence.visible=(this.fencePreview||this.protected)&&this.praying;this.fence.position.set(this.position.x,0,this.position.z);
     const mobile=innerWidth<=900,target=this.cameraTarget.set(this.position.x-(this.portraitMode||mobile?0:(document.documentElement.dir==='rtl'?-1.5:1.5)),this.portraitMode?1.0:1.25,this.position.z-(this.portraitMode?0:1.5));

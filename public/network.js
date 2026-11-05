@@ -22,7 +22,7 @@ export class RoomConnection {
         this.handlers.recount();
       }else if(msg.type==='leave'){this.handlers.leave(msg.id);this.handlers.recount();}
       else if(msg.type==='notice')this.handlers.notice(msg.message);
-      else if(msg.type==='chat')this.handlers.chat(msg);
+      else if(msg.type==='chat'||msg.type==='whisper')this.handlers.chat(msg);
     };
     ws.onclose=()=>{
       if(generation!==this.generation)return;
