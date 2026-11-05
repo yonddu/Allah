@@ -1,3 +1,12 @@
+## Completion record · 2026-11-06 (Asia/Seoul)
+
+- Final application commit: d2210ee91974f9176a93dd21ff334929dc195673.
+- GitHub validation: https://github.com/yonddu/Allah/actions/runs/42118205483 — success.28 Node tests, Cloudflare dry-run, real local-Worker browser flows (onboarding, full Taj dome in play view, Qibla, analog joystick, all5 prayer rows/timezones/Quran link, whispers with3 isolated sessions, mute/block/unblock, both maps and RTL) passed. Browser report has no page errors.
+- Mecca32-total-avatar budget:116 draw calls,93,778 triangles. Taj solo:13 draw calls,17,249 triangles. These were software Chromium rendering-budget checks, not actual low-end Android FPS tests.
+- Cloudflare deployment build:2d4da05e-4dee-49c9-ac77-67b07a007405. Status: stopped / success, verified through the Cloudflare Builds API. The pinned application commit was deployed successfully.
+- Play URL: https://allah.songyd1018.workers.dev . Refresh an already-open tab to load the new maps, compact HUD, original-image-based avatar choices and local prayer-time tools.
+- Remaining product limits: actual billing is disabled; front-image-based3D heads/clothes have approximated side/back geometry; physical3–4GB phone performance and local-mosque timetable review still need real-device/local validation. Prayer times are starts, not congregational iqamah schedules.
+
 ## 2026-11-06 outdoor worlds, Quran link and five daily prayer times
 
 - Active maps are now mecca and taj, each with3 rooms /32 visitors. Old zayed/nabawi room IDs migrate to mecca and blue IDs to taj through parseRoom. Menu and generated GLBs contain only the two new worlds.
@@ -77,3 +86,4 @@ scripts/browser-smoke.mjs는 로컬 Worker + Chromium에서 입장3단계/여성
 
 ## 최종 검증
 2026-11-06: Node검사19개통과. 로컬Chromium실행에서언어→캐릭터→입장,여성히잡강제,나침반왼쪽위/카바표시,조이스틱드래그/리셋,3개맵전환,RTL통과. 화면앞밀집한32명렌더는199draws/53,794tri기록. 이것은소프트웨어WebGL의렌더예산검사이며실제3~4GB폰의FPS측정이아님. 보급폰가로화면도coarse포인터및RAM4GB이하로저사양판별. 평균프레임지연시해상도뿐아니라상세원격캐릭터수도최소2명까지하향.
+
