@@ -18,8 +18,12 @@ jobs:
           node-version: '22'
       - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm run build
-      - run: sudo apt-get update -qq
-      - run: sudo apt-get install -y --no-install-recommends blender python3-numpy
+      - name: Install Blender with bounded mirror retries
+        timeout-minutes: 5
+        run: |
+          sudo sed -i -E 's|https?://[^ /]*azure[^ /]*/ubuntu/?|http://archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 update -qq
+          sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 install -y --no-install-recommends blender python3-numpy
       - run: blender --background --threads 2 --python-exit-code 1 --python scripts/blender-landmarks.py -- --output artifacts/blender-landmarks
         env:
           PYTHONPATH: /usr/lib/python3/dist-packages
