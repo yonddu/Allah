@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {qibla,KAABA,sanitizeProfile,DEFAULT_PROFILE,legalPosition,constrainedMove,fenceAllows,validatePost,parseRoom} from '../public/core.js';
+import {qibla,KAABA,sanitizeProfile,DEFAULT_PROFILE,legalPosition,constrainedMove,fenceAllows,validatePost,parseRoom,joystickVector} from '../public/core.js';
 test('Qibla uses a great-circle bearing in several hemispheres',()=>{
   const seoul=qibla(37.5665,126.978),newYork=qibla(40.7128,-74.006),jakarta=qibla(-6.2088,106.8456);
   assert.ok(seoul.bearing>280&&seoul.bearing<290);
@@ -37,4 +37,22 @@ test('Board validation and room selection reject unsupported input',()=>{
   assert.equal(validatePost({category:'suggestion',title:' 의견 ',body:' 내용입니다 '}).title,'의견');
   assert.deepEqual(parseRoom('blue:2'),{map:'blue',server:2,key:'blue:2'});
   assert.equal(parseRoom('zayed:4'),null);assert.equal(parseRoom('../../admin'),null);
+});
+
+test('Joystick uses a dead zone, analog speed, radial clamping and safe reset',()=>{
+  assert.deepEqual(joystickVector(0,0,30),{x:0,y:0,pixelX:0,pixelY:0});
+  assert.equal(joystickVector(2,0,30).x,0);
+  const gentle=joystickVector(15,0,30),full=joystickVector(100,0,30);
+  assert.ok(gentle.x>0&&gentle.x<1);assert.equal(full.x,1);assert.equal(full.pixelX,30);
+  const diagonal=joystickVector(100,100,30);
+  assert.ok(Math.abs(Math.hypot(diagonal.x,diagonal.y)-1)<1e-9);
+  assert.ok(Math.abs(Math.hypot(diagonal.pixelX,diagonal.pixelY)-30)<1e-9);
+  assert.deepEqual(joystickVector(NaN,10,30),{x:0,y:0,pixelX:0,pixelY:0});
+});
+
+test('Female avatars always receive a head covering, including tampered client profiles',()=>{
+  assert.equal(sanitizeProfile({gender:'female',cover:'none'}).cover,'hijab');
+  assert.equal(sanitizeProfile({gender:'female',cover:'kufi'}).cover,'hijab');
+  assert.equal(sanitizeProfile({gender:'female',cover:'hijab'}).cover,'hijab');
+  assert.equal(sanitizeProfile({gender:'male',cover:'none'}).cover,'none');
 });

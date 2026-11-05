@@ -5,3 +5,6 @@ public/vendor/
 .dev.vars
 .DS_Store
 public/audio/
+public/assets/
+public/utils/
+artifacts/

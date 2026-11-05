@@ -291,5 +291,9 @@
   "s290": "Reconnexion après la perte du serveur. Vous pouvez continuer à explorer en privé.",
   "s291": "Impossible d’établir une connexion. Reconnectez-vous dans les réglages.",
   "s292": "Azimut de la qibla : {n} degrés",
-  "s293": "Code d’ami : {code}"
+  "s293": "Code d’ami : {code}",
+  "s294": "Type de personnage",
+  "s295": "Homme",
+  "s296": "Femme",
+  "s297": "Les personnages féminins doivent porter une tenue qui couvre la tête."
 }

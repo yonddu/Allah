@@ -291,5 +291,9 @@
   "s290": "Serverlə bağlantı kəsilib, yenidən qoşulur. Məkanı təkbaşına kəşf etməyə davam edə bilərsiniz.",
   "s291": "Bağlantı qurmaq mümkün olmadı. Parametrlərdən yenidən qoşulun.",
   "s292": "Qiblə bucağı {n} dərəcə",
-  "s293": "Dostluq kodu: {code}"
+  "s293": "Dostluq kodu: {code}",
+  "s294": "Personaj növü",
+  "s295": "Kişi",
+  "s296": "Qadın",
+  "s297": "Qadın personajlar yalnız başı örtən geyim seçə bilər."
 }

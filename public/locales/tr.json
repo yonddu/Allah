@@ -291,5 +291,9 @@
   "s290": "Sunucu bağlantısı kesildi, yeniden bağlanılıyor. Alanı tek başınıza keşfetmeye devam edebilirsiniz.",
   "s291": "Bağlantı kurulamadı. Ayarlardan yeniden bağlanın.",
   "s292": "Kıble açısı {n} derece",
-  "s293": "Arkadaş kodu: {code}"
+  "s293": "Arkadaş kodu: {code}",
+  "s294": "Karakter türü",
+  "s295": "Erkek",
+  "s296": "Kadın",
+  "s297": "Kadın karakterler yalnızca başı örten kıyafetler seçebilir."
 }

@@ -96,27 +96,33 @@ export async function setLanguage(code,persist=true){
   locale=target.code;dictionary=data;document.documentElement.lang=locale;document.documentElement.dir=target.dir||'ltr';
   document.title=t('NOOR — 나만의 평온이 머무는 곳');
   document.getElementById('languageSelect').value=locale;
+  document.getElementById('entryLanguageSelect').value=locale;
   translateTree(document.body);
   if(persist)try{localStorage.setItem('noor-language',locale);}catch{}
   window.dispatchEvent(new CustomEvent('languagechange',{detail:{language:locale}}));
   return true;
 }
+export function chooseInitialLanguage(query,saved){
+  const codes=LANGUAGES.map(l=>l.code);
+  return codes.includes(query)?query:codes.includes(saved)?saved:'id';
+}
 export async function initI18n(){
-  const select=document.getElementById('languageSelect');
-  for(const lang of LANGUAGES){const option=document.createElement('option');option.value=lang.code;option.textContent=lang.name;select.append(option);}
+  const select=document.getElementById('languageSelect'),entrySelect=document.getElementById('entryLanguageSelect');
+  for(const lang of LANGUAGES){const option=document.createElement('option');option.value=lang.code;option.textContent=lang.name;select.append(option);entrySelect.append(option.cloneNode(true));}
   document.getElementById('languageButton').addEventListener('click',()=>document.getElementById('languageDialog').showModal());
   document.getElementById('closeLanguage').addEventListener('click',()=>document.getElementById('languageDialog').close());
-  select.addEventListener('change',async()=>{
-    select.disabled=true;
+  for(const picker of [select,entrySelect])picker.addEventListener('change',async()=>{
+    select.disabled=entrySelect.disabled=true;
     try{
-      const ok=await setLanguage(select.value);
+      const ok=await setLanguage(picker.value);
       document.getElementById('languageStatus').textContent=ok?t('언어 설정을 저장했습니다.'):'This language could not be loaded. Please try again.';
-    }finally{select.disabled=false;}
+    }finally{select.disabled=entrySelect.disabled=false;}
   });
   let saved;try{saved=localStorage.getItem('noor-language');}catch{}
   const codes=LANGUAGES.map(l=>l.code),query=new URLSearchParams(location.search).get('lang');
-  const detected=(navigator.languages||[navigator.language]).map(l=>l.toLowerCase().split('-')[0]).find(l=>codes.includes(l));
-  await setLanguage(codes.includes(query)?query:codes.includes(saved)?saved:detected||'en',false);
+  await setLanguage(chooseInitialLanguage(query,saved),false);
+  let savedRoom,onboarded;try{savedRoom=localStorage.getItem('noor-room');onboarded=localStorage.getItem('noor-onboarded');}catch{}
+  if(onboarded!=='1'||!/^(zayed|blue|nabawi):[1-3]$/.test(savedRoom||''))document.getElementById('mapDialog').showModal();
   observer=new MutationObserver(changes=>{
     for(const change of changes){
       if(change.type==='characterData')translateNode(change.target);

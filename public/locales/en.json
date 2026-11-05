@@ -291,5 +291,9 @@
   "s290": "Reconnecting after losing the server. You can continue exploring privately.",
   "s291": "Unable to establish a connection. Reconnect in settings.",
   "s292": "Qibla bearing {n} degrees",
-  "s293": "Friend code: {code}"
+  "s293": "Friend code: {code}",
+  "s294": "Character type",
+  "s295": "Male",
+  "s296": "Female",
+  "s297": "Female characters can only wear clothing that covers the head."
 }

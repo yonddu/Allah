@@ -1,5 +1,4 @@
-import {initI18n,t} from './i18n.js';
-await initI18n();
+import {t} from './i18n.js';
 import {DEFAULT_PROFILE,COLORS,sanitizeProfile,MAPS,parseRoom} from './core.js';
 import {Sanctuary} from './scene.js';
 import {initQibla} from './qibla.js';
@@ -24,6 +23,8 @@ try{
 }catch(e){console.error(e);fatal();throw e;}
 const sound=new Soundscape(toast);
 function updateChoices(){
+  for(const b of document.querySelectorAll('[data-field="cover"] button'))b.hidden=profile.gender==='female'&&b.dataset.value!=='hijab';
+  $('femaleCoverNote').hidden=profile.gender!=='female';
   for(const b of document.querySelectorAll('[data-field] button')){
     const field=b.closest('[data-field]').dataset.field;b.setAttribute('aria-pressed',String(profile[field]===b.dataset.value));
   }
@@ -54,7 +55,7 @@ function selectTab(button){for(const b of tabs){const selected=b===button;b.setA
 for(const b of tabs){b.addEventListener('click',()=>selectTab(b));b.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();const n=(tabs.indexOf(b)+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;selectTab(tabs[n]);tabs[n].focus();}});}
 $('customizeButton').addEventListener('click',()=>$('customPanel').classList.toggle('open'));
 $('closeCustomize').addEventListener('click',()=>$('customPanel').classList.remove('open'));
-$('portraitButton').addEventListener('click',()=>{scene.cameraAngle=scene.yaw+Math.PI;scene.cameraDistance=4.4;scene.cameraHeight=2.9;toast('화면을 드래그해 다른 각도도 볼 수 있습니다.');});
+$('portraitButton').addEventListener('click',()=>{scene.portraitMode=true;scene.cameraAngle=scene.yaw+Math.PI;scene.cameraDistance=3.1;scene.cameraHeight=2.9;toast('화면을 드래그해 다른 각도도 볼 수 있습니다.');});
 $('helpButton').addEventListener('click',()=>openDialog('helpDialog'));
 $('settingsButton').addEventListener('click',()=>openDialog('settingsDialog'));
 $('qualitySelect').addEventListener('change',e=>{scene.quality(e.target.value);try{localStorage.setItem('noor-quality',e.target.value);}catch{}});
@@ -68,12 +69,13 @@ $('prayerSoundToggle').addEventListener('change',e=>{sound.prayerEnabled=e.targe
 $('prayerAudioFile').addEventListener('change',e=>sound.setFile(e.target.files[0]));
 const poses=['standing','bowing','prostrating','sitting'],poseLabels=['서기','숙이기','엎드리기','앉기'];
 function prayerUI(){
+  $('joystickThumb').setAttribute('aria-disabled',String(scene.praying));
   $('prayerButtonText').textContent=scene.praying?'기도 마치기':'기도 시작';
   $('poseButton').hidden=!scene.praying;$('poseButton').textContent='다음 자세 · '+poseLabels[poses.indexOf(scene.pose)];
   $('prayerLabel').textContent=scene.praying?'기도 중 · '+poseLabels[poses.indexOf(scene.pose)]:'가상 공간 기도 방향 ↑';
 }
 function setPrayer(active){
-  scene.praying=active;scene.pose='standing';scene.protected=false;scene.keys.clear();scene.direction.clear();
+  scene.praying=active;scene.pose='standing';scene.protected=false;scene.keys.clear();scene.direction.clear();scene.resetJoystick?.();
   network?.send({type:'prayer',active,pose:scene.pose});
   if(active){sound.startPrayer();$('soundButton').textContent='소리 설정';toast('기도 방향으로 정렬했습니다. 다음 자세 버튼으로 자세를 바꿀 수 있습니다.');}
   else sound.stopPrayer();
@@ -136,24 +138,31 @@ async function loadServers(){
     b.addEventListener('click',()=>{chosenServer=room.server;for(const n of $('serverChoices').children)n.setAttribute('aria-pressed',String(n===b));});$('serverChoices').append(b);
   }
 }
-$('mapButton').addEventListener('click',()=>{chosenMap=parseRoom(currentRoom).map;chosenServer=parseRoom(currentRoom).server;renderMaps();openDialog('mapDialog');loadServers();});
+$('mapButton').addEventListener('click',()=>{window.dispatchEvent(new Event('noor:select-room'));chosenMap=parseRoom(currentRoom).map;chosenServer=parseRoom(currentRoom).server;renderMaps();openDialog('mapDialog');loadServers();});
 $('enterRoomButton').addEventListener('click',async()=>{
   $('enterRoomButton').disabled=true;
   try{
     sound.enable().then(()=>$('soundButton').textContent='소리 설정').catch(()=>{});
-    if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;scene.setMap(chosenMap);scene.position={x:0,z:7};scene.cameraDistance=11.6;scene.cameraHeight=6.3;scene.cameraAngle=.42;
+    if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={x:0,z:7};scene.cameraDistance=11.6;scene.cameraHeight=4.1;scene.cameraAngle=.42;
     mapLabels();try{localStorage.setItem('noor-room',currentRoom);}catch{}
-    await community.start();network.retry=0;network.connect(currentRoom);$('mapDialog').close();
+    await community.start();network.retry=0;network.connect(currentRoom);window.dispatchEvent(new Event('noor:entered'));$('mapDialog').close();
   }catch(e){$('roomStatus').textContent=e.message;}
   finally{$('enterRoomButton').disabled=false;}
 });
 initQibla(toast);updateChoices();mapLabels();prayerUI();
-setInterval(()=>{if(!document.hidden)network.movement(scene.position,scene.yaw);},100);
+setInterval(()=>{if(!document.hidden)network.movement(scene.position,scene.yaw);},150);
+await scene.ready;
+await scene.environmentReady;
+$('enterRoomButton').disabled=false;
 requestAnimationFrame(()=>{$('loading').hidden=true;});
-community.start().then(()=>network.connect(currentRoom)).catch(()=>toast('온라인 연결을 준비하지 못했습니다. 설정에서 다시 연결할 수 있습니다.'));
-if(!parseRoom(savedRoom)){renderMaps();openDialog('mapDialog');loadServers();}
+if(new URLSearchParams(location.search).has('qa'))window.__noorScene=scene;
+community.start().then(()=>{if(parseRoom(savedRoom))network.connect(currentRoom);}).catch(()=>toast('온라인 연결을 준비하지 못했습니다. 설정에서 다시 연결할 수 있습니다.'));
+if(!parseRoom(savedRoom)||$('mapDialog').open){renderMaps();openDialog('mapDialog');loadServers();}
 window.addEventListener('pagehide',()=>{network.generation++;clearTimeout(network.timer);network.socket?.close();});
 
 setInterval(()=>{if(!document.hidden&&community.session)community.refresh().catch(()=>{});},30000);
 
 window.addEventListener('languagechange',()=>{mapLabels();});
+
+window.addEventListener('noor:entry-character',e=>{scene.portraitMode=e.detail.active;scene.cameraAngle=e.detail.active?scene.yaw+Math.PI:.42;scene.cameraDistance=e.detail.active?3:11.6;scene.cameraHeight=e.detail.active?2.1:4.1;});
+window.dispatchEvent(new Event('noor:app-ready'));

@@ -5,7 +5,7 @@ export const COLORS = Object.freeze({
   rug: ['#18554c','#843c46','#243e64','#a27d40','#443d65']
 });
 export const DEFAULT_PROFILE = Object.freeze({
-  name:'방문자', skin:0, face:'oval', beard:'none', outfit:'thobe',
+  name:'방문자', gender:'male', skin:0, face:'oval', beard:'none', outfit:'thobe',
   cover:'kufi', color:0, rug:0, pattern:'mihrab'
 });
 export const PILLARS = [-8,8].flatMap(x=>[-9,0,9].map(z=>({x,z,r:0.92})));
@@ -18,11 +18,11 @@ export function sanitizeProfile(raw={}) {
   const d=DEFAULT_PROFILE;
   const name=typeof raw.name==='string'?raw.name.normalize('NFKC').replace(/[\p{C}<>]/gu,'').trim().slice(0,20):d.name;
   return {
-    name:name||d.name, skin:index(raw.skin,COLORS.skin.length,d.skin),
+    name:name||d.name, gender:option(raw.gender,['male','female'],d.gender), skin:index(raw.skin,COLORS.skin.length,d.skin),
     face:option(raw.face,['oval','round','square'],d.face),
     beard:option(raw.beard,['none','short','full'],d.beard),
     outfit:option(raw.outfit,['thobe','abaya','tunic'],d.outfit),
-    cover:option(raw.cover,['kufi','hijab','none'],d.cover),
+    cover:raw.gender==='female'?'hijab':option(raw.cover,['kufi','hijab','none'],d.cover),
     color:index(raw.color,COLORS.robe.length,d.color),
     rug:index(raw.rug,COLORS.rug.length,d.rug),
     pattern:option(raw.pattern,['mihrab','geometry','garden'],d.pattern)
@@ -89,4 +89,12 @@ export const MAPS = Object.freeze({
 export function parseRoom(value){
   const match=typeof value==='string'?value.match(/^(zayed|blue|nabawi):([1-3])$/):null;
   return match?{map:match[1],server:Number(match[2]),key:value}:null;
+}
+
+export function joystickVector(dx,dy,radius,deadzone=.12){
+  if(!Number.isFinite(dx)||!Number.isFinite(dy)||!Number.isFinite(radius)||radius<=0)return {x:0,y:0,pixelX:0,pixelY:0};
+  const length=Math.hypot(dx,dy);
+  if(!length)return {x:0,y:0,pixelX:0,pixelY:0};
+  const limit=clamp(deadzone,0,.9),raw=clamp(length/radius,0,1),strength=raw<=limit?0:(raw-limit)/(1-limit),pixels=Math.min(length,radius);
+  return {x:dx/length*strength,y:dy/length*strength,pixelX:dx/length*pixels,pixelY:dy/length*pixels};
 }

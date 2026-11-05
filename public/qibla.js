@@ -6,6 +6,13 @@ export function initQibla(toast){
     $('compassArrow').style.transform='rotate('+(bearing??0)+'deg)';
     $('compassArrow').style.opacity=bearing===null?'.25':'1';
     $('compass').style.rotate=heading===null?'0deg':(-heading)+'deg';
+    $('kaabaMarker').hidden=bearing===null;
+    if(bearing!==null){
+      const angle=bearing*Math.PI/180;
+      $('kaabaMarker').style.left=(50+35*Math.sin(angle))+'%';
+      $('kaabaMarker').style.top=(50-35*Math.cos(angle))+'%';
+      $('kaabaMarker').style.rotate=(heading??0)+'deg';
+    }
     $('compass').setAttribute('aria-label',bearing===null?'방향 계산 전':'메카 방위각 '+bearing.toFixed(1)+'도'+(heading===null?' · 북쪽 기준':' · 휴대폰 방향 반영'));
   }
   function update(lat,lon,label,accuracy){
@@ -19,6 +26,11 @@ export function initQibla(toast){
       paint();
     }catch(e){toast(e.message);}
   }
+  $('qiblaExpandButton').addEventListener('click',()=>{
+    const open=$('qiblaDetails').hidden;
+    $('qiblaDetails').hidden=!open;$('qiblaExpandButton').setAttribute('aria-expanded',String(open));
+    $('qiblaExpandButton').textContent=open?'⌃':'⌄';$('qiblaCard').classList.toggle('expanded',open);
+  });
   $('locationButton').addEventListener('click',()=>{
     if(!navigator.geolocation){toast('이 브라우저에서는 위치를 사용할 수 없습니다. 도시나 좌표를 선택해주세요.');return;}
     if(watch!==null)navigator.geolocation.clearWatch(watch);
