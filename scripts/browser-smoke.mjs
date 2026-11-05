@@ -130,7 +130,9 @@ try{
     await page.locator('.map-card[data-map="'+map+'"]').click();
     await page.locator('#enterRoomButton').click();
     await page.waitForFunction(id=>window.__noorScene.hallReady&&window.__noorScene.mapId===id,map,{timeout:30000});
-    await delay(300);maps.push({map,...await page.evaluate(()=>window.__noorScene.diagnostics())});
+    await delay(1100);
+    if(map==='taj'){const dome=await page.evaluate(()=>{const s=window.__noorScene,p=s.camera.position.clone().set(0,45,-52).project(s.camera);return {x:p.x,y:p.y};});assert.ok(Math.abs(dome.x)<1&&Math.abs(dome.y)<1,'Taj dome must be in the play view: '+JSON.stringify(dome));}
+    maps.push({map,...await page.evaluate(()=>window.__noorScene.diagnostics())});
     await page.screenshot({path:'artifacts/mobile-'+map+'.png'});
   }
   await page.locator('#languageButton').click();await page.locator('#languageSelect').selectOption('ar');

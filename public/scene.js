@@ -22,7 +22,7 @@ export class Sanctuary {
     container.appendChild(this.renderer.domElement);
     this.renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();onError('그래픽 메모리가 부족하거나 연결이 끊어졌습니다. 화면 품질을 낮춘 뒤 다시 열어주세요.');});
     this.scene=new THREE.Scene();this.scene.fog=new THREE.FogExp2(0xc5dce1,.0027);
-    this.camera=new THREE.PerspectiveCamera(56,1,.1,360);
+    this.camera=new THREE.PerspectiveCamera(80,1,.1,360);
     setAnisotropy(this.renderer.capabilities.getMaxAnisotropy());
     // A small, pre-authored reflection map avoids rendering a temporary 3D room at startup.
     this.environmentReady=new THREE.TextureLoader().loadAsync('/assets/textures/low/environment.png').then(texture=>{
@@ -235,10 +235,11 @@ export class Sanctuary {
       if(this.blockedIds?.has(a.accountId)){a.hips.visible=a.simple.visible=a.label.visible=a.rug.visible=a.fringe.visible=false;}
     }
     this.fence.visible=(this.fencePreview||this.protected)&&this.praying;this.fence.position.set(this.position.x,0,this.position.z);this.fence.rotation.y=this.yaw;
-    const target=this.cameraTarget.set(this.position.x,this.portraitMode?.98:1.1,this.position.z);
+    const target=this.cameraTarget.set(this.position.x,this.portraitMode?.98:2.1,this.position.z);
     const cam=this.desiredCamera.set(target.x+Math.sin(this.cameraAngle)*this.cameraDistance,this.cameraHeight,target.z+Math.cos(this.cameraAngle)*this.cameraDistance);
     this.camera.position.lerp(cam,1-Math.exp(-dt*4));this.camera.lookAt(target);
 
+    const fov=this.portraitMode?56:80;if(this.camera.fov!==fov){this.camera.fov=fov;this.camera.updateProjectionMatrix();}
     this.renderer.render(this.scene,this.camera);
   }
 }

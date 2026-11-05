@@ -29,6 +29,10 @@ function build(profile,low){
  const skinUV=[((face.index%4)*256+64)/1024,1-(Math.floor(face.index/4)*256+248)/512];
  const hairUV=[((face.index%4)*256+192)/1024,skinUV[1]],constant=()=>skinUV;
  const clothUV=p=>{let u=THREE.MathUtils.clamp(.5-p[0]/1.18,.025,.975),w=THREE.MathUtils.clamp((1.85-p[1])/1.80,.02,.98);if(p[2]>.03)u=.26+(u-.5)*.22;return [(look.index%5+u)/5,1-(Math.floor(look.index/5)+w)/3];};
+ const sleeveUV=p=>{
+  const x=Math.abs(p[0]),u=THREE.MathUtils.clamp(.5-Math.sign(p[0])*(.18+(x-.19)/.49*.26),.065,.935),w=THREE.MathUtils.clamp(.16-(p[1]-1.435)*.45,.12,.20);
+  return [(look.index%5+u)/5,1-(Math.floor(look.index/5)+w)/3];
+ };
  const bone=id=>()=>[[id,1]],body=p=>{
   const y=p[1];if(y>1.32)return [[I.chest,1]];if(y>1.12){const t=(y-1.12)/.2;return [[I.spine,1-t],[I.chest,t]];}if(y>.94){const t=(y-.94)/.18;return [[I.hips,1-t],[I.spine,t]];}return [[I.hips,1]];
  };
@@ -58,8 +62,8 @@ function build(profile,low){
   const arm=side<0?I.la:I.ra,elbow=side<0?I.le:I.re,hand=side<0?I.lh:I.rh,foot=side<0?I.lf:I.rf;
   const armWeights=p=>{const x=Math.abs(p[0]);if(x<.42)return [[arm,1]];if(x<.49){const t=(x-.42)/.07;return [[arm,1-t],[elbow,t]];}return [[elbow,1]];};
   ellipsoid(skin,[side*.097,1.663,0],[.015,.027,.012],constant,bone(I.head),()=>true,low?6:10);
-  tube(cloth,[side*.19,1.435,0],[side*.45,1.435,0],profile.gender==='female'?.078:.083,.069,clothUV,armWeights);
-  tube(cloth,[side*.45,1.435,0],[side*(look.cut==='batik'?.50:.68),1.435,0],.068,.047,clothUV,armWeights);
+  tube(cloth,[side*.19,1.435,0],[side*.45,1.435,0],profile.gender==='female'?.078:.083,.069,sleeveUV,armWeights);
+  tube(cloth,[side*.45,1.435,0],[side*(look.cut==='batik'?.50:.68),1.435,0],.068,.047,sleeveUV,armWeights);
   if(look.cut==='batik')tube(skin,[side*.48,1.435,0],[side*.70,1.435,0],.052,.034,constant,armWeights);
   ellipsoid(skin,[side*.723,1.435,0],[.050,.044,.024],constant,bone(hand),()=>true,low?6:10);
   for(let f=0;f<4;f++){
