@@ -1,6 +1,7 @@
 import {t} from './i18n.js';
 import {DEFAULT_PROFILE,COLORS,sanitizeProfile,MAPS,parseRoom} from './core.js';
 import {Sanctuary} from './scene.js';
+import {initPrayerTimes} from './prayer-times.js';
 import {initQibla} from './qibla.js';
 import {RoomConnection} from './network.js';
 import {initCommunity} from './social.js';
@@ -11,7 +12,7 @@ const $=id=>document.getElementById(id);
 let generatedName=false;
 let toastTimer,profile=loadProfile(),savedRoom;
 try{savedRoom=localStorage.getItem('noor-room');}catch{}
-let currentRoom=parseRoom(savedRoom)?.key||'zayed:1',scene,network,community;
+let currentRoom=parseRoom(savedRoom)?.key||'mecca:1',scene,network,community;
 function toast(message){
   $('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),4500);
 }
@@ -71,7 +72,7 @@ $('settingsButton').addEventListener('click',()=>openDialog('settingsDialog'));
 $('qualitySelect').addEventListener('change',e=>{scene.quality(e.target.value);try{localStorage.setItem('noor-quality',e.target.value);}catch{}});
 try{const value=localStorage.getItem('noor-quality');if(['auto','high','low'].includes(value)){$('qualitySelect').value=value;scene.quality(value);}}catch{}
 $('soundButton').addEventListener('click',()=>openDialog('soundDialog'));
-$('enableSoundButton').addEventListener('click',async()=>{try{await sound.enable();$('soundButton').textContent='소리 설정';toast('소리를 켰습니다. 크기는 아래에서 조절할 수 있습니다.');}catch{toast('오디오를 시작하지 못했습니다. 다시 눌러주세요.');}});
+$('enableSoundButton').addEventListener('click',async()=>{try{await sound.enable();$('soundButton').querySelector('.utility-label').textContent='소리 설정';toast('소리를 켰습니다. 크기는 아래에서 조절할 수 있습니다.');}catch{toast('오디오를 시작하지 못했습니다. 다시 눌러주세요.');}});
 $('bgmToggle').addEventListener('change',e=>{sound.bgmEnabled=e.target.checked;sound.applyMix();});
 $('bgmVolume').addEventListener('input',e=>sound.setVolume(Number(e.target.value)/100));
 $('prayerVolume').addEventListener('input',e=>sound.setPrayerVolume(Number(e.target.value)/100));
@@ -87,7 +88,7 @@ function prayerUI(){
 function setPrayer(active){
   scene.praying=active;scene.pose='standing';scene.protected=false;scene.keys.clear();scene.direction.clear();scene.resetJoystick?.();
   network?.send({type:'prayer',active,pose:scene.pose});
-  if(active){sound.startPrayer();$('soundButton').textContent='소리 설정';toast('기도 방향으로 정렬했습니다. 다음 자세 버튼으로 자세를 바꿀 수 있습니다.');}
+  if(active){sound.startPrayer();$('soundButton').querySelector('.utility-label').textContent='소리 설정';toast('기도 방향으로 정렬했습니다. 다음 자세 버튼으로 자세를 바꿀 수 있습니다.');}
   else sound.stopPrayer();
   prayerUI();
 }
@@ -152,14 +153,14 @@ $('mapButton').addEventListener('click',()=>{window.dispatchEvent(new Event('noo
 $('enterRoomButton').addEventListener('click',async()=>{
   $('enterRoomButton').disabled=true;
   try{
-    sound.enable().then(()=>$('soundButton').textContent='소리 설정').catch(()=>{});
-    if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={x:0,z:7};scene.cameraDistance=5.6;scene.cameraHeight=2.9;scene.cameraAngle=.42;
+    sound.enable().then(()=>$('soundButton').querySelector('.utility-label').textContent='소리 설정').catch(()=>{});
+    if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={...MAPS[chosenMap].spawn};scene.cameraDistance=5.6;scene.cameraHeight=2.9;scene.cameraAngle=MAPS[chosenMap].cameraAngle;
     mapLabels();try{localStorage.setItem('noor-room',currentRoom);}catch{}
     await community.start();network.retry=0;network.connect(currentRoom);window.dispatchEvent(new Event('noor:entered'));$('mapDialog').close();
   }catch(e){$('roomStatus').textContent=e.message;}
   finally{$('enterRoomButton').disabled=false;}
 });
-initQibla(toast);updateChoices();mapLabels();prayerUI();
+const qibla=initQibla(toast);initPrayerTimes({qibla,toast});updateChoices();mapLabels();prayerUI();
 setInterval(()=>{if(!document.hidden)network.movement(scene.position,scene.yaw);},150);
 await scene.ready;
 await scene.environmentReady;
@@ -174,6 +175,6 @@ setInterval(()=>{if(!document.hidden&&community.session)community.refresh().catc
 
 window.addEventListener('languagechange',()=>{for(const [list,id,label]of [[CHARACTERS,'characterChoices','얼굴'],[WARDROBE,'wardrobeChoices','기도 복장']])for(const item of list){const b=document.querySelector('#'+id+' [data-value="'+item.id+'"]');b.lastElementChild.textContent=t(label)+' '+(item.index+1);b.setAttribute('aria-label',t(label)+' '+(item.index+1));}mapLabels();if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;changedProfile();}});
 
-window.addEventListener('noor:entry-character',e=>{scene.portraitMode=e.detail.active;scene.cameraAngle=e.detail.active?scene.yaw+Math.PI:.42;scene.cameraDistance=e.detail.active?2.65:5.6;scene.cameraHeight=e.detail.active?1.6:2.9;});
+window.addEventListener('noor:entry-character',e=>{scene.portraitMode=e.detail.active;scene.cameraAngle=e.detail.active?scene.yaw+Math.PI:MAPS[scene.mapId].cameraAngle;scene.cameraDistance=e.detail.active?2.65:5.6;scene.cameraHeight=e.detail.active?1.6:2.9;});
 if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;scene.updateProfile(profile);}
 window.dispatchEvent(new Event('noor:app-ready'));

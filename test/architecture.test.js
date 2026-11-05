@@ -5,10 +5,10 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {buildArchitecture} from '../scripts/hall-geometry.mjs';
 import {writeGlb} from '../scripts/write-glb.mjs';
-test('All three architectural maps compile to bounded valid GLB assets',async()=>{
+test('Both outdoor courtyard maps compile to bounded valid GLB assets',async()=>{
   const dir=await mkdtemp(join(tmpdir(),'noor-assets-'));
   try{
-    for(const map of ['zayed','blue','nabawi'])for(const tier of ['low','high']){
+    for(const map of ['mecca','taj'])for(const tier of ['low','high']){
       const model=buildArchitecture(map,tier),path=join(dir,map+'-'+tier+'.glb');
       for(const batch of model.batches){
         for(const name of ['position','normal','uv'])for(const value of batch.geometry.getAttribute(name).array)assert.ok(Number.isFinite(value),map+' invalid '+name);

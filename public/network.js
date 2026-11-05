@@ -1,5 +1,5 @@
 export class RoomConnection {
-  constructor(handlers){this.handlers=handlers;this.socket=null;this.generation=0;this.retry=0;this.timer=null;this.lastState='';this.selfId=null;this.room='zayed:1';this.sequence=0;this.pending=new Map();}
+  constructor(handlers){this.handlers=handlers;this.socket=null;this.generation=0;this.retry=0;this.timer=null;this.lastState='';this.selfId=null;this.room='mecca:1';this.sequence=0;this.pending=new Map();}
   connect(room=this.room){
     this.room=room;this.generation++;const generation=this.generation;
     clearTimeout(this.timer);if(this.socket){this.socket.onclose=null;this.socket.close();}this.socket=null;this.selfId=null;this.lastState='';this.pending.clear();

@@ -34,3 +34,7 @@
 ## User-supplied character references
 
 The seven face presets and fifteen clothing designs in public/reference-assets are derived from images supplied by the project owner for this application. They are not assigned a CC0 or third-party asset license. Mobile anatomical geometry, skeleton, IK, HUD and chat implementation are project code. Unseen sides and backs of the references are approximated.
+
+## Offline prayer-time calculations
+
+Adhan JS4.4.6 (Batoul Apps, MIT) and @photostructure/tz-lookup11.7.0 (CC0) are included under public/lib with their licenses and immutable source references. Quran.com is linked as an external reading service; no claim of endorsement or content ownership is made.

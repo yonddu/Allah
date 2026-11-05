@@ -1,0 +1,5 @@
+# Vendored calculation libraries
+
+- Adhan JS 4.4.6: https://github.com/batoulapps/adhan-js, source tree `e779a32a9bb9c7849c7612b0bdbdf8cbad60b080`. MIT license in adhan/LICENSE. TypeScript was converted to JavaScript with Node stripTypeScriptTypes(mode=transform), marking the ValueOf helper imports as type-only first. Calculation logic is unchanged. These checked-in browser modules require no external CDN or location API.
+- @photostructure/tz-lookup 11.7.0: https://github.com/photostructure/tz-lookup. tz.js blob `6fedfc7ae0442130abcac9c7bad32044ae488588`, with an ESM default export appended. CC0 license in TZ-LOOKUP-LICENSE. Lookup is approximate, especially near timezone boundaries; the UI displays and allows overriding the IANA timezone. Browser Intl applies timezone/DST rules.
+- Prayer start calculations differ by local authority and convention. The UI offers regional method selection, Shafi/Hanafi Asr, explicit Isha minute adjustment (including Umm al-Qura Ramadan +30 min), and local-mosque timetable guidance. High latitude results use the library's recommended night rule and AqrabBalad polar resolution, explicitly labelled.

@@ -1,3 +1,4 @@
+import {parseRoom} from './core.js';
 import {ko,en} from './locale-base.js';
 export const LANGUAGES=[
  {code:'en',name:'English'},{code:'ar',name:'العربية',dir:'rtl'},{code:'ur',name:'اردو',dir:'rtl'},
@@ -122,7 +123,7 @@ export async function initI18n(){
   const codes=LANGUAGES.map(l=>l.code),query=new URLSearchParams(location.search).get('lang');
   await setLanguage(chooseInitialLanguage(query,saved),false);
   let savedRoom,onboarded;try{savedRoom=localStorage.getItem('noor-room');onboarded=localStorage.getItem('noor-onboarded');}catch{}
-  if(onboarded!=='1'||!/^(zayed|blue|nabawi):[1-3]$/.test(savedRoom||''))document.getElementById('mapDialog').showModal();
+  if(onboarded!=='1'||!parseRoom(savedRoom))document.getElementById('mapDialog').showModal();
   observer=new MutationObserver(changes=>{
     for(const change of changes){
       if(change.type==='characterData')translateNode(change.target);

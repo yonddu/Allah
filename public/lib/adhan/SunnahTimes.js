@@ -1,0 +1,17 @@
+import { dateByAddingDays, dateByAddingSeconds, isValidDate, roundedMinute } from './DateUtils.js';
+import PrayerTimes from './PrayerTimes.js';
+export default class SunnahTimes {
+    middleOfTheNight;
+    lastThirdOfTheNight;
+    constructor(prayerTimes){
+        const date = prayerTimes.date;
+        const nextDay = dateByAddingDays(date, 1);
+        const nextDayPrayerTimes = new PrayerTimes(prayerTimes.coordinates, nextDay, prayerTimes.calculationParameters);
+        const nightDuration = (nextDayPrayerTimes.fajr.getTime() - prayerTimes.maghrib.getTime()) / 1000.0;
+        this.middleOfTheNight = roundedMinute(dateByAddingSeconds(prayerTimes.maghrib, nightDuration / 2), prayerTimes.calculationParameters.rounding);
+        this.lastThirdOfTheNight = roundedMinute(dateByAddingSeconds(prayerTimes.maghrib, nightDuration * (2 / 3)), prayerTimes.calculationParameters.rounding);
+    }
+    get isValid() {
+        return isValidDate(this.middleOfTheNight) && isValidDate(this.lastThirdOfTheNight);
+    }
+}

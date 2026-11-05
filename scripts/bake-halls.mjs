@@ -75,9 +75,25 @@ export async function bakeHalls(){
       shade.addColorStop(0,'rgba(12,18,12,.48)');shade.addColorStop(1,'rgba(12,18,12,0)');g.fillStyle=shade;g.fillRect(px-r,py-r,2*r,2*r);
     }
   });
-  custom('environment',512,256,(g,w,h)=>{
-    const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#aebcb8');sky.addColorStop(.45,'#f7efdb');sky.addColorStop(.55,'#dfcfa8');sky.addColorStop(1,'#4b5548');g.fillStyle=sky;g.fillRect(0,0,w,h);
-    for(let n=0;n<8;n++){const glow=g.createRadialGradient(35+n*67,110,1,35+n*67,110,38);glow.addColorStop(0,'#fff6d8');glow.addColorStop(1,'#d0c9af00');g.fillStyle=glow;g.fillRect(n*67,60,80,100);}
+  custom('kaaba-cloth',1024,1024,(g,w,h)=>{
+    g.fillStyle='#151a18';g.fillRect(0,0,w,h);g.strokeStyle='#252c27';g.lineWidth=1.5;
+    for(let y=0;y<h;y+=128)for(let x=0;x<w;x+=128){g.beginPath();g.ellipse(x+64,y+64,37,52,0,0,Math.PI*2);g.stroke();g.strokeRect(x+30,y+30,68,68);}
+    g.strokeStyle='#32372d';g.lineWidth=.5;for(let x=0;x<w;x+=6){g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke();}
+  });
+  custom('kaaba-band',1024,256,(g,w,h)=>{
+    g.fillStyle='#b79c53';g.fillRect(0,0,w,h);g.strokeStyle='#514b29';g.lineWidth=3;
+    for(let y=12;y<h;y+=h-25)g.strokeRect(0,y,w,3);
+    for(let x=0;x<w;x+=128){for(const r of [27,45,61]){g.beginPath();g.ellipse(x+64,h/2,r,r*.68,0,0,Math.PI*2);g.stroke();}g.strokeRect(x+25,42,78,172);}
+  });
+  custom('city',512,512,(g,w,h)=>{
+    g.fillStyle='#b9b5a5';g.fillRect(0,0,w,h);for(let y=12;y<h;y+=30)for(let x=12;x<w;x+=35){g.fillStyle=(x+y)%3?'#647378':'#949d95';g.fillRect(x,y,19,18);}
+  });
+  custom('grass',512,512,(g,w,h)=>{
+    g.fillStyle='#4b7446';g.fillRect(0,0,w,h);for(let n=0;n<12000;n++){const x=(n*137)%w,y=(n*311)%h;g.fillStyle=n%2?'#658857':'#395b37';g.fillRect(x,y,1,3);}
+  });
+  custom('environment',1024,512,(g,w,h)=>{
+    const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#699ec6');sky.addColorStop(.43,'#b9d9e6');sky.addColorStop(.50,'#e1e5d9');sky.addColorStop(.54,'#dbd8bf');sky.addColorStop(1,'#9b9b87');g.fillStyle=sky;g.fillRect(0,0,w,h);
+    for(let n=0;n<8;n++){const x=60+n*143,y=130+(n%3)*14,cloud=g.createRadialGradient(x,y,1,x,y,70);cloud.addColorStop(0,'#ffffff65');cloud.addColorStop(1,'#ffffff00');g.fillStyle=cloud;g.fillRect(x-70,y-70,140,140);}
   });
   const files=[],models={};
   for(const [name,c]of Object.entries(canvases)){
@@ -88,7 +104,7 @@ export async function bakeHalls(){
     }
   }
   if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;
-  for(const map of ['zayed','blue','nabawi'])for(const tier of ['low','high']){
+  for(const map of ['mecca','taj'])for(const tier of ['low','high']){
     const model=buildArchitecture(map,tier),path='halls/'+map+'-'+tier+'.glb',stats=await writeGlb('public/assets/'+path,model,tier);
     model.batches.forEach(p=>p.geometry.dispose());models[map+'-'+tier]=stats;files.push(path);
     if(stats.drawCalls>16||stats.triangles>(tier==='low'?85000:250000)||stats.bytes>(tier==='low'?3500000:9000000))throw new Error('Architecture exceeds budget: '+map+' '+tier+' '+JSON.stringify(stats));

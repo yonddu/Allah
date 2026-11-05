@@ -23,7 +23,7 @@ export function initQibla(toast){
       $('distanceValue').textContent=Math.round(result.distance).toLocaleString('ko-KR')+' km · 카바까지';
       $('qiblaStatus').textContent=bearing===null?'카바 바로 근처이거나 방향이 정해지지 않는 지점입니다. 현장 안내를 따라주세요.':heading===null?'북쪽 기준 방향입니다. 지원 휴대폰에서 나침반을 켜면 회전에 따라 움직입니다.':'휴대폰 방향을 반영하고 있습니다. 기기를 평평하게 놓아주세요.';
       if(accuracy>500)$('qiblaStatus').textContent+=' 위치 오차가 큽니다. 열린 장소에서 다시 확인해주세요.';
-      paint();
+      paint();window.dispatchEvent(new CustomEvent('noor:location',{detail:{lat,lon,label,accuracy}}));
     }catch(e){toast(e.message);}
   }
   $('qiblaExpandButton').addEventListener('click',()=>{
@@ -32,7 +32,7 @@ export function initQibla(toast){
     $('qiblaExpandButton').textContent=open?'⌃':'⌄';$('qiblaCard').classList.toggle('expanded',open);
   });
   $('locationButton').addEventListener('click',()=>{
-    if(!navigator.geolocation){toast('이 브라우저에서는 위치를 사용할 수 없습니다. 도시나 좌표를 선택해주세요.');return;}
+    if(!navigator.geolocation){const message='이 브라우저에서는 위치를 사용할 수 없습니다. 도시나 좌표를 선택해주세요.';toast(message);window.dispatchEvent(new CustomEvent('noor:location-error',{detail:{message}}));return;}
     if(watch!==null)navigator.geolocation.clearWatch(watch);
     $('locationButton').disabled=true;$('qiblaStatus').textContent='현재 위치를 확인하고 있습니다…';
     watch=navigator.geolocation.watchPosition(p=>{
@@ -40,6 +40,7 @@ export function initQibla(toast){
     },e=>{
       $('locationButton').disabled=false;
       $('qiblaStatus').textContent=e.code===1?'위치 권한이 거부되었습니다. 도시·좌표를 직접 선택할 수 있습니다.':'위치를 확인하지 못했습니다. 도시·좌표를 직접 선택해주세요.';
+      window.dispatchEvent(new CustomEvent('noor:location-error',{detail:{message:$('qiblaStatus').textContent}}));
       if(watch!==null){navigator.geolocation.clearWatch(watch);watch=null;}
     },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
   });
@@ -90,4 +91,5 @@ export function initQibla(toast){
   });
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&listener)stopSensors();});
   window.addEventListener('pagehide',()=>{if(watch!==null)navigator.geolocation.clearWatch(watch);stopSensors();});
+  return {useLocation:()=>{$('locationButton').click();},setLocation:(lat,lon,label)=>{if(watch!==null){navigator.geolocation.clearWatch(watch);watch=null;}if(!coordinatesValid(lat,lon)){toast('위도 -90~90, 경도 -180~180 범위의 좌표를 입력해주세요.');return;}$('locationButton').disabled=false;update(lat,lon,label);}};
 }

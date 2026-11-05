@@ -2,16 +2,16 @@ import * as THREE from 'three';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './utils/BufferGeometryUtils.js';
 import {QUALITY_BUDGETS,chooseQuality,pixelRatioFor,nextResolutionScale} from './performance.js';
-import {COLORS,PILLARS,constrainedMove,MAPS,fenceAllows,joystickVector} from './core.js';
+import {COLORS,constrainedMove,MAPS,fenceAllows,joystickVector,prayerYaw} from './core.js';
 import {makeHumanAvatar} from './avatars.js';
 import {setAnisotropy,weaveTexture,metalTexture,rugTexture,robeTexture} from './textures.js';
 const GOLD=0xc4a36a;
 export class Sanctuary {
-  constructor(container,profile,onError,mapId='zayed'){
-    this.mapId=mapId;this.theme=MAPS[mapId]||MAPS.zayed;
+  constructor(container,profile,onError,mapId='mecca'){
+    this.mapId=mapId;this.theme=MAPS[mapId]||MAPS.mecca;
     this.container=container;this.profile=profile;this.remote=new Map();this.keys=new Set();this.direction=new Set();this.moving=false;this.joystickAxis={x:0,y:0};
-    this.position={x:0,z:7};this.yaw=Math.PI;this.praying=false;this.pose='standing';this.fencePreview=false;
-    this.cameraAngle=.42;this.cameraHeight=2.9;this.cameraDistance=5.6;this.last=performance.now();
+    this.position={...this.theme.spawn};this.yaw=Math.PI;this.praying=false;this.pose='standing';this.fencePreview=false;
+    this.cameraAngle=this.theme.cameraAngle;this.cameraHeight=2.9;this.cameraDistance=5.6;this.last=performance.now();
     this.device={mobile:matchMedia('(max-width:900px)').matches||matchMedia('(pointer:coarse)').matches,memory:navigator.deviceMemory||8,cores:navigator.hardwareConcurrency||8};
     this.qualityMode='auto';this.qualityTier=chooseQuality('auto',this.device);this.resolutionScale=1;this.renderedAt=0;this.performanceWindow=performance.now();this.performanceFrames=0;
     this.loader=new GLTFLoader();this.hallGeneration=0;this.hallReady=false;
@@ -21,12 +21,12 @@ export class Sanctuary {
     this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;this.renderer.domElement.setAttribute('aria-hidden','true');
     container.appendChild(this.renderer.domElement);
     this.renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();onError('그래픽 메모리가 부족하거나 연결이 끊어졌습니다. 화면 품질을 낮춘 뒤 다시 열어주세요.');});
-    this.scene=new THREE.Scene();this.scene.fog=new THREE.FogExp2(0x7a887c,.010);
-    this.camera=new THREE.PerspectiveCamera(56,1,.1,90);
+    this.scene=new THREE.Scene();this.scene.fog=new THREE.FogExp2(0xc5dce1,.0027);
+    this.camera=new THREE.PerspectiveCamera(56,1,.1,360);
     setAnisotropy(this.renderer.capabilities.getMaxAnisotropy());
     // A small, pre-authored reflection map avoids rendering a temporary 3D room at startup.
     this.environmentReady=new THREE.TextureLoader().loadAsync('/assets/textures/low/environment.png').then(texture=>{
-      texture.mapping=THREE.EquirectangularReflectionMapping;texture.colorSpace=THREE.SRGBColorSpace;this.scene.environment=texture;this.environment=texture;
+      texture.mapping=THREE.EquirectangularReflectionMapping;texture.colorSpace=THREE.SRGBColorSpace;this.scene.environment=texture;this.scene.background=texture;this.environment=texture;
     }).catch(()=>{});
     this.materials={
       stone:new THREE.MeshStandardMaterial({color:this.theme.stone,roughness:.38,metalness:.06}),
@@ -96,7 +96,7 @@ export class Sanctuary {
     const ctx=labelCanvas.getContext('2d');ctx.fillStyle='rgba(15,42,31,.82)';ctx.beginPath();ctx.roundRect(16,13,480,70,28);ctx.fill();
     ctx.fillStyle='#f2e7c7';ctx.font='500 30px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(profile.name,256,48,440);
     const labelTexture=new THREE.CanvasTexture(labelCanvas);labelTexture.colorSpace=THREE.SRGBColorSpace;
-    const label=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture,depthTest:false,transparent:true}));label.position.y=2.02;label.scale.set(1.3,.244,1);root.add(label);
+    const label=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture,depthTest:false,transparent:true}));label.position.y=1.96;label.scale.set(.78,.146,1);root.add(label);
     const avatar={root,hips,torso,arms,legs,head,rug,fringe,profile,materials,labelTexture,label,simple,human,pose:'standing',praying:false};
     avatar.protection=this.makeFence();avatar.protection.visible=false;root.add(avatar.protection);
     avatar.target=new THREE.Vector3();
@@ -163,13 +163,13 @@ export class Sanctuary {
     el.addEventListener('pointerdown',e=>{el.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});drag={x:e.clientX,y:e.clientY};});
     el.addEventListener('pointermove',e=>{
       if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-      if(pointers.size===2){const [a,b]=[...pointers.values()],dist=Math.hypot(a.x-b.x,a.y-b.y);if(pinch)this.cameraDistance=THREE.MathUtils.clamp(this.cameraDistance+(pinch-dist)*.03,4,20);pinch=dist;drag=null;return;}
+      if(pointers.size===2){const [a,b]=[...pointers.values()],dist=Math.hypot(a.x-b.x,a.y-b.y);if(pinch)this.cameraDistance=THREE.MathUtils.clamp(this.cameraDistance+(pinch-dist)*.03,3,40);pinch=dist;drag=null;return;}
       if(drag){this.cameraAngle-=(e.clientX-drag.x)*.006;this.cameraHeight=THREE.MathUtils.clamp(this.cameraHeight+(e.clientY-drag.y)*.022,2.5,12);}
       drag={x:e.clientX,y:e.clientY};
     });
     const up=e=>{pointers.delete(e.pointerId);drag=null;pinch=0;};
     el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
-    el.addEventListener('wheel',e=>{e.preventDefault();this.cameraDistance=THREE.MathUtils.clamp(this.cameraDistance+e.deltaY*.008,4,20);},{passive:false});
+    el.addEventListener('wheel',e=>{e.preventDefault();this.cameraDistance=THREE.MathUtils.clamp(this.cameraDistance+e.deltaY*.008,3,40);},{passive:false});
   }
   quality(value){
     const previousAsset=QUALITY_BUDGETS[this.qualityTier].asset;
@@ -212,12 +212,12 @@ export class Sanctuary {
       this.portraitMode=false;
       const l=Math.hypot(x,z);x/=l;z/=l;
       const dx=x*Math.cos(this.cameraAngle)+z*Math.sin(this.cameraAngle),dz=-x*Math.sin(this.cameraAngle)+z*Math.cos(this.cameraAngle);
-      const next=constrainedMove(this.position,{x:this.position.x+dx*4*dt*strength,z:this.position.z+dz*4*dt*strength},dt);
-      const allowed=[...this.remote.values()].every(a=>!a.protected||fenceAllows(this.position,next,{x:a.target.x,z:a.target.z,accountId:a.accountId},this.accountId,(this.friendIds||[]).includes(a.accountId)?[this.accountId]:[]));
+      const next=constrainedMove(this.position,{x:this.position.x+dx*4*dt*strength,z:this.position.z+dz*4*dt*strength},dt,this.mapId);
+      const allowed=[...this.remote.values()].every(a=>!a.protected||fenceAllows(this.position,next,{x:a.target.x,z:a.target.z,yaw:a.targetYaw,accountId:a.accountId},this.accountId,(this.friendIds||[]).includes(a.accountId)?[this.accountId]:[]));
       if(allowed)this.position=next;
       this.yaw=Math.atan2(-dx,-dz);
     }
-    if(this.praying)this.yaw=0;
+    if(this.praying)this.yaw=prayerYaw(this.mapId,this.position);
     this.local.root.position.set(this.position.x,0,this.position.z);
     this.local.root.rotation.y=this.yaw;
     this.applyPose(this.local,this.pose,this.praying,time,this.moving,dt);
@@ -234,8 +234,8 @@ export class Sanctuary {
       // Preserve an occupied fence boundary while hiding this visitor's appearance.
       if(this.blockedIds?.has(a.accountId)){a.hips.visible=a.simple.visible=a.label.visible=a.rug.visible=a.fringe.visible=false;}
     }
-    this.fence.visible=(this.fencePreview||this.protected)&&this.praying;this.fence.position.set(this.position.x,0,this.position.z);
-    const mobile=innerWidth<=900,target=this.cameraTarget.set(this.position.x,this.portraitMode?.98:1.1,this.position.z);
+    this.fence.visible=(this.fencePreview||this.protected)&&this.praying;this.fence.position.set(this.position.x,0,this.position.z);this.fence.rotation.y=this.yaw;
+    const target=this.cameraTarget.set(this.position.x,this.portraitMode?.98:1.1,this.position.z);
     const cam=this.desiredCamera.set(target.x+Math.sin(this.cameraAngle)*this.cameraDistance,this.cameraHeight,target.z+Math.cos(this.cameraAngle)*this.cameraDistance);
     this.camera.position.lerp(cam,1-Math.exp(-dt*4));this.camera.lookAt(target);
 

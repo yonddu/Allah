@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {prayerYaw} from '../public/core.js';
 import worker,{PrayerRoom} from '../worker.js';
 function setup(){
   const sockets=[],access={};
@@ -17,7 +18,7 @@ test('The room rejects teleporting and ignores forged paid protection',async()=>
   const {room,socket}=setup(),ws=socket('one','u1');
   await room.webSocketMessage(ws,JSON.stringify({type:'move',x:999,z:0,yaw:1}));assert.ok(ws.deserializeAttachment().x<=1.05);
   await room.webSocketMessage(ws,JSON.stringify({type:'protect',premium:true}));assert.equal(ws.deserializeAttachment().protected,undefined);
-  await room.webSocketMessage(ws,JSON.stringify({type:'prayer',active:true,pose:'prostrating',premium:true}));const state=ws.deserializeAttachment();assert.equal(state.protected,false);assert.equal(state.yaw,0);
+  await room.webSocketMessage(ws,JSON.stringify({type:'prayer',active:true,pose:'prostrating',premium:true}));const state=ws.deserializeAttachment();assert.equal(state.protected,false);assert.equal(state.yaw,prayerYaw('mecca',state));
   await room.webSocketMessage(ws,JSON.stringify({type:'move',x:2,z:0}));assert.equal(ws.deserializeAttachment().x,state.x);
 });
 test('Chat filtering is enforced for premium viewers on the server',async()=>{

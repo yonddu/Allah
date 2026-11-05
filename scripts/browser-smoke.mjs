@@ -51,6 +51,17 @@ try{
   const marker=await page.locator('#kaabaMarker').evaluate(el=>({left:parseFloat(el.style.left),top:parseFloat(el.style.top)}));
   assert.ok(marker.left<50&&marker.top<50);
   await page.locator('#qiblaExpandButton').click();
+  assert.equal(await page.locator('#quranLink').getAttribute('href'),'https://quran.com/');
+  await page.locator('#prayerTimesButton').click();
+  await page.locator('#prayerCity').selectOption('0');
+  assert.equal(await page.locator('#prayerRows .prayer-time-row').count(),5);
+  assert.ok((await page.locator('#prayerCountdown').textContent()).includes('다음 기도'));
+  await page.locator('.prayer-options summary').click();await page.locator('#prayerMadhab').selectOption('Hanafi');
+  await page.locator('#prayerCity').selectOption('17');
+  assert.ok((await page.locator('#prayerLocation').textContent()).includes('America/New_York'));
+  assert.equal(await page.locator('#prayerRows time').count(),5);
+  await page.screenshot({path:'artifacts/prayer-times.png'});
+  await page.locator('#prayerTimesDialog [data-close]').click();
   const before=await page.evaluate(()=>window.__noorScene.diagnostics().position);
   const stick=await page.locator('#joystick').boundingBox(),cx=stick.x+stick.width/2,cy=stick.y+stick.height/2;
   await page.mouse.move(cx,cy);await page.mouse.down();await page.mouse.move(cx+24,cy);await delay(400);await page.mouse.up();await delay(200);
@@ -76,7 +87,7 @@ try{
     await peer.goto('http://127.0.0.1:8787/api/health');
     await peer.evaluate(async name=>{
       const r=await fetch('/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});window.chatIdentity=await r.json();
-      window.chatReceived=[];await new Promise((resolve,reject)=>{window.chatSocket=new WebSocket('ws://127.0.0.1:8787/api/room?room=zayed:1');window.chatSocket.onmessage=e=>{const m=JSON.parse(e.data);window.chatReceived.push(m);if(m.type==='welcome')resolve();};window.chatSocket.onerror=reject;});
+      window.chatReceived=[];await new Promise((resolve,reject)=>{window.chatSocket=new WebSocket('ws://127.0.0.1:8787/api/room?room=mecca:1');window.chatSocket.onmessage=e=>{const m=JSON.parse(e.data);window.chatReceived.push(m);if(m.type==='welcome')resolve();};window.chatSocket.onerror=reject;});
     },name);
   }
   const guest=peerContexts[0].pages()[0],other=peerContexts[1].pages()[0],guestId=await guest.evaluate(()=>window.chatIdentity.id);
@@ -113,8 +124,8 @@ try{
   const crowd=await page.evaluate(()=>window.__noorScene.diagnostics());
   assert.equal(crowd.remoteVisitors,31);assert.ok(crowd.drawCalls>=100,'Crowd must be visible in the camera: '+JSON.stringify(crowd));assert.ok(crowd.drawCalls<260,JSON.stringify(crowd));assert.ok(crowd.triangles<150000,JSON.stringify(crowd));
   await page.screenshot({path:'artifacts/mobile-32-visitors.png'});
-  const maps=[{map:'zayed',...crowd}];
-  for(const map of ['blue','nabawi']){
+  const maps=[{map:'mecca',...crowd}];
+  for(const map of ['taj']){
     await page.locator('#mapButton').click();
     await page.locator('.map-card[data-map="'+map+'"]').click();
     await page.locator('#enterRoomButton').click();

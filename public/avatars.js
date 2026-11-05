@@ -80,7 +80,7 @@ function build(profile,low){
  // Caps, headscarves and a modest shoulder drape belong to the outfit, not a removable toggle.
  if(look.cover==='hijab'||look.cover==='ghutra'){
   const hijab=look.cover==='hijab',rx=hijab?.116:.13,ry=hijab?.155:.17;
-  ellipsoid(cloth,[0,1.68,.006],[rx,ry,.111],clothUV,bone(I.head),p=>!(p[2]<-.038&&Math.abs(p[0])<.086&&p[1]>1.565&&p[1]<1.78),low?16:28);
+  ellipsoid(cloth,[0,1.68,.006],[rx,ry,.111],clothUV,bone(I.head),p=>!(p[2]<-.038&&Math.abs(p[0])<.086&&p[1]>1.565&&p[1]<(hijab?1.715:1.78)),low?16:28);
   sweep(cloth,[[1.585,.075,.076],[1.49,.115,.10],[1.34,hijab?.19:.16,.13],[1.22,hijab?.225:.18,.145]],clothUV,p=>p[1]>1.51?[[I.head,1]]:body(p),low?12:24);
  }else if(look.cover!=='hood'){
   const songkok=look.cover==='songkok',pakol=look.cover==='pakol';

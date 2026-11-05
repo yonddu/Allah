@@ -9,7 +9,6 @@ export const DEFAULT_PROFILE = Object.freeze({
   name:'방문자', gender:'male', skin:0, face:'oval', beard:'none', outfit:'thobe',
   cover:'kufi', color:0, rug:0, pattern:'mihrab',character:'face01',wardrobe:'look01'
 });
-export const PILLARS = [-8,8].flatMap(x=>[-9,0,9].map(z=>({x,z,r:0.92})));
 export const PRAYER_POSES = ['standing','bowing','prostrating','sitting'];
 export const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
 const option = (v,allowed,fallback)=>allowed.includes(v)?v:fallback;
@@ -35,7 +34,7 @@ export function coordinatesValid(lat,lon) {
   return typeof lat==='number'&&typeof lon==='number'&&Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180;
 }
 export function qibla(lat,lon) {
-  if(!coordinatesValid(lat,lon))throw new RangeError('유효한 위도·경도를 입력하세요.');
+  if(!coordinatesValid(lat,lon))throw new RangeError('위도 -90~90, 경도 -180~180 범위의 좌표를 입력해주세요.');
   const p1=rad(lat),p2=rad(KAABA.lat),dl=rad(KAABA.lon-lon);
   const a=Math.sin((p2-p1)/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
   const distance=6371*2*Math.atan2(Math.sqrt(clamp(a,0,1)),Math.sqrt(1-clamp(a,0,1)));
@@ -47,18 +46,19 @@ export function qibla(lat,lon) {
 export function relativeBearing(bearing,heading) {
   return ((bearing-heading+540)%360)-180;
 }
-export function legalPosition(x,z) {
-  return Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x)<=12&&Math.abs(z)<=14&&PILLARS.every(p=>Math.hypot(x-p.x,z-p.z)>p.r);
+export function legalPosition(x,z,mapId='mecca') {
+  const map=MAPS[mapId]||MAPS.mecca;
+  return Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x)<=map.bounds.x&&Math.abs(z)<=map.bounds.z&&map.obstacles.every(o=>o.kind==='circle'?Math.hypot(x-o.x,z-o.z)>o.r+.45:!(x>o.x1-.45&&x<o.x2+.45&&z>o.z1-.45&&z<o.z2+.45));
 }
-export function constrainedMove(current,desired,seconds) {
+export function constrainedMove(current,desired,seconds,mapId='mecca') {
   if(!desired||!Number.isFinite(desired.x)||!Number.isFinite(desired.z)) return {x:current.x,z:current.z};
   const dx=desired.x-current.x,dz=desired.z-current.z;
   const distance=Math.hypot(dx,dz),max=4.2*clamp(seconds,0,0.25);
   if(distance===0||max===0)return {x:current.x,z:current.z};
   const scale=Math.min(1,max/distance),x=current.x+dx*scale,z=current.z+dz*scale;
-  if(legalPosition(x,z))return {x,z};
-  if(legalPosition(x,current.z))return {x,z:current.z};
-  if(legalPosition(current.x,z))return {x:current.x,z};
+  if(legalPosition(x,z,mapId))return {x,z};
+  if(legalPosition(x,current.z,mapId))return {x,z:current.z};
+  if(legalPosition(current.x,z,mapId))return {x:current.x,z};
   return {x:current.x,z:current.z};
 }
 export function publicPlayer(p) {
@@ -67,9 +67,9 @@ export function publicPlayer(p) {
 
 export function fenceAllows(from,to,host,actorId,friends=[]) {
   if(actorId===host.accountId||friends.includes(actorId))return true;
-  const center={x:host.x,z:host.z-.35},rx=1.85,rz=2.35;
-  const ax=(from.x-center.x)/rx,az=(from.z-center.z)/rz;
-  const bx=(to.x-center.x)/rx,bz=(to.z-center.z)/rz;
+  const yaw=Number.isFinite(host.yaw)?host.yaw:0,c=Math.cos(yaw),s=Math.sin(yaw),center={x:host.x-.35*s,z:host.z-.35*c},rx=1.85,rz=2.35;
+  const ax=((from.x-center.x)*c-(from.z-center.z)*s)/rx,az=((from.x-center.x)*s+(from.z-center.z)*c)/rz;
+  const bx=((to.x-center.x)*c-(to.z-center.z)*s)/rx,bz=((to.x-center.x)*s+(to.z-center.z)*c)/rz;
   const old=ax*ax+az*az,next=bx*bx+bz*bz;
   if(old<1)return next>old; // A revoked guest can always walk outward.
   const dx=bx-ax,dz=bz-az,len=dx*dx+dz*dz;
@@ -84,13 +84,16 @@ export function validatePost(raw) {
 }
 
 export const MAPS = Object.freeze({
-  zayed:{name:'셰이크 자이드 모스크',city:'아부다비 · UAE',short:'SHEIKH ZAYED',description:'아이보리 대리석과 샴페인 골드, 꽃무늬 장식',stone:0xf4eee1,green:0xc8bda5,fog:0x78877a,carpet:false},
-  blue:{name:'술탄 아흐메트 모스크',city:'이스탄불 · 튀르키예',short:'THE BLUE MOSQUE',description:'푸른 이즈니크 타일, 붉은 카펫과 고요한 돔',stone:0xdfd4c0,green:0x315d78,fog:0x314e65,carpet:true},
-  nabawi:{name:'예언자 모스크',city:'메디나 · 사우디아라비아',short:'AL-MASJID AN-NABAWI',description:'초록빛 카펫과 밝은 기둥이 이어지는 기도 공간',stone:0xece4d6,green:0x456e58,fog:0x526e56,carpet:true}
+ mecca:{name:'메카 · 카바 광장',city:'메카 · 사우디아라비아',short:'MAKKAH',description:'카바 · 대리석 광장',stone:0xf0eee5,green:0x32544b,bounds:{x:74,z:84},cameraAngle:.34,spawn:{x:14,z:22},obstacles:[{kind:'box',x1:-6.5,x2:6.5,z1:-25,z2:-11},...[-72,72].flatMap(x=>[-82,82].map(z=>({kind:'circle',x,z,r:2.8})))]},
+ taj:{name:'타지마할 광장',city:'아그라 · 인도',short:'TAJ MAHAL',description:'돔 · 정원 · 반사 연못',stone:0xf3f0e6,green:0x3e744b,bounds:{x:74,z:84},cameraAngle:.13,spawn:{x:10,z:24},obstacles:[{kind:'box',x1:-38,x2:38,z1:-77,z2:-26},{kind:'box',x1:-6.2,x2:6.2,z1:-6.2,z2:66.2},...[-1,1].map(side=>({kind:'box',x1:side<0?-80:58,x2:side<0?-58:80,z1:-78,z2:-28})),...[-13,13,-46,46].flatMap(x=>Array.from({length:8},(_,i)=>({kind:'circle',x,z:i*10,r:.35})))]}
 });
 export function parseRoom(value){
-  const match=typeof value==='string'?value.match(/^(zayed|blue|nabawi):([1-3])$/):null;
-  return match?{map:match[1],server:Number(match[2]),key:value}:null;
+ const match=typeof value==='string'?value.match(/^(mecca|taj|zayed|blue|nabawi):([1-3])$/):null;
+ if(!match)return null;const map=({zayed:'mecca',nabawi:'mecca',blue:'taj'})[match[1]]||match[1],server=Number(match[2]);return {map,server,key:map+':'+server};
+}
+export function prayerYaw(mapId,position){
+ if(mapId==='mecca')return Math.atan2(position.x,position.z+18);
+ return -(qibla(27.1751,78.0421).bearing||0)*Math.PI/180;
 }
 
 export function joystickVector(dx,dy,radius,deadzone=.12){
