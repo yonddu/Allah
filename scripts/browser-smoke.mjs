@@ -75,6 +75,10 @@ try{
   await page.waitForFunction(()=>document.documentElement.dir==='rtl');
   await page.locator('#closeLanguage').click();
   const rtlCard=await page.locator('#qiblaCard').boundingBox();assert.ok(rtlCard.x<35);
+  await page.locator('#settingsButton').click();
+  await page.locator('#qualitySelect').selectOption('high');
+  await page.waitForFunction(()=>window.__noorScene.hallReady&&window.__noorScene.loadedAsset==='high',null,{timeout:30000});
+  assert.equal(await page.evaluate(()=>window.__noorScene.renderer.shadowMap.autoUpdate),true);
   await writeFile('artifacts/browser-report.json',JSON.stringify({note:'Desktop Chromium with software WebGL; these are rendering budgets, not real-phone FPS measurements.',maps,errors},null,2));
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({browser:'passed',maps:maps.map(m=>({map:m.map,drawCalls:m.drawCalls,triangles:m.triangles})),crowdDrawCalls:crowd.drawCalls}));

@@ -231,7 +231,7 @@ export class Sanctuary {
   quality(value){
     const previousAsset=QUALITY_BUDGETS[this.qualityTier].asset;
     this.qualityMode=value;this.qualityTier=chooseQuality(value,this.device);this.resolutionScale=1;this.visitorDetailLimit=QUALITY_BUDGETS[this.qualityTier].detailedVisitors;
-    this.renderer.shadowMap.enabled=QUALITY_BUDGETS[this.qualityTier].shadows;this.renderer.shadowMap.autoUpdate=false;this.renderer.shadowMap.needsUpdate=true;
+    this.renderer.shadowMap.enabled=QUALITY_BUDGETS[this.qualityTier].shadows;this.renderer.shadowMap.autoUpdate=this.renderer.shadowMap.enabled;this.renderer.shadowMap.needsUpdate=true;
     this.resize();
     if(this.hallGeneration>0&&previousAsset!==QUALITY_BUDGETS[this.qualityTier].asset)this.ready=this.loadHall(this.mapId).catch(console.error);
   }
