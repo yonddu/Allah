@@ -120,3 +120,7 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 @media(max-width:600px){.utilitybar,html[dir=rtl] .utilitybar{display:grid;grid-template-columns:repeat(3,36px);gap:3px;top:47px}.utilitybar button,.utilitybar a{width:36px;height:34px;min-height:34px;padding:0;display:grid;place-items:center}.utilitybar .utility-label{display:none}.utilitybar .utility-icon{display:block;font-size:21px;line-height:1;color:var(--gold)}#friendBadge{position:absolute;right:1px;top:1px;font-size:8px;color:var(--gold)}.map-art.mecca:before{inset:20px 20px 10px}.map-art.taj:before{inset:36px 14px 0}.map-art.taj:after{top:10px}}
 
 .map-choices{grid-template-columns:repeat(2,1fr)}@media(max-width:480px){.map-choices{grid-template-columns:1fr}}
+
+/* Player names remain native-resolution HTML even when 3D resolution is reduced. */
+.scene-labels{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.avatar-name{max-width:150px;padding:3px 9px;border:1px solid #d6b57b66;border-radius:20px;background:#102c26e8;color:#fff8e8;font:600 12px/18px Manrope,"Noto Sans KR",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;box-shadow:0 2px 5px #0003;unicode-bidi:isolate;pointer-events:none}

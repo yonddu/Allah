@@ -14,6 +14,7 @@ try{
   if(!healthy)throw new Error('Local Worker did not start.\n'+log);
   browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
+  await context.addInitScript(()=>{Object.defineProperty(navigator,'deviceMemory',{get:()=>4,configurable:true});Object.defineProperty(navigator,'hardwareConcurrency',{get:()=>4,configurable:true});});
   page=await context.newPage();const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   await page.route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:8787')?route.continue():route.abort());
@@ -73,7 +74,11 @@ try{
   await page.locator('#prayerButton').click();
   for(let n=0;n<4;n++){await delay(500);await page.screenshot({path:'artifacts/prayer-pose-'+n+'.png'});await page.locator('#poseButton').click();}
   await page.locator('#prayerButton').click();
-  await page.evaluate(()=>{const s=window.__noorScene;s.portraitMode=false;s.cameraAngle=.42;s.cameraHeight=2.9;s.cameraDistance=5.6;});
+  await page.evaluate(()=>{const s=window.__noorScene;s.portraitMode=false;s.cameraAngle=.42;s.cameraHeight=1.6;s.cameraDistance=5.2;});
+  await delay(700);
+  const framing=await page.evaluate(()=>{const s=window.__noorScene,p=s.camera.position.clone().set(s.position.x,.94,s.position.z).project(s.camera),label=s.local.label.element;return {x:p.x,y:p.y,labelText:label.textContent,labelFont:parseFloat(getComputedStyle(label).fontSize),htmlLabel:label.tagName,pixelRatio:s.renderer.getPixelRatio()};});
+  assert.ok(Math.abs(framing.x)<.08&&Math.abs(framing.y)<.08,'Avatar body must be in the screen centre: '+JSON.stringify(framing));assert.equal(framing.htmlLabel,'DIV');assert.ok(framing.labelFont>=12);assert.equal(framing.labelText,'QA visitor');assert.ok(framing.pixelRatio>=.85);
+  await page.screenshot({path:'artifacts/centred-readable-mobile.png'});
   // The play HUD leaves the middle open; chat and movement occupy separate bottom corners.
   assert.equal(await page.locator('#customPanel').isVisible(),false);
   const dock=await page.locator('#chatDock').boundingBox(),action=await page.locator('.actionbar').boundingBox();
@@ -122,7 +127,7 @@ try{
   });
   await delay(1000);
   const crowd=await page.evaluate(()=>window.__noorScene.diagnostics());
-  assert.equal(crowd.remoteVisitors,31);assert.ok(crowd.drawCalls>=100,'Crowd must be visible in the camera: '+JSON.stringify(crowd));assert.ok(crowd.drawCalls<260,JSON.stringify(crowd));assert.ok(crowd.triangles<150000,JSON.stringify(crowd));
+  assert.equal(crowd.remoteVisitors,31);assert.ok(crowd.drawCalls>=60,'Crowd body meshes must be rendered: '+JSON.stringify(crowd));assert.ok(crowd.drawCalls<180,JSON.stringify(crowd));assert.ok(crowd.triangles<150000,JSON.stringify(crowd));
   await page.screenshot({path:'artifacts/mobile-32-visitors.png'});
   const maps=[{map:'mecca',...crowd}];
   for(const map of ['taj']){
@@ -131,6 +136,7 @@ try{
     await page.locator('#enterRoomButton').click();
     await page.waitForFunction(id=>window.__noorScene.hallReady&&window.__noorScene.mapId===id,map,{timeout:30000});
     await delay(1100);
+    const centre=await page.evaluate(()=>{const s=window.__noorScene;return s.camera.position.clone().set(s.position.x,.94,s.position.z).project(s.camera).y;});assert.ok(Math.abs(centre)<.08,'Avatar must stay centred after changing maps');
     if(map==='taj'){const dome=await page.evaluate(()=>{const s=window.__noorScene,p=s.camera.position.clone().set(0,45,-52).project(s.camera);return {x:p.x,y:p.y};});assert.ok(Math.abs(dome.x)<1&&Math.abs(dome.y)<1,'Taj dome must be in the play view: '+JSON.stringify(dome));}
     maps.push({map,...await page.evaluate(()=>window.__noorScene.diagnostics())});
     await page.screenshot({path:'artifacts/mobile-'+map+'.png'});

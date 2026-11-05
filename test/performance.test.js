@@ -14,5 +14,12 @@ test('High-DPI and large displays stay within their render-pixel budget',()=>{
     assert.ok(w*h*ratio*ratio<=budget.maxPixels+1);
     assert.ok(ratio<=dpr);assert.ok(ratio<=budget.dpr);
   }
-  assert.equal(nextResolutionScale(1,30),1);assert.equal(nextResolutionScale(1,60),.85);assert.equal(nextResolutionScale(.65,100),.65);
+  assert.equal(nextResolutionScale(1,30),1);assert.equal(nextResolutionScale(1,60),.85);assert.equal(nextResolutionScale(.85,100),.85);
+});
+
+
+test('Capable phones keep the balanced profile and automatic resolution retains readable edges',()=>{
+ assert.equal(chooseQuality('auto',{mobile:true,memory:8,cores:8}),'balanced');
+ let scale=1;for(let n=0;n<20;n++)scale=nextResolutionScale(scale,80);assert.equal(scale,.85);
+ assert.equal(QUALITY_BUDGETS.balanced.fps,30);
 });

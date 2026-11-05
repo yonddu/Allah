@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import {CSS2DRenderer,CSS2DObject} from './vendor/CSS2DRenderer.js';
+import {PLAY_CAMERA,avatarFocus} from './camera.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './utils/BufferGeometryUtils.js';
 import {QUALITY_BUDGETS,chooseQuality,pixelRatioFor,nextResolutionScale} from './performance.js';
@@ -11,17 +13,18 @@ export class Sanctuary {
     this.mapId=mapId;this.theme=MAPS[mapId]||MAPS.mecca;
     this.container=container;this.profile=profile;this.remote=new Map();this.keys=new Set();this.direction=new Set();this.moving=false;this.joystickAxis={x:0,y:0};
     this.position={...this.theme.spawn};this.yaw=Math.PI;this.praying=false;this.pose='standing';this.fencePreview=false;
-    this.cameraAngle=this.theme.cameraAngle;this.cameraHeight=2.9;this.cameraDistance=5.6;this.last=performance.now();
+    this.cameraAngle=this.theme.cameraAngle;this.cameraHeight=PLAY_CAMERA.height;this.cameraDistance=PLAY_CAMERA.distance;this.last=performance.now();
     this.device={mobile:matchMedia('(max-width:900px)').matches||matchMedia('(pointer:coarse)').matches,memory:navigator.deviceMemory||8,cores:navigator.hardwareConcurrency||8};
     this.qualityMode='auto';this.qualityTier=chooseQuality('auto',this.device);this.resolutionScale=1;this.renderedAt=0;this.performanceWindow=performance.now();this.performanceFrames=0;
     this.loader=new GLTFLoader();this.hallGeneration=0;this.hallReady=false;
     this.cameraTarget=new THREE.Vector3();this.desiredCamera=new THREE.Vector3();
-    this.renderer=new THREE.WebGLRenderer({antialias:this.qualityTier!=='low',alpha:false,powerPreference:this.qualityTier==='low'?'low-power':'high-performance'});
+    this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:this.qualityTier==='low'?'low-power':'high-performance'});
     this.renderer.setClearColor(0x24483e);this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.95;
     this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;this.renderer.domElement.setAttribute('aria-hidden','true');
     container.appendChild(this.renderer.domElement);
+    this.labels=new CSS2DRenderer();this.labels.domElement.className='scene-labels';container.appendChild(this.labels.domElement);
     this.renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();onError('그래픽 메모리가 부족하거나 연결이 끊어졌습니다. 화면 품질을 낮춘 뒤 다시 열어주세요.');});
-    this.scene=new THREE.Scene();this.scene.fog=new THREE.FogExp2(0xc5dce1,.0027);
+    this.scene=new THREE.Scene();this.scene.environmentIntensity=.5;this.scene.fog=new THREE.FogExp2(0xc5dce1,.0027);
     this.camera=new THREE.PerspectiveCamera(80,1,.1,360);
     setAnisotropy(this.renderer.capabilities.getMaxAnisotropy());
     // A small, pre-authored reflection map avoids rendering a temporary 3D room at startup.
@@ -39,6 +42,9 @@ export class Sanctuary {
     this.setupLights();this.ready=this.loadHall(mapId);
     this.local=this.makeAvatar(profile,true);this.scene.add(this.local.root);
     this.fence=this.makeFence();this.scene.add(this.fence);this.fence.visible=false;
+    const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=64;const sc=shadowCanvas.getContext('2d'),shade=sc.createRadialGradient(32,32,2,32,32,32);shade.addColorStop(0,'rgba(0,0,0,.24)');shade.addColorStop(1,'rgba(0,0,0,0)');sc.fillStyle=shade;sc.fillRect(0,0,64,64);
+    const shadowTexture=new THREE.CanvasTexture(shadowCanvas),shadowMaterial=new THREE.MeshBasicMaterial({map:shadowTexture,transparent:true,depthWrite:false});
+    this.avatarShadows=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),shadowMaterial,32);this.avatarShadows.instanceMatrix.setUsage(THREE.DynamicDrawUsage);this.avatarShadows.frustumCulled=false;this.avatarShadows.count=0;this.scene.add(this.avatarShadows);this.shadowTransform=new THREE.Object3D();
     this.raycaster=new THREE.Raycaster();
     this.bindControls();
     this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(container);
@@ -55,12 +61,12 @@ export class Sanctuary {
   }
   box(mat,parent,pos,scale){return this.mesh(this.geometry.box,mat,parent,pos,scale);}
   setupLights(){
-    this.scene.add(new THREE.HemisphereLight(0xe1ece5,0x77705c,1.6));
-    this.scene.add(new THREE.AmbientLight(0xb0a68b,.32));
-    this.sun=new THREE.DirectionalLight(0xffe6be,2.0);this.sun.position.set(-12,18,-10);this.sun.castShadow=true;
+    this.scene.add(new THREE.HemisphereLight(0xe1ece5,0x77705c,.85));
+    this.scene.add(new THREE.AmbientLight(0xb0a68b,.08));
+    this.sun=new THREE.DirectionalLight(0xffe6be,2.2);this.sun.position.set(-12,18,-10);this.sun.castShadow=true;
     this.sun.shadow.mapSize.set(1024,1024);Object.assign(this.sun.shadow.camera,{left:-18,right:18,top:18,bottom:-18,near:1,far:60});
     this.sun.shadow.bias=-.00025;this.sun.shadow.normalBias=.025;this.scene.add(this.sun);
-    const fill=new THREE.DirectionalLight(0xd4e7df,.65);fill.position.set(8,6,10);this.scene.add(fill);
+    const fill=new THREE.DirectionalLight(0xd4e7df,.35);fill.position.set(8,6,10);this.scene.add(fill);
   }
   disposeHall(hall){
     if(!hall)return;this.scene.remove(hall);const geometries=new Set(),materials=new Set(),textures=new Set();
@@ -92,12 +98,9 @@ export class Sanctuary {
     // Fringes are instanced so woven detail does not increase draw calls.
     const fringe=new THREE.InstancedMesh(new THREE.BoxGeometry(.012,.008,.11),this.materials.stone,66),d=new THREE.Object3D();
     for(let n=0;n<66;n++){d.position.set(-.64+(n%33)*.04,.06,n<33?.95:-1.86);d.updateMatrix();fringe.setMatrixAt(n,d.matrix);}root.add(fringe);
-    const labelCanvas=document.createElement('canvas');labelCanvas.width=512;labelCanvas.height=96;
-    const ctx=labelCanvas.getContext('2d');ctx.fillStyle='rgba(15,42,31,.82)';ctx.beginPath();ctx.roundRect(16,13,480,70,28);ctx.fill();
-    ctx.fillStyle='#f2e7c7';ctx.font='500 30px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(profile.name,256,48,440);
-    const labelTexture=new THREE.CanvasTexture(labelCanvas);labelTexture.colorSpace=THREE.SRGBColorSpace;
-    const label=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture,depthTest:false,transparent:true}));label.position.y=1.96;label.scale.set(.78,.146,1);root.add(label);
-    const avatar={root,hips,torso,arms,legs,head,rug,fringe,profile,materials,labelTexture,label,simple,human,pose:'standing',praying:false};
+    const nameElement=document.createElement('div');nameElement.className='avatar-name';nameElement.textContent=profile.name;nameElement.dir='auto';nameElement.dataset.noI18n='';
+    const label=new CSS2DObject(nameElement);label.position.y=1.96;label.center.set(.5,1);root.add(label);
+    const avatar={root,hips,torso,arms,legs,head,rug,fringe,profile,materials,label,labelAnchor:new THREE.Vector3(),simple,human,pose:'standing',praying:false};
     avatar.protection=this.makeFence();avatar.protection.visible=false;root.add(avatar.protection);
     avatar.target=new THREE.Vector3();
     return avatar;
@@ -105,7 +108,7 @@ export class Sanctuary {
   disposeAvatar(a){
     this.scene.remove(a.root);
     a.root.traverse(m=>{if(m.isMesh&&m.geometry&&!m.geometry.userData.shared&&!Object.values(this.geometry).includes(m.geometry))m.geometry.dispose();});
-    a.materials.forEach(m=>m.dispose());a.label.material.dispose();a.labelTexture.dispose();a.human?.skeleton.dispose();
+    a.materials.forEach(m=>m.dispose());a.label.element.remove();a.human?.skeleton.dispose();
   }
   updateProfile(profile){const old=this.local;this.local=this.makeAvatar(profile,true);this.scene.add(this.local.root);this.disposeAvatar(old);this.profile=profile;}
   makeFence(){
@@ -130,6 +133,7 @@ export class Sanctuary {
   clearPlayers(){for(const id of [...this.remote.keys()])this.removePlayer(id);}
   applyPose(a,pose,praying,time,moving,dt){
     a.human.update(pose,praying,time,moving,dt);a.rug.visible=a.fringe.visible=praying;
+    a.human.bones[5].getWorldPosition(a.labelAnchor);a.root.worldToLocal(a.labelAnchor);a.label.position.copy(a.labelAnchor);a.label.position.y+=.23;
   }
 
   bindControls(){
@@ -164,7 +168,7 @@ export class Sanctuary {
     el.addEventListener('pointermove',e=>{
       if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(pointers.size===2){const [a,b]=[...pointers.values()],dist=Math.hypot(a.x-b.x,a.y-b.y);if(pinch)this.cameraDistance=THREE.MathUtils.clamp(this.cameraDistance+(pinch-dist)*.03,3,40);pinch=dist;drag=null;return;}
-      if(drag){this.cameraAngle-=(e.clientX-drag.x)*.006;this.cameraHeight=THREE.MathUtils.clamp(this.cameraHeight+(e.clientY-drag.y)*.022,2.5,12);}
+      if(drag){this.cameraAngle-=(e.clientX-drag.x)*.006;this.cameraHeight=THREE.MathUtils.clamp(this.cameraHeight+(e.clientY-drag.y)*.022,1.1,12);}
       drag={x:e.clientX,y:e.clientY};
     });
     const up=e=>{pointers.delete(e.pointerId);drag=null;pinch=0;};
@@ -182,7 +186,7 @@ export class Sanctuary {
   resize(){
     const w=this.container.clientWidth,h=this.container.clientHeight,budget=QUALITY_BUDGETS[this.qualityTier];
     this.renderer.setPixelRatio(pixelRatioFor(w,h,devicePixelRatio,budget,this.resolutionScale));this.renderer.setSize(w,h,false);
-    this.camera.aspect=w/Math.max(h,1);this.camera.updateProjectionMatrix();
+    this.labels.setSize(w,h);this.camera.aspect=w/Math.max(h,1);this.camera.updateProjectionMatrix();
   }
   diagnostics(){
     return {tier:this.qualityTier,asset:this.hall?.name||null,ready:this.hallReady,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,textures:this.renderer.info.memory.textures,pixelRatio:this.renderer.getPixelRatio(),position:{...this.position},joystick:{...this.joystickAxis},remoteVisitors:this.remote.size};
@@ -224,7 +228,7 @@ export class Sanctuary {
     const nearby=[...this.remote.values()].filter(a=>!this.blockedIds?.has(a.accountId)).sort((a,b)=>a.target.distanceToSquared(this.local.root.position)-b.target.distanceToSquared(this.local.root.position)).slice(0,this.visitorDetailLimit||budget.detailedVisitors);
     for(const a of this.remote.values()){
       const detailed=nearby.includes(a)&&a.target.distanceToSquared(this.local.root.position)<144;
-      a.human.setDetail(detailed);a.hips.visible=true;a.simple.visible=false;a.label.visible=a.target.distanceToSquared(this.local.root.position)<225;
+      a.human.setDetail(detailed);a.hips.visible=true;a.simple.visible=false;a.label.visible=(detailed||this.friendIds?.includes(a.accountId))&&a.target.distanceToSquared(this.local.root.position)<144;
       const moving=a.root.position.distanceTo(a.target)>.03;
       a.root.position.lerp(a.target,1-Math.exp(-dt*12));
       const delta=Math.atan2(Math.sin(a.targetYaw-a.root.rotation.y),Math.cos(a.targetYaw-a.root.rotation.y));a.root.rotation.y+=delta*(1-Math.exp(-dt*12));
@@ -234,12 +238,14 @@ export class Sanctuary {
       // Preserve an occupied fence boundary while hiding this visitor's appearance.
       if(this.blockedIds?.has(a.accountId)){a.hips.visible=a.simple.visible=a.label.visible=a.rug.visible=a.fringe.visible=false;}
     }
+    let shadowIndex=0;for(const a of [this.local,...this.remote.values()]){if(shadowIndex>=32)break;if(a!==this.local&&this.blockedIds?.has(a.accountId))continue;this.shadowTransform.position.set(a.root.position.x,.035,a.root.position.z);this.shadowTransform.rotation.set(0,a.root.rotation.y,0);this.shadowTransform.scale.set(.85,1,.55);this.shadowTransform.updateMatrix();this.avatarShadows.setMatrixAt(shadowIndex++,this.shadowTransform.matrix);}this.avatarShadows.count=shadowIndex;this.avatarShadows.instanceMatrix.needsUpdate=true;
     this.fence.visible=(this.fencePreview||this.protected)&&this.praying;this.fence.position.set(this.position.x,0,this.position.z);this.fence.rotation.y=this.yaw;
-    const target=this.cameraTarget.set(this.position.x,this.portraitMode?.98:2.1,this.position.z);
+    const focus=this.portraitMode?{height:.94,forward:0}:avatarFocus(this.pose,this.praying);
+    const target=this.cameraTarget.set(this.position.x-Math.sin(this.yaw)*focus.forward,focus.height,this.position.z-Math.cos(this.yaw)*focus.forward);
     const cam=this.desiredCamera.set(target.x+Math.sin(this.cameraAngle)*this.cameraDistance,this.cameraHeight,target.z+Math.cos(this.cameraAngle)*this.cameraDistance);
     this.camera.position.lerp(cam,1-Math.exp(-dt*4));this.camera.lookAt(target);
 
     const fov=this.portraitMode?56:80;if(this.camera.fov!==fov){this.camera.fov=fov;this.camera.updateProjectionMatrix();}
-    this.renderer.render(this.scene,this.camera);
+    this.renderer.render(this.scene,this.camera);this.labels.render(this.scene,this.camera);
   }
 }

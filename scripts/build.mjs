@@ -8,6 +8,7 @@ await mkdir('public/vendor',{recursive:true});
 for(const name of ['three.module.js','three.core.js'])await copyFile(join(threeBuild,name),join('public/vendor',name));
 await copyFile(join(threeBuild,'../LICENSE'),'public/vendor/THREE-LICENSE.txt');
 await copyFile(join(threeBuild,'../examples/jsm/loaders/GLTFLoader.js'),'public/vendor/GLTFLoader.js');
+await copyFile(join(threeBuild,'../examples/jsm/renderers/CSS2DRenderer.js'),'public/vendor/CSS2DRenderer.js');
 await mkdir('public/utils',{recursive:true});
 await copyFile(join(threeBuild,'../examples/jsm/utils/BufferGeometryUtils.js'),'public/utils/BufferGeometryUtils.js');
 const info=JSON.parse(await readFile(join(threeBuild,'../package.json'),'utf8'));

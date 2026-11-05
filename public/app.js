@@ -1,4 +1,5 @@
 import {t} from './i18n.js';
+import {PLAY_CAMERA} from './camera.js';
 import {DEFAULT_PROFILE,COLORS,sanitizeProfile,MAPS,parseRoom} from './core.js';
 import {Sanctuary} from './scene.js';
 import {initPrayerTimes} from './prayer-times.js';
@@ -66,7 +67,7 @@ function selectTab(button){for(const b of tabs){const selected=b===button;b.setA
 for(const b of tabs){b.addEventListener('click',()=>selectTab(b));b.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();const n=(tabs.indexOf(b)+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;selectTab(tabs[n]);tabs[n].focus();}});}
 $('customizeButton').addEventListener('click',()=>$('customPanel').classList.toggle('open'));
 $('closeCustomize').addEventListener('click',()=>$('customPanel').classList.remove('open'));
-$('portraitButton').addEventListener('click',()=>{scene.portraitMode=true;scene.cameraAngle=scene.yaw+Math.PI;scene.cameraDistance=3.1;scene.cameraHeight=2.9;toast('화면을 드래그해 다른 각도도 볼 수 있습니다.');});
+$('portraitButton').addEventListener('click',()=>{scene.portraitMode=true;scene.cameraAngle=scene.yaw+Math.PI;scene.cameraDistance=3;scene.cameraHeight=1.5;toast('화면을 드래그해 다른 각도도 볼 수 있습니다.');});
 $('helpButton').addEventListener('click',()=>openDialog('helpDialog'));
 $('settingsButton').addEventListener('click',()=>openDialog('settingsDialog'));
 $('qualitySelect').addEventListener('change',e=>{scene.quality(e.target.value);try{localStorage.setItem('noor-quality',e.target.value);}catch{}});
@@ -154,7 +155,7 @@ $('enterRoomButton').addEventListener('click',async()=>{
   $('enterRoomButton').disabled=true;
   try{
     sound.enable().then(()=>$('soundButton').querySelector('.utility-label').textContent='소리 설정').catch(()=>{});
-    if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={...MAPS[chosenMap].spawn};scene.cameraDistance=5.6;scene.cameraHeight=2.9;scene.cameraAngle=MAPS[chosenMap].cameraAngle;
+    if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={...MAPS[chosenMap].spawn};scene.cameraDistance=PLAY_CAMERA.distance;scene.cameraHeight=PLAY_CAMERA.height;scene.cameraAngle=MAPS[chosenMap].cameraAngle;
     mapLabels();try{localStorage.setItem('noor-room',currentRoom);}catch{}
     await community.start();network.retry=0;network.connect(currentRoom);window.dispatchEvent(new Event('noor:entered'));$('mapDialog').close();
   }catch(e){$('roomStatus').textContent=e.message;}
@@ -175,6 +176,6 @@ setInterval(()=>{if(!document.hidden&&community.session)community.refresh().catc
 
 window.addEventListener('languagechange',()=>{for(const [list,id,label]of [[CHARACTERS,'characterChoices','얼굴'],[WARDROBE,'wardrobeChoices','기도 복장']])for(const item of list){const b=document.querySelector('#'+id+' [data-value="'+item.id+'"]');b.lastElementChild.textContent=t(label)+' '+(item.index+1);b.setAttribute('aria-label',t(label)+' '+(item.index+1));}mapLabels();if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;changedProfile();}});
 
-window.addEventListener('noor:entry-character',e=>{scene.portraitMode=e.detail.active;scene.cameraAngle=e.detail.active?scene.yaw+Math.PI:MAPS[scene.mapId].cameraAngle;scene.cameraDistance=e.detail.active?2.65:5.6;scene.cameraHeight=e.detail.active?1.6:2.9;});
+window.addEventListener('noor:entry-character',e=>{scene.portraitMode=e.detail.active;scene.cameraAngle=e.detail.active?scene.yaw+Math.PI:MAPS[scene.mapId].cameraAngle;scene.cameraDistance=e.detail.active?2.65:PLAY_CAMERA.distance;scene.cameraHeight=e.detail.active?1.6:PLAY_CAMERA.height;});
 if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;scene.updateProfile(profile);}
 window.dispatchEvent(new Event('noor:app-ready'));

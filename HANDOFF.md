@@ -1,3 +1,11 @@
+## Graphics/readability repair in progress · 2026-11-06
+
+User rejected the low-detail appearance and requested a centred avatar, readable labels and Blender-authored background models; the user will provide character models. CHARACTER_ASSET_SPEC.md sets a12k-triangle dressed-character target.
+
+Camera now follows the character body centre (standing focus .94m; default camera1.6m /5.2m distance), with pose-dependent focus and preserved portrait framing. Player labels use native-resolution CSS2D HTML, not textures rendered inside the reduced-resolution3D canvas. Nearby/friend labels are shown, blocked labels remain hidden. Device memory/cores select quality, so capable phones no longer get forced into low mode; balanced mode targets30fps. Adaptive resolution floors at85% rather than65%. MSAA, lower ambient fill, and a single instanced soft contact-shadow draw improve edges, contrast and grounding.
+
+scripts/blender-landmarks.py authors Kaaba and Taj main landmarks in Blender4 with folded cloth, bevels, detailed doors, real portal cavities, cornices, inlays and smooth domes, exporting embedded low/high GLBs. The dedicated author-assets workflow runs official Ubuntu Blender and uploads the files for validation/integration; final authoring and deployment results are recorded after completion. This authoring step is separate from ordinary Cloudflare builds.
+
 ## Completion record · 2026-11-06 (Asia/Seoul)
 
 - Final application commit: d2210ee91974f9176a93dd21ff334929dc195673.
@@ -86,4 +94,3 @@ scripts/browser-smoke.mjs는 로컬 Worker + Chromium에서 입장3단계/여성
 
 ## 최종 검증
 2026-11-06: Node검사19개통과. 로컬Chromium실행에서언어→캐릭터→입장,여성히잡강제,나침반왼쪽위/카바표시,조이스틱드래그/리셋,3개맵전환,RTL통과. 화면앞밀집한32명렌더는199draws/53,794tri기록. 이것은소프트웨어WebGL의렌더예산검사이며실제3~4GB폰의FPS측정이아님. 보급폰가로화면도coarse포인터및RAM4GB이하로저사양판별. 평균프레임지연시해상도뿐아니라상세원격캐릭터수도최소2명까지하향.
-
