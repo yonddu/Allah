@@ -1,3 +1,5 @@
+import {initI18n,t} from './i18n.js';
+await initI18n();
 import {DEFAULT_PROFILE,COLORS,sanitizeProfile,MAPS,parseRoom} from './core.js';
 import {Sanctuary} from './scene.js';
 import {initQibla} from './qibla.js';
@@ -110,7 +112,7 @@ let chosenMap=parseRoom(currentRoom).map,chosenServer=parseRoom(currentRoom).ser
 function mapLabels(){
   const room=parseRoom(currentRoom),map=MAPS[room.map];
   $('currentMapName').textContent=map.name+' · '+room.server;
-  $('mapCaption').textContent=map.short+' · '+map.city;
+  $('mapCaption').textContent=map.short+' · '+t(map.city);
 }
 function renderMaps(){
   $('mapChoices').replaceChildren();
@@ -153,3 +155,5 @@ if(!parseRoom(savedRoom)){renderMaps();openDialog('mapDialog');loadServers();}
 window.addEventListener('pagehide',()=>{network.generation++;clearTimeout(network.timer);network.socket?.close();});
 
 setInterval(()=>{if(!document.hidden&&community.session)community.refresh().catch(()=>{});},30000);
+
+window.addEventListener('languagechange',()=>{mapLabels();});

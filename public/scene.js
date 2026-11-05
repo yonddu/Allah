@@ -309,7 +309,7 @@ export class Sanctuary {
       this.applyPose(a,a.pose,a.praying,time,moving,dt);a.protection.visible=!!a.protected&&a.praying;
     }
     this.fence.visible=(this.fencePreview||this.protected)&&this.praying;this.fence.position.set(this.position.x,0,this.position.z);
-    const mobile=innerWidth<=900,target=new THREE.Vector3(this.position.x-(mobile?0:1.5),.9,this.position.z-1.5);
+    const mobile=innerWidth<=900,target=new THREE.Vector3(this.position.x-(mobile?0:(document.documentElement.dir==='rtl'?-1.5:1.5)),.9,this.position.z-1.5);
     const cam=new THREE.Vector3(target.x+Math.sin(this.cameraAngle)*this.cameraDistance,this.cameraHeight,target.z+Math.cos(this.cameraAngle)*this.cameraDistance);
     this.camera.position.lerp(cam,1-Math.exp(-dt*4));this.camera.lookAt(target);
     this.dust.rotation.y=time*.003;

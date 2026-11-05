@@ -32,3 +32,6 @@ Workers subdomain은 songyd1018. 실 배포 상태를 API에서 확인할 것.
 ## 검증
 `npm run check` / `npm test` / `npm run build` / `npx wrangler deploy --dry-run`.
 Node 내장 SQLite를 이용한 게시판·친구·기기 쿠키 테스트와 서버 필터·방향·펜스 충돌 테스트 포함.
+
+## 다국어 추가
+21개 언어, 언어당 293문구. public/i18n.js와 locales/*.json. 초기 브라우저 언어 또는 ?lang=ar 지정, 선택값 기기 저장. 4개 RTL 언어에서 패널·방향·카메라 구도를 반전. 사용자 글/이름은 data-no-i18n으로 보호. 번역문 전문 원어민 검수는 미완료. 공통 키/변수 일치 검증 포함.

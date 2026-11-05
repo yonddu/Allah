@@ -1,8 +1,9 @@
+import {t} from './i18n.js';
 export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
   const $=id=>document.getElementById(id);
   let session=null,category='suggestion',page=0,currentPost=null,requestVersion=0,startPromise=null;
   const open=id=>$(id).showModal();
-  const date=value=>new Intl.DateTimeFormat('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(value));
+  const date=value=>new Intl.DateTimeFormat(document.documentElement.lang||'en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(value));
   const element=(tag,className,text)=>Object.assign(document.createElement(tag),{className:className||'',textContent:text||''});
   async function api(path,method='GET',data){
     const response=await fetch(path,{method,credentials:'same-origin',headers:data?{'Content-Type':'application/json'}:{},body:data?JSON.stringify(data):undefined});
@@ -24,7 +25,7 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
       $('postList').replaceChildren();$('boardStatus').textContent='';
       if(!result.posts.length)$('postList').append(element('p','empty-list','아직 글이 없습니다. 첫 이야기를 남겨주세요.'));
       for(const post of result.posts){
-        const button=element('button','post-row');button.append(element('strong','',post.title),element('small','',post.author+' · '+date(post.created)+(post.mine?' · 내 글':'')));
+        const button=element('button','post-row');button.setAttribute('data-no-i18n','');button.append(element('strong','',post.title),element('small','',post.author+' · '+date(post.created)+(post.mine?' · '+t('내 글'):'')));
         button.addEventListener('click',()=>showPost(post.id).catch(e=>toast(e.message)));$('postList').append(button);
       }
       $('pageLabel').textContent=String(page+1);$('previousPageButton').disabled=page===0;$('nextPageButton').disabled=!result.hasMore;
@@ -56,7 +57,7 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
   handler('cancelDeleteButton','click',()=>{$('deleteConfirm').hidden=true;});
   handler('confirmDeleteButton','click',async()=>{if(!currentPost)return;$('confirmDeleteButton').disabled=true;try{await api('/api/posts/'+currentPost.id,'DELETE');$('postDialog').close();await loadPosts();toast('글을 삭제했습니다.');}finally{$('confirmDeleteButton').disabled=false;}});
   function friendRow(person,buttons=[]){
-    const row=element('div','friend-row'),label=element('div','',person.name);label.append(element('small','',person.code));row.append(label);
+    const row=element('div','friend-row'),label=element('div','',person.name);label.setAttribute('data-no-i18n','');label.append(element('small','',person.code));row.append(label);
     const actions=element('div');for(const [text,fn]of buttons){const b=element('button','small-secondary',text);b.addEventListener('click',()=>{b.disabled=true;Promise.resolve(fn()).catch(e=>toast(e.message)).finally(()=>b.disabled=false);});actions.append(b);}row.append(actions);return row;
   }
   function renderFriends(){
@@ -81,5 +82,6 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
     const row=element('div','chat-message'),title=element('strong','',message.name);title.append(element('small','',date(message.at)));row.append(title,element('p','',message.text));
     $('chatMessages').append(row);while($('chatMessages').children.length>80)$('chatMessages').firstElementChild.remove();$('chatMessages').scrollTop=$('chatMessages').scrollHeight;
   }
+  window.addEventListener('languagechange',()=>{if($('boardDialog').open)loadPosts();if($('friendsDialog').open)renderFriends();});
   return {start,chat,refresh:refreshFriends,get session(){return session;},updateName:async()=>{if(session)sessionUpdated(await api('/api/session','POST',{name:getName()}));}};
 }
