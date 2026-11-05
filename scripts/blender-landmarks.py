@@ -143,6 +143,11 @@ def box(name, p, size, mat, bevel=.025):
     obj.dimensions = (size[0], size[2], size[1])
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     obj.data.materials.append(mat)
+    # Blender4.0 requires Auto Smooth for harden_normals / weighted normals.
+    # Blender4.1+ removes this property, so keep the authoring portable.
+    if hasattr(obj.data, 'use_auto_smooth'):
+        obj.data.use_auto_smooth = True
+        obj.data.auto_smooth_angle = math.radians(60)
     if bevel > 0:
         mod = obj.modifiers.new('Real edge bevel', 'BEVEL')
         mod.width = min(bevel, min(size) * .22)

@@ -19,10 +19,13 @@ jobs:
       - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm run build
       - run: sudo apt-get update -qq
-      - run: sudo apt-get install -y --no-install-recommends blender
-      - run: blender --background --threads 2 --python scripts/blender-landmarks.py -- --output artifacts/blender-landmarks
+      - run: sudo apt-get install -y --no-install-recommends blender python3-numpy
+      - run: blender --background --threads 2 --python-exit-code 1 --python scripts/blender-landmarks.py -- --output artifacts/blender-landmarks
+        env:
+          PYTHONPATH: /usr/lib/python3/dist-packages
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          if-no-files-found: error
           name: blender-landmarks
           path: artifacts/blender-landmarks/
