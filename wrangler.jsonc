@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "allah",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-05",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*"
+    ]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ROOMS",
+        "class_name": "PrayerRoom"
+      },
+      {
+        "name": "COMMUNITY",
+        "class_name": "Community"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "PrayerRoom",
+        "Community"
+      ]
+    }
+  ],
+  "build": {
+    "command": "npm run build"
+  }
+}
