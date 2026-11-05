@@ -124,3 +124,8 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 /* Player names remain native-resolution HTML even when 3D resolution is reduced. */
 .scene-labels{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
 .avatar-name{max-width:150px;padding:3px 9px;border:1px solid #d6b57b66;border-radius:20px;background:#102c26e8;color:#fff8e8;font:600 12px/18px Manrope,"Noto Sans KR",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;box-shadow:0 2px 5px #0003;unicode-bidi:isolate;pointer-events:none}
+/* Compact panels retain readable text on a narrow phone. */
+.chat-dock{background:#102d27f5}.chat-dock .chat-mode{font-size:11px;color:#c4d0c7}
+.chat-toolbar button{font-size:12px}.chat-toolbar>button{font-size:20px}
+.chat-dock .chat-message{font-size:12px}.chat-author{font-size:12px}
+@media(max-width:600px){.room-pill{font-size:11px}.chat-dock .chat-mode{font-size:11px}.chat-toolbar button{font-size:12px}.chat-toolbar>button{font-size:19px}.chat-dock .chat-message{font-size:12px}.actionbar .action-secondary,html:not([lang=ko]) .action-secondary{font-size:11px}.actionbar .prayer-button,html:not([lang=ko]) .prayer-button{font-size:11px}}

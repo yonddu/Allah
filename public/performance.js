@@ -1,5 +1,5 @@
 export const QUALITY_BUDGETS=Object.freeze({
-  low:Object.freeze({asset:'low',dpr:1,maxPixels:550000,fps:30,shadows:false,detailedVisitors:4}),
+  low:Object.freeze({asset:'low',dpr:1.25,maxPixels:650000,fps:30,shadows:false,detailedVisitors:4}),
   balanced:Object.freeze({asset:'high',dpr:1.35,maxPixels:1400000,fps:30,shadows:false,detailedVisitors:5}),
   high:Object.freeze({asset:'high',dpr:1.75,maxPixels:2200000,fps:60,shadows:true,detailedVisitors:8})
 });
