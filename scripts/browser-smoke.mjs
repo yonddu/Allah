@@ -55,12 +55,12 @@ try{
   assert.deepEqual(after.joystick,{x:0,y:0});assert.equal(after.tier,'low');
   // Render 32 total avatars locally; no test messages are sent to a public room.
   await page.evaluate(async()=>{
-    const {sanitizeProfile}=await import('/core.js'),scene=window.__noorScene;
-    for(let n=0;n<31;n++)scene.syncPlayer({id:'benchmark-'+n,accountId:'qa-'+n,profile:sanitizeProfile({name:'Visitor '+n,color:n%6,skin:n%5,cover:n%2?'kufi':'hijab'}),x:(n%7-3)*1.8,z:Math.floor(n/7)*2.5,pose:n%3?'standing':'sitting',praying:n%3===0,yaw:0,protected:false});
+    const {sanitizeProfile}=await import('/core.js'),scene=window.__noorScene;scene.cameraAngle=0;const origin={...scene.position};
+    for(let n=0;n<31;n++)scene.syncPlayer({id:'benchmark-'+n,accountId:'qa-'+n,profile:sanitizeProfile({name:'Visitor '+n,color:n%6,skin:n%5,cover:n%2?'kufi':'hijab'}),x:origin.x+(n%7-3),z:origin.z-2-Math.floor(n/7)*1.5,pose:n%3?'standing':'sitting',praying:n%3===0,yaw:0,protected:false});
   });
   await delay(1000);
   const crowd=await page.evaluate(()=>window.__noorScene.diagnostics());
-  assert.equal(crowd.remoteVisitors,31);assert.ok(crowd.drawCalls<260,JSON.stringify(crowd));assert.ok(crowd.triangles<150000,JSON.stringify(crowd));
+  assert.equal(crowd.remoteVisitors,31);assert.ok(crowd.drawCalls>=100,'Crowd must be visible in the camera: '+JSON.stringify(crowd));assert.ok(crowd.drawCalls<260,JSON.stringify(crowd));assert.ok(crowd.triangles<150000,JSON.stringify(crowd));
   await page.screenshot({path:'artifacts/mobile-32-visitors.png'});
   const maps=[{map:'zayed',...crowd}];
   for(const map of ['blue','nabawi']){
