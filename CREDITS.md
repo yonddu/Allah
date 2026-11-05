@@ -30,3 +30,7 @@
 - @napi-rs/canvas 0.1.80: MIT, https://github.com/Brooooooklyn/canvas . 빌드 환경에서 텍스처 PNG 생성에만 사용하며 브라우저에는 포함하지 않습니다.
 - Playwright 1.56.1: Apache-2.0, https://github.com/microsoft/playwright . 로컬 CI 브라우저 검사 전용입니다.
 - 모스크 GLB·재질·꽃무늬·접촉 음영은 이 프로젝트의 절차적 생성물이며 실제 모스크의 스캔 자료가 아닙니다.
+
+## User-supplied character references
+
+The seven face presets and fifteen clothing designs in public/reference-assets are derived from images supplied by the project owner for this application. They are not assigned a CC0 or third-party asset license. Mobile anatomical geometry, skeleton, IK, HUD and chat implementation are project code. Unseen sides and backs of the references are approximated.

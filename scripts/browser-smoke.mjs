@@ -27,7 +27,11 @@ try{
   assert.equal(await page.locator('#entryCharacterHost #customPanel').count(),1);
   assert.equal(await page.locator('#entryAvatarPreview #scene').count(),1);
   await page.locator('[data-field="gender"] [data-value="female"]').click();
+  assert.equal(await page.locator('#characterChoices button:visible').count(),1);
   await page.locator('#tab-outfit').click();
+  assert.equal(await page.locator('#wardrobeChoices button:visible').count(),4);
+  await page.locator('#wardrobeChoices [data-value="look08"]').click();
+  await page.screenshot({path:'artifacts/female-character-setup.png'});
   assert.equal(await page.locator('[data-field="cover"] [data-value="none"]').isVisible(),false);
   assert.equal(await page.locator('[data-field="cover"] [data-value="hijab"]').getAttribute('aria-pressed'),'true');
   await page.locator('#displayName').fill('QA visitor');
@@ -53,6 +57,12 @@ try{
   const after=await page.evaluate(()=>window.__noorScene.diagnostics());
   assert.ok(Math.hypot(after.position.x-before.x,after.position.z-before.z)>.1);
   assert.deepEqual(after.joystick,{x:0,y:0});assert.equal(after.tier,'low');
+  await page.evaluate(()=>{const s=window.__noorScene;s.portraitMode=true;s.cameraAngle=s.yaw+Math.PI;s.cameraHeight=1.6;s.cameraDistance=3.2;});
+  await delay(800);await page.screenshot({path:'artifacts/avatar-front.png'});
+  await page.locator('#prayerButton').click();
+  for(let n=0;n<4;n++){await delay(500);await page.screenshot({path:'artifacts/prayer-pose-'+n+'.png'});await page.locator('#poseButton').click();}
+  await page.locator('#prayerButton').click();
+  await page.evaluate(()=>{const s=window.__noorScene;s.portraitMode=false;s.cameraAngle=.42;s.cameraHeight=2.9;s.cameraDistance=5.6;});
   // The play HUD leaves the middle open; chat and movement occupy separate bottom corners.
   assert.equal(await page.locator('#customPanel').isVisible(),false);
   const dock=await page.locator('#chatDock').boundingBox(),action=await page.locator('.actionbar').boundingBox();
@@ -96,7 +106,7 @@ try{
   await page.locator('#publicChatTab').click();
   // Render 32 total avatars locally; no test messages are sent to a public room.
   await page.evaluate(async()=>{
-    const {sanitizeProfile}=await import('/core.js'),scene=window.__noorScene;scene.cameraAngle=0;const origin={...scene.position};
+    const {sanitizeProfile}=await import('/core.js'),scene=window.__noorScene;scene.cameraAngle=0;scene.cameraDistance=11.6;scene.cameraHeight=4.1;scene.portraitMode=false;const origin={...scene.position};
     for(let n=0;n<31;n++)scene.syncPlayer({id:'benchmark-'+n,accountId:'qa-'+n,profile:sanitizeProfile({name:'Visitor '+n,color:n%6,skin:n%5,cover:n%2?'kufi':'hijab'}),x:origin.x+(n%7-3),z:origin.z-2-Math.floor(n/7)*1.5,pose:n%3?'standing':'sitting',praying:n%3===0,yaw:0,protected:false});
   });
   await delay(1000);

@@ -1,3 +1,4 @@
+import {avatarSelection} from './avatar-catalog.js';
 export const KAABA = Object.freeze({lat:21.422487, lon:39.826206});
 export const COLORS = Object.freeze({
   skin: ['#f1c9a7','#d9a078','#ad7351','#774c38','#473029'],
@@ -6,7 +7,7 @@ export const COLORS = Object.freeze({
 });
 export const DEFAULT_PROFILE = Object.freeze({
   name:'방문자', gender:'male', skin:0, face:'oval', beard:'none', outfit:'thobe',
-  cover:'kufi', color:0, rug:0, pattern:'mihrab'
+  cover:'kufi', color:0, rug:0, pattern:'mihrab',character:'face01',wardrobe:'look01'
 });
 export const PILLARS = [-8,8].flatMap(x=>[-9,0,9].map(z=>({x,z,r:0.92})));
 export const PRAYER_POSES = ['standing','bowing','prostrating','sitting'];
@@ -18,6 +19,7 @@ export function sanitizeProfile(raw={}) {
   const d=DEFAULT_PROFILE;
   const name=typeof raw.name==='string'?raw.name.normalize('NFKC').replace(/[\p{C}<>]/gu,'').trim().slice(0,20):d.name;
   return {
+    ...avatarSelection(raw),
     name:name||d.name, gender:option(raw.gender,['male','female'],d.gender), skin:index(raw.skin,COLORS.skin.length,d.skin),
     face:option(raw.face,['oval','round','square'],d.face),
     beard:option(raw.beard,['none','short','full'],d.beard),

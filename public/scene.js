@@ -3,6 +3,7 @@ import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './utils/BufferGeometryUtils.js';
 import {QUALITY_BUDGETS,chooseQuality,pixelRatioFor,nextResolutionScale} from './performance.js';
 import {COLORS,PILLARS,constrainedMove,MAPS,fenceAllows,joystickVector} from './core.js';
+import {makeHumanAvatar} from './avatars.js';
 import {setAnisotropy,weaveTexture,metalTexture,rugTexture,robeTexture} from './textures.js';
 const GOLD=0xc4a36a;
 export class Sanctuary {
@@ -10,7 +11,7 @@ export class Sanctuary {
     this.mapId=mapId;this.theme=MAPS[mapId]||MAPS.zayed;
     this.container=container;this.profile=profile;this.remote=new Map();this.keys=new Set();this.direction=new Set();this.moving=false;this.joystickAxis={x:0,y:0};
     this.position={x:0,z:7};this.yaw=Math.PI;this.praying=false;this.pose='standing';this.fencePreview=false;
-    this.cameraAngle=.42;this.cameraHeight=4.1;this.cameraDistance=11.6;this.last=performance.now();
+    this.cameraAngle=.42;this.cameraHeight=2.9;this.cameraDistance=5.6;this.last=performance.now();
     this.device={mobile:matchMedia('(max-width:900px)').matches||matchMedia('(pointer:coarse)').matches,memory:navigator.deviceMemory||8,cores:navigator.hardwareConcurrency||8};
     this.qualityMode='auto';this.qualityTier=chooseQuality('auto',this.device);this.resolutionScale=1;this.renderedAt=0;this.performanceWindow=performance.now();this.performanceFrames=0;
     this.loader=new GLTFLoader();this.hallGeneration=0;this.hallReady=false;
@@ -84,47 +85,7 @@ export class Sanctuary {
     this.ready=this.loadHall(mapId);return this.ready;
   }
   makeAvatar(profile,local=false){
-    const root=new THREE.Group(),hips=new THREE.Group(),torso=new THREE.Group();
-    root.add(hips);hips.position.y=.6;hips.add(torso);
-    const skin=new THREE.MeshStandardMaterial({color:COLORS.skin[profile.skin],roughness:.72});
-    const cloth=new THREE.MeshStandardMaterial({color:COLORS.robe[profile.color],map:robeTexture(),bumpMap:weaveTexture(),bumpScale:.012,roughness:.84});
-    const trim=this.materials.gold,dark=this.materials.dark;
-    const materials=[skin,cloth];
-    const width=profile.outfit==='abaya'?.39:profile.outfit==='tunic'?.30:.34;
-    const robe=this.mesh(new THREE.CylinderGeometry(width*.78,width,1.05,24),cloth,torso,[0,.20,0]);robe.castShadow=true;
-    this.mesh(this.geometry.cylinder,trim,torso,[0,-.3,0],[width*1.008,.028,width*1.008]);
-    this.box(trim,torso,[0,.47,-width*.8],[.023,.40,.018]);
-    const head=new THREE.Group();head.position.set(0,.98,0);torso.add(head);
-    const face=this.mesh(this.geometry.sphere,skin,head,[0,0,0],profile.face==='round'?[.235,.245,.22]:profile.face==='square'?[.245,.25,.195]:[.205,.28,.20]);
-    for(const x of [-.075,.075])this.mesh(this.geometry.sphere,dark,head,[x,.035,-.181],[.018,.023,.012]);
-    this.mesh(this.geometry.sphere,skin,head,[0,-.02,-.206],[.035,.05,.045]);
-    const mouthMat=new THREE.MeshStandardMaterial({color:0x986c56,roughness:.8});materials.push(mouthMat);
-    this.box(mouthMat,head,[0,-.11,-.185],[.065,.008,.012]);
-    if(profile.beard!=='none'){
-      const b=new THREE.MeshStandardMaterial({color:0x292722,roughness:1});materials.push(b);
-      this.mesh(this.geometry.sphere,b,head,[0,profile.beard==='full'?-.19:-.135,-.07],[.18,profile.beard==='full'?.19:.09,.15]);
-    }
-    if(profile.cover==='kufi'){
-      this.mesh(this.geometry.cylinder,cloth,head,[0,.24,0],[.215,.14,.215]);
-      this.mesh(this.geometry.cylinder,trim,head,[0,.19,0],[.217,.022,.217]);
-    }else if(profile.cover==='hijab'){
-      const h=new THREE.Mesh(new THREE.SphereGeometry(.275,20,14,Math.PI*1.5+.65,Math.PI*2-1.3,0,Math.PI*.80),cloth);
-      h.position.set(0,.035,.055);head.add(h);
-      this.mesh(new THREE.SphereGeometry(.273,16,8,0,Math.PI*2,0,.65),cloth,head,[0,.035,.055]);
-      this.mesh(new THREE.ConeGeometry(.37,.62,24,1,true),cloth,torso,[0,.68,.10]);
-    }
-    const arms=[];
-    for(const side of [-1,1]){
-      const arm=new THREE.Group();arm.position.set(side*(width+.035),.56,0);torso.add(arm);
-      const sleeve=this.mesh(this.geometry.cylinder,cloth,arm,[0,-.24,0],[.09,.5,.09]);sleeve.rotation.z=side*.08;
-      this.mesh(this.geometry.sphere,skin,arm,[side*.02,-.52,0],[.065,.095,.07]);arms.push(arm);
-    }
-    const legs=[];
-    for(const side of [-1,1]){
-      const leg=new THREE.Group();leg.position.set(side*.13,-.28,0);hips.add(leg);
-      this.mesh(this.geometry.cylinder,cloth,leg,[0,-.15,0],[.10,.34,.10]);
-      this.mesh(this.geometry.sphere,skin,leg,[0,-.27,-.07],[.1,.06,.17]);legs.push(leg);
-    }
+    const {root,hips,torso,arms,legs,head,materials,simple,human}=makeHumanAvatar(profile,this.qualityTier);
     const high=local&&this.qualityTier!=='low';
     const rugMat=new THREE.MeshStandardMaterial({map:rugTexture(profile.rug,profile.pattern,high),roughness:1,bumpMap:weaveTexture(),bumpScale:.013,side:THREE.DoubleSide});materials.push(rugMat);
     const rug=new THREE.Mesh(new THREE.PlaneGeometry(1.35,2.7),rugMat);rug.rotation.x=-Math.PI/2;rug.position.set(0,.055,-.45);rug.receiveShadow=true;root.add(rug);
@@ -135,29 +96,16 @@ export class Sanctuary {
     const ctx=labelCanvas.getContext('2d');ctx.fillStyle='rgba(15,42,31,.82)';ctx.beginPath();ctx.roundRect(16,13,480,70,28);ctx.fill();
     ctx.fillStyle='#f2e7c7';ctx.font='500 30px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(profile.name,256,48,440);
     const labelTexture=new THREE.CanvasTexture(labelCanvas);labelTexture.colorSpace=THREE.SRGBColorSpace;
-    const label=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture,depthTest:false,transparent:true}));label.position.y=2.05;label.scale.set(1.3,.244,1);root.add(label);
-    const avatar={root,hips,torso,arms,legs,head,rug,fringe,profile,materials,labelTexture,label,pose:'standing',praying:false};
-    const simple=new THREE.Group(),clothParts=[],skinParts=[];
-    const add=(list,g,x,y,z)=>{g.translate(x,y,z);list.push(g.index?g.toNonIndexed():g);if(g.index)g.dispose();};
-    add(clothParts,new THREE.CylinderGeometry(width*.8,width,1.05,10),0,.62,0);
-    for(const side of [-1,1]){
-      add(clothParts,new THREE.CylinderGeometry(.07,.09,.48,6),side*(width+.02),.86,0);
-      add(skinParts,new THREE.SphereGeometry(.07,6,4),side*(width+.02),.57,0);
-    }
-    if(profile.cover==='kufi')add(clothParts,new THREE.CylinderGeometry(.215,.215,.14,10),0,1.68,0);
-    if(profile.cover==='hijab'){add(clothParts,new THREE.SphereGeometry(.27,10,7,Math.PI*1.5+.65,Math.PI*2-1.3,0,Math.PI*.80),0,1.47,.05);add(clothParts,new THREE.ConeGeometry(.35,.60,10,1,true),0,1.17,.10);}
-    add(skinParts,new THREE.SphereGeometry(.21,10,7),0,1.44,0);
-    const simpleCloth=mergeGeometries(clothParts),simpleSkin=mergeGeometries(skinParts);
-    clothParts.forEach(g=>g.dispose());skinParts.forEach(g=>g.dispose());
-    simple.add(new THREE.Mesh(simpleCloth,cloth),new THREE.Mesh(simpleSkin,skin));simple.visible=false;root.add(simple);avatar.simple=simple;
+    const label=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture,depthTest:false,transparent:true}));label.position.y=2.02;label.scale.set(1.3,.244,1);root.add(label);
+    const avatar={root,hips,torso,arms,legs,head,rug,fringe,profile,materials,labelTexture,label,simple,human,pose:'standing',praying:false};
     avatar.protection=this.makeFence();avatar.protection.visible=false;root.add(avatar.protection);
     avatar.target=new THREE.Vector3();
     return avatar;
   }
   disposeAvatar(a){
     this.scene.remove(a.root);
-    a.root.traverse(m=>{if(m.isMesh&&m.geometry&&!Object.values(this.geometry).includes(m.geometry))m.geometry.dispose();});
-    a.materials.forEach(m=>m.dispose());a.label.material.dispose();a.labelTexture.dispose();
+    a.root.traverse(m=>{if(m.isMesh&&m.geometry&&!m.geometry.userData.shared&&!Object.values(this.geometry).includes(m.geometry))m.geometry.dispose();});
+    a.materials.forEach(m=>m.dispose());a.label.material.dispose();a.labelTexture.dispose();a.human?.skeleton.dispose();
   }
   updateProfile(profile){const old=this.local;this.local=this.makeAvatar(profile,true);this.scene.add(this.local.root);this.disposeAvatar(old);this.profile=profile;}
   makeFence(){
@@ -181,14 +129,9 @@ export class Sanctuary {
   removePlayer(id){const a=this.remote.get(id);if(a)this.disposeAvatar(a);this.remote.delete(id);}
   clearPlayers(){for(const id of [...this.remote.keys()])this.removePlayer(id);}
   applyPose(a,pose,praying,time,moving,dt){
-    const target=pose==='prostrating'?{hip:.29,torso:1.35,arm:2.6,knee:-1.1}:pose==='bowing'?{hip:.6,torso:1.05,arm:1.05,knee:0}:pose==='sitting'?{hip:.28,torso:0,arm:.75,knee:-1.35}:{hip:.6,torso:0,arm:praying?1.0:0,knee:0};
-    const s=1-Math.exp(-dt*9);
-    a.hips.position.y=THREE.MathUtils.lerp(a.hips.position.y,target.hip+(moving?Math.sin(time*11)*.025:0),s);
-    a.torso.rotation.x=THREE.MathUtils.lerp(a.torso.rotation.x,-target.torso,s);
-    a.arms.forEach((arm,i)=>arm.rotation.x=THREE.MathUtils.lerp(arm.rotation.x,target.arm+(moving?Math.sin(time*9+i*Math.PI)*.23:0),s));
-    a.legs.forEach((leg,i)=>leg.rotation.x=THREE.MathUtils.lerp(leg.rotation.x,target.knee+(moving?Math.sin(time*9+i*Math.PI)*.28:0),s));
-    a.rug.visible=a.fringe.visible=praying;
+    a.human.update(pose,praying,time,moving,dt);a.rug.visible=a.fringe.visible=praying;
   }
+
   bindControls(){
     window.addEventListener('keydown',e=>{
       if(e.target.closest('input,textarea,select,dialog')||document.querySelector('dialog[open]'))return;
@@ -231,6 +174,7 @@ export class Sanctuary {
   quality(value){
     const previousAsset=QUALITY_BUDGETS[this.qualityTier].asset;
     this.qualityMode=value;this.qualityTier=chooseQuality(value,this.device);this.resolutionScale=1;this.visitorDetailLimit=QUALITY_BUDGETS[this.qualityTier].detailedVisitors;
+    this.local?.human.setQuality(this.qualityTier);for(const a of this.remote.values())a.human.setQuality(this.qualityTier);
     this.renderer.shadowMap.enabled=QUALITY_BUDGETS[this.qualityTier].shadows;this.renderer.shadowMap.autoUpdate=this.renderer.shadowMap.enabled;this.renderer.shadowMap.needsUpdate=true;
     this.resize();
     if(this.hallGeneration>0&&previousAsset!==QUALITY_BUDGETS[this.qualityTier].asset)this.ready=this.loadHall(this.mapId).catch(console.error);
@@ -280,21 +224,18 @@ export class Sanctuary {
     const nearby=[...this.remote.values()].filter(a=>!this.blockedIds?.has(a.accountId)).sort((a,b)=>a.target.distanceToSquared(this.local.root.position)-b.target.distanceToSquared(this.local.root.position)).slice(0,this.visitorDetailLimit||budget.detailedVisitors);
     for(const a of this.remote.values()){
       const detailed=nearby.includes(a)&&a.target.distanceToSquared(this.local.root.position)<144;
-      a.hips.visible=detailed;a.simple.visible=!detailed;a.label.visible=a.target.distanceToSquared(this.local.root.position)<225;
+      a.human.setDetail(detailed);a.hips.visible=true;a.simple.visible=false;a.label.visible=a.target.distanceToSquared(this.local.root.position)<225;
       const moving=a.root.position.distanceTo(a.target)>.03;
       a.root.position.lerp(a.target,1-Math.exp(-dt*12));
       const delta=Math.atan2(Math.sin(a.targetYaw-a.root.rotation.y),Math.cos(a.targetYaw-a.root.rotation.y));a.root.rotation.y+=delta*(1-Math.exp(-dt*12));
-      if(detailed)this.applyPose(a,a.pose,a.praying,time,moving,dt);
-      else{
-        a.rug.visible=a.praying&&a.target.distanceToSquared(this.local.root.position)<225;a.fringe.visible=false;
-        a.simple.scale.y=a.pose==='standing'?1:.62;a.simple.position.y=a.pose==='standing'?0:.02;
-      }
+      this.applyPose(a,a.pose,a.praying,time,moving,dt);
+      a.rug.visible=a.praying&&a.target.distanceToSquared(this.local.root.position)<225;a.fringe.visible=a.praying&&detailed;
       a.protection.visible=!!a.protected&&a.praying;
       // Preserve an occupied fence boundary while hiding this visitor's appearance.
       if(this.blockedIds?.has(a.accountId)){a.hips.visible=a.simple.visible=a.label.visible=a.rug.visible=a.fringe.visible=false;}
     }
     this.fence.visible=(this.fencePreview||this.protected)&&this.praying;this.fence.position.set(this.position.x,0,this.position.z);
-    const mobile=innerWidth<=900,target=this.cameraTarget.set(this.position.x-(this.portraitMode||mobile?0:(document.documentElement.dir==='rtl'?-1.5:1.5)),this.portraitMode?1.0:1.25,this.position.z-(this.portraitMode?0:1.5));
+    const mobile=innerWidth<=900,target=this.cameraTarget.set(this.position.x,this.portraitMode?.98:1.1,this.position.z);
     const cam=this.desiredCamera.set(target.x+Math.sin(this.cameraAngle)*this.cameraDistance,this.cameraHeight,target.z+Math.cos(this.cameraAngle)*this.cameraDistance);
     this.camera.position.lerp(cam,1-Math.exp(-dt*4));this.camera.lookAt(target);
 

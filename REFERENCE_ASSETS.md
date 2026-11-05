@@ -1,3 +1,20 @@
+## Attached source images received (2026-11-05)
+
+The original image download blocker is resolved by the eight PNG attachments. Use the assets in public/reference-assets, not an opaque Dropbox thumbnail.
+
+| Source | Preset |
+| --- | --- |
+| 01-31824.png | face01 |
+| 02-31825.png | face02 |
+| 03-31826.png | face03 |
+| 05-31823.png | face04 |
+| 06-31820.png | face05 |
+| 08-31822.png | face06 |
+| 07-31821.png | face07 (female; only covered outfits) |
+| 04-31827.png | look01..look15, ordered row by row |
+
+This is a mobile 3D approximation using the supplied front images for face/fabric detail. It does not recover unseen side/back topology exactly. Head coverings are part of the selected outfit. User-provided images are not relabeled as public-domain assets.
+
 # 캐릭터·복장 참고 자료
 
 사용자가 제공한 Dropbox /salah 폴더에서 다음 PNG 8개의 파일 메타데이터를 확인했습니다. 원본 픽셀 읽기가 연결 환경에서 차단되어, 캐릭터/복장을 이 그림에 맞췄다고 표시하지 않습니다. 실제 시각 자료를 확인할 수 있게 되면 디자인 분류와 3D·텍스처 작업을 진행합니다.

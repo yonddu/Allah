@@ -105,3 +105,10 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
  .actionbar .action-secondary,html:not([lang=ko]) .action-secondary{font-size:9px;padding:8px 5px}.actionbar .prayer-button,html:not([lang=ko]) .prayer-button{font-size:10px;min-width:91px;padding:9px 10px}.actionbar .action-divider{margin:0 1px}
 }
 @media(max-height:500px){.chat-dock .chat-messages{height:36px}.chat-dock .chat-mode{display:none}.qibla-card,html[dir=rtl] .qibla-card{max-height:calc(100dvh - 150px)}.custom-panel,html[dir=rtl] .custom-panel{top:8px;bottom:68px;max-height:calc(100dvh - 76px)}}
+
+.portrait-choices,.wardrobe-choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.portrait-choices button,.wardrobe-choices button{padding:5px;border:1px solid var(--line);background:#e4d4ad09;font-size:9px;color:var(--muted);text-align:center}
+.portrait-choices [aria-pressed=true],.wardrobe-choices [aria-pressed=true]{border-color:var(--gold);color:var(--gold);background:#d6b57b20}
+.portrait-thumb{display:block;height:83px;background-size:cover;background-position:center;border-radius:5px;margin-bottom:5px}
+.wardrobe-thumb{display:block;height:112px;background-image:url(/reference-assets/wardrobe.webp);background-size:500% 300%;background-repeat:no-repeat;margin-bottom:5px}
+#entryCharacterHost fieldset{margin-bottom:15px}#entryCharacterHost .portrait-choices,#entryCharacterHost .wardrobe-choices{grid-template-columns:repeat(3,1fr)}

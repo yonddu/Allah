@@ -5,6 +5,7 @@ import {initQibla} from './qibla.js';
 import {RoomConnection} from './network.js';
 import {initCommunity} from './social.js';
 import {Soundscape} from './audio.js';
+import {CHARACTERS,WARDROBE} from './avatar-catalog.js';
 
 const $=id=>document.getElementById(id);
 let generatedName=false;
@@ -23,7 +24,15 @@ try{
   scene=new Sanctuary($('scene'),profile,fatal,parseRoom(currentRoom).map);
 }catch(e){console.error(e);fatal();throw e;}
 const sound=new Soundscape(toast);
+for(const [list,id,field,label]of [[CHARACTERS,'characterChoices','character','얼굴'],[WARDROBE,'wardrobeChoices','wardrobe','기도 복장']])for(const item of list){
+  const b=document.createElement('button');b.type='button';b.dataset.value=item.id;b.dataset.gender=item.gender;
+  const preview=document.createElement('span');preview.className=field==='character'?'portrait-thumb':'wardrobe-thumb';preview.setAttribute('aria-hidden','true');
+  if(field==='character')preview.style.backgroundImage='url(/reference-assets/'+item.id+'.webp)';
+  else preview.style.backgroundPosition=(item.index%5)*25+'% '+Math.floor(item.index/5)*50+'%';
+  const text=document.createElement('span');text.textContent=t(label)+' '+(item.index+1);b.append(preview,text);b.setAttribute('aria-label',t(label)+' '+(item.index+1));$(id).append(b);
+}
 function updateChoices(){
+  for(const b of document.querySelectorAll('[data-gender]'))b.hidden=b.dataset.gender!==profile.gender;
   for(const b of document.querySelectorAll('[data-field="cover"] button'))b.hidden=profile.gender==='female'&&b.dataset.value!=='hijab';
   $('femaleCoverNote').hidden=profile.gender!=='female';
   for(const b of document.querySelectorAll('[data-field] button')){
@@ -144,7 +153,7 @@ $('enterRoomButton').addEventListener('click',async()=>{
   $('enterRoomButton').disabled=true;
   try{
     sound.enable().then(()=>$('soundButton').textContent='소리 설정').catch(()=>{});
-    if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={x:0,z:7};scene.cameraDistance=11.6;scene.cameraHeight=4.1;scene.cameraAngle=.42;
+    if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={x:0,z:7};scene.cameraDistance=5.6;scene.cameraHeight=2.9;scene.cameraAngle=.42;
     mapLabels();try{localStorage.setItem('noor-room',currentRoom);}catch{}
     await community.start();network.retry=0;network.connect(currentRoom);window.dispatchEvent(new Event('noor:entered'));$('mapDialog').close();
   }catch(e){$('roomStatus').textContent=e.message;}
@@ -163,8 +172,8 @@ window.addEventListener('pagehide',()=>{network.generation++;clearTimeout(networ
 
 setInterval(()=>{if(!document.hidden&&community.session)community.refresh().catch(()=>{});},30000);
 
-window.addEventListener('languagechange',()=>{mapLabels();if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;changedProfile();}});
+window.addEventListener('languagechange',()=>{for(const [list,id,label]of [[CHARACTERS,'characterChoices','얼굴'],[WARDROBE,'wardrobeChoices','기도 복장']])for(const item of list){const b=document.querySelector('#'+id+' [data-value="'+item.id+'"]');b.lastElementChild.textContent=t(label)+' '+(item.index+1);b.setAttribute('aria-label',t(label)+' '+(item.index+1));}mapLabels();if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;changedProfile();}});
 
-window.addEventListener('noor:entry-character',e=>{scene.portraitMode=e.detail.active;scene.cameraAngle=e.detail.active?scene.yaw+Math.PI:.42;scene.cameraDistance=e.detail.active?3:11.6;scene.cameraHeight=e.detail.active?2.1:4.1;});
+window.addEventListener('noor:entry-character',e=>{scene.portraitMode=e.detail.active;scene.cameraAngle=e.detail.active?scene.yaw+Math.PI:.42;scene.cameraDistance=e.detail.active?2.65:5.6;scene.cameraHeight=e.detail.active?1.6:2.9;});
 if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;scene.updateProfile(profile);}
 window.dispatchEvent(new Event('noor:app-ready'));

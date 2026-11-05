@@ -1,3 +1,15 @@
+## 2026-11-05 compact HUD, private chat and reference avatars
+
+- Play HUD: a 104px mobile Qibla widget stays upper-left; room/language/settings and social buttons stay on top. Joystick is bottom-left, collapsible chat bottom-right, prayer/customize/fence actions on the bottom edge. Customize panel is closed until requested. The camera centers the avatar at a closer 5.6m distance.
+- Public and whisper tabs have independent server-persisted off settings. The people button opens the current-room visitor list, the two chat switches and blocked list. Messages are ephemeral, capped at 100 in the browser, and rendered using textContent.
+- A whisper targets an authenticated account currently in the same room, never broadcasts to bystanders, and is rejected if either side blocks the other or either side disables whispers. Public delivery respects each receiver's public switch, block relationship and paid friends-only rule. COMMUNITY access is fetched for each chat send; the client cannot supply paid/sender identity flags.
+- New SQLite tables chat_preferences and blocks are created idempotently. Blocks are owner-scoped (max200), persist across DO restart, hide the blocked person's body/name/rug locally, and purge their old chat. A protected fence remains visible to explain collision boundaries. Cookies remain anonymous device accounts; payments are still disabled.
+- Attached original references are now available and processed. Character presets: six male faces + one female face; wardrobe: eleven male + four female outfits. Female face/outfit combinations and hijab enforcement run through sanitizeProfile on client and server. Old cosmetic fields remain accepted for compatibility; current visual selection uses character and wardrobe IDs.
+- public/avatars.js builds real 3D, 18-bone skinned skin/clothing volumes with nose relief, ears, hands and fingers. Both parts share atlases and cached geometry. Full models stay under6k triangles; distant models under1.8k. Nearby detail limit remains4 on low. All body poses use the rig; arm IK handles folded hands, bowing, kneeling and prostration.
+- IMPORTANT: these are source-image-projected anatomical approximations, not exact photogrammetric reconstruction. Side/back geometry and unseen fabric require approximation. Review front, side and prayer-pose screenshots before claiming fidelity. No Blender or paid model API was used.
+- public/reference-assets holds compressed user-image-derived atlases/thumbs (~475KB combined). Mobile atlas sizes512x512 clothes and512x256 faces; high1024x1024 and1024x512. scripts/prepare-avatar-textures.py reproduces them from the original eight filenames, using Pillow, NumPy and SciPy; it is an optional authoring step, not required for deployment.
+- Validation: 24 Node tests pass locally. Chat/HUD commit71ab65e passed real local-Worker browser QA with three isolated sessions, server dry-run and 32-avatar render budget. New avatar browser QA and deployment results are recorded in the final handoff update below. Real entry-level Android FPS remains unmeasured.
+
 # 인수인계 · 2026-11-06
 
 ## 최종 요구

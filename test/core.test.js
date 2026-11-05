@@ -56,3 +56,11 @@ test('Female avatars always receive a head covering, including tampered client p
   assert.equal(sanitizeProfile({gender:'female',cover:'hijab'}).cover,'hijab');
   assert.equal(sanitizeProfile({gender:'male',cover:'none'}).cover,'none');
 });
+
+
+test('Reference character and clothing combinations are normalized on the server',()=>{
+  const female=sanitizeProfile({gender:'female',character:'face01',wardrobe:'look01',cover:'none'});
+  assert.equal(female.character,'face07');assert.equal(female.wardrobe,'look07');assert.equal(female.cover,'hijab');
+  for(const wardrobe of ['look07','look08','look09','look10'])assert.equal(sanitizeProfile({gender:'female',wardrobe}).wardrobe,wardrobe);
+  const male=sanitizeProfile({gender:'male',character:'face07',wardrobe:'look10'});assert.equal(male.character,'face01');assert.equal(male.wardrobe,'look01');
+});
