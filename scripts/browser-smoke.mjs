@@ -7,14 +7,14 @@ await mkdir('artifacts',{recursive:true});
 let log='';
 const server=spawn(process.execPath,['node_modules/wrangler/bin/wrangler.js','dev','--local','--ip','127.0.0.1','--port','8787'],{stdio:['ignore','pipe','pipe']});
 for(const stream of [server.stdout,server.stderr])stream.on('data',b=>log=(log+b.toString()).slice(-14000));
-let browser;
+let browser,page;
 try{
   let healthy=false;
   for(let n=0;n<120;n++){try{const r=await fetch('http://127.0.0.1:8787/api/health');if(r.ok){healthy=true;break;}}catch{}await delay(500);}
   if(!healthy)throw new Error('Local Worker did not start.\n'+log);
   browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
-  const page=await context.newPage(),errors=[];
+  page=await context.newPage();const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   await page.route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:8787')?route.continue():route.abort());
   await page.goto('http://127.0.0.1:8787/?qa=1',{waitUntil:'domcontentloaded'});
@@ -41,6 +41,7 @@ try{
   const card=await page.locator('#qiblaCard').boundingBox();
   assert.ok(card.x<35&&card.y<125&&card.width<=190);
   await page.locator('#qiblaExpandButton').click();
+  await page.locator('.manual-location summary').click();
   await page.locator('#citySelect').selectOption('35.8714,128.6014');
   assert.equal(await page.locator('#kaabaMarker').isVisible(),true);
   const marker=await page.locator('#kaabaMarker').evaluate(el=>({left:parseFloat(el.style.left),top:parseFloat(el.style.top)}));
@@ -77,6 +78,10 @@ try{
   await writeFile('artifacts/browser-report.json',JSON.stringify({note:'Desktop Chromium with software WebGL; these are rendering budgets, not real-phone FPS measurements.',maps,errors},null,2));
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({browser:'passed',maps:maps.map(m=>({map:m.map,drawCalls:m.drawCalls,triangles:m.triangles})),crowdDrawCalls:crowd.drawCalls}));
+}catch(error){
+  if(page)try{await page.screenshot({path:'artifacts/failure.png'});}catch{}
+  await writeFile('artifacts/failure.txt',String(error.stack||error));
+  throw error;
 }finally{
   if(browser)await browser.close();server.kill('SIGTERM');await writeFile('artifacts/local-worker.log',log);
 }
