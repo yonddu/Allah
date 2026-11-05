@@ -5,7 +5,7 @@ export const QUALITY_BUDGETS=Object.freeze({
 });
 export function chooseQuality(requested='auto',device={}){
   if(requested==='low'||requested==='high')return requested;
-  return device.mobile||device.memory<=2||device.cores<=4||device.software?'low':'balanced';
+  return device.mobile||device.memory<=4||device.cores<=4||device.software?'low':'balanced';
 }
 export function pixelRatioFor(width,height,deviceDpr,budget,scale=1){
   const dpr=Math.min(Number.isFinite(deviceDpr)?deviceDpr:1,budget.dpr);

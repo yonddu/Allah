@@ -52,3 +52,6 @@ scripts/browser-smoke.mjs는 로컬 Worker + Chromium에서 입장3단계/여성
 
 ## 오프라인 생성 검증 결과
 19개 Node 검사와 건축자산 생성/Worker dry-run 통과. 모바일 GLB: zayed 10 draws/17,572tri/762,016bytes, blue 11 draws/18,548tri/789,120bytes, nabawi 10 draws/26,856tri/1,300,612bytes. 고품질각각39,116/43,100/55,144tri. 최초브라우저검사는Playwright1.56의Ubuntu26지원부재로실행전실패; CI runner를Ubuntu24.04로고정하여재검사. 이메모작성당시실기기FPS측정없음.
+
+## 최종 검증
+2026-11-06: Node검사19개통과. 로컬Chromium실행에서언어→캐릭터→입장,여성히잡강제,나침반왼쪽위/카바표시,조이스틱드래그/리셋,3개맵전환,RTL통과. 화면앞밀집한32명렌더는199draws/53,794tri기록. 이것은소프트웨어WebGL의렌더예산검사이며실제3~4GB폰의FPS측정이아님. 보급폰가로화면도coarse포인터및RAM4GB이하로저사양판별. 평균프레임지연시해상도뿐아니라상세원격캐릭터수도최소2명까지하향.

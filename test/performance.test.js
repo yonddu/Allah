@@ -4,6 +4,7 @@ import {QUALITY_BUDGETS,chooseQuality,pixelRatioFor,nextResolutionScale} from '.
 test('The reference entry-level phone uses the low 30fps profile',()=>{
   assert.equal(chooseQuality('auto',{mobile:true,memory:3,cores:8}),'low');
   assert.equal(chooseQuality('auto',{mobile:true,memory:4,cores:8}),'low');
+  assert.equal(chooseQuality('auto',{mobile:false,memory:4,cores:8}),'low');
   assert.equal(QUALITY_BUDGETS.low.fps,30);assert.equal(QUALITY_BUDGETS.low.shadows,false);
   assert.equal(chooseQuality('high',{mobile:true,memory:3}),'high');
 });

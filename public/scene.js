@@ -11,7 +11,7 @@ export class Sanctuary {
     this.container=container;this.profile=profile;this.remote=new Map();this.keys=new Set();this.direction=new Set();this.moving=false;this.joystickAxis={x:0,y:0};
     this.position={x:0,z:7};this.yaw=Math.PI;this.praying=false;this.pose='standing';this.fencePreview=false;
     this.cameraAngle=.42;this.cameraHeight=4.1;this.cameraDistance=11.6;this.last=performance.now();
-    this.device={mobile:matchMedia('(max-width:900px)').matches,memory:navigator.deviceMemory||8,cores:navigator.hardwareConcurrency||8};
+    this.device={mobile:matchMedia('(max-width:900px)').matches||matchMedia('(pointer:coarse)').matches,memory:navigator.deviceMemory||8,cores:navigator.hardwareConcurrency||8};
     this.qualityMode='auto';this.qualityTier=chooseQuality('auto',this.device);this.resolutionScale=1;this.renderedAt=0;this.performanceWindow=performance.now();this.performanceFrames=0;
     this.loader=new GLTFLoader();this.hallGeneration=0;this.hallReady=false;
     this.cameraTarget=new THREE.Vector3();this.desiredCamera=new THREE.Vector3();
@@ -230,7 +230,7 @@ export class Sanctuary {
   }
   quality(value){
     const previousAsset=QUALITY_BUDGETS[this.qualityTier].asset;
-    this.qualityMode=value;this.qualityTier=chooseQuality(value,this.device);this.resolutionScale=1;
+    this.qualityMode=value;this.qualityTier=chooseQuality(value,this.device);this.resolutionScale=1;this.visitorDetailLimit=QUALITY_BUDGETS[this.qualityTier].detailedVisitors;
     this.renderer.shadowMap.enabled=QUALITY_BUDGETS[this.qualityTier].shadows;this.renderer.shadowMap.autoUpdate=false;this.renderer.shadowMap.needsUpdate=true;
     this.resize();
     if(this.hallGeneration>0&&previousAsset!==QUALITY_BUDGETS[this.qualityTier].asset)this.ready=this.loadHall(this.mapId).catch(console.error);
@@ -252,6 +252,7 @@ export class Sanctuary {
       if(now-this.performanceWindow>4000){
         const average=(now-this.performanceWindow)/this.performanceFrames,next=nextResolutionScale(this.resolutionScale,average);
         if(next<this.resolutionScale){this.resolutionScale=next;this.resize();}
+        if(average>47)this.visitorDetailLimit=Math.max(2,(this.visitorDetailLimit||budget.detailedVisitors)-1);
         this.performanceWindow=now;this.performanceFrames=0;
       }
     }
@@ -276,7 +277,7 @@ export class Sanctuary {
     this.local.root.position.set(this.position.x,0,this.position.z);
     this.local.root.rotation.y=this.yaw;
     this.applyPose(this.local,this.pose,this.praying,time,this.moving,dt);
-    const nearby=[...this.remote.values()].sort((a,b)=>a.target.distanceToSquared(this.local.root.position)-b.target.distanceToSquared(this.local.root.position)).slice(0,budget.detailedVisitors);
+    const nearby=[...this.remote.values()].sort((a,b)=>a.target.distanceToSquared(this.local.root.position)-b.target.distanceToSquared(this.local.root.position)).slice(0,this.visitorDetailLimit||budget.detailedVisitors);
     for(const a of this.remote.values()){
       const detailed=nearby.includes(a)&&a.target.distanceToSquared(this.local.root.position)<144;
       a.hips.visible=detailed;a.simple.visible=!detailed;a.label.visible=a.target.distanceToSquared(this.local.root.position)<225;
