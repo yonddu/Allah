@@ -25,3 +25,8 @@
 - 3D 장면·양탄자·대리석·타일·직조·금속 텍스처: 프로젝트 코드로 생성. 실제 모스크의 공식 스캔이나 인증된 복제물이 아닙니다.
 - Three.js 0.180.0: MIT, https://github.com/mrdoob/three.js/blob/r180/LICENSE. /vendor/THREE-LICENSE.txt에 함께 배포합니다.
 - Noto Sans KR / Manrope: Google Fonts. Google Fonts CSS에 표시된 글꼴 라이선스 적용. 미지원 시 시스템 글꼴 사용.
+
+## 빌드/검증 도구
+- @napi-rs/canvas 0.1.80: MIT, https://github.com/Brooooooklyn/canvas . 빌드 환경에서 텍스처 PNG 생성에만 사용하며 브라우저에는 포함하지 않습니다.
+- Playwright 1.56.1: Apache-2.0, https://github.com/microsoft/playwright . 로컬 CI 브라우저 검사 전용입니다.
+- 모스크 GLB·재질·꽃무늬·접촉 음영은 이 프로젝트의 절차적 생성물이며 실제 모스크의 스캔 자료가 아닙니다.

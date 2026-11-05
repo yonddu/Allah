@@ -7,13 +7,14 @@ import {initCommunity} from './social.js';
 import {Soundscape} from './audio.js';
 
 const $=id=>document.getElementById(id);
+let generatedName=false;
 let toastTimer,profile=loadProfile(),savedRoom;
 try{savedRoom=localStorage.getItem('noor-room');}catch{}
 let currentRoom=parseRoom(savedRoom)?.key||'zayed:1',scene,network,community;
 function toast(message){
   $('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),4500);
 }
-function loadProfile(){try{return sanitizeProfile(JSON.parse(localStorage.getItem('noor-profile'))||DEFAULT_PROFILE);}catch{return {...DEFAULT_PROFILE};}}
+function loadProfile(){try{const raw=JSON.parse(localStorage.getItem('noor-profile'));if(raw)return sanitizeProfile(raw);}catch{}generatedName=true;return {...DEFAULT_PROFILE,name:t('방문자')};}
 function persistProfile(){try{localStorage.setItem('noor-profile',JSON.stringify(profile));$('saveStatus').textContent='이 기기에 저장했습니다';}catch{$('saveStatus').textContent='이번 접속에서만 유지됩니다';}}
 function openDialog(id){if(!$(id).open)$(id).showModal();}
 function fatal(message){$('loading').hidden=true;$('fatal').hidden=false;if(message)$('fatalMessage').textContent=message;}
@@ -48,7 +49,7 @@ for(const [container,field,colors,names]of [
 for(const group of document.querySelectorAll('[data-field]'))for(const b of group.querySelectorAll('button'))b.addEventListener('click',()=>{profile[group.dataset.field]=b.dataset.value;changedProfile();});
 $('displayName').value=profile.name;
 let nameTimer;
-$('displayName').addEventListener('input',()=>{clearTimeout(nameTimer);nameTimer=setTimeout(()=>{profile.name=$('displayName').value;changedProfile();},650);});
+$('displayName').addEventListener('input',()=>{generatedName=false;clearTimeout(nameTimer);nameTimer=setTimeout(()=>{profile.name=$('displayName').value||t('방문자');changedProfile();},650);});
 $('displayName').addEventListener('blur',()=>{clearTimeout(nameTimer);profile.name=$('displayName').value;changedProfile();$('displayName').value=profile.name;});
 const tabs=[...document.querySelectorAll('[data-tab]')];
 function selectTab(button){for(const b of tabs){const selected=b===button;b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1;$('panel-'+b.dataset.tab).hidden=!selected;}}
@@ -162,7 +163,8 @@ window.addEventListener('pagehide',()=>{network.generation++;clearTimeout(networ
 
 setInterval(()=>{if(!document.hidden&&community.session)community.refresh().catch(()=>{});},30000);
 
-window.addEventListener('languagechange',()=>{mapLabels();});
+window.addEventListener('languagechange',()=>{mapLabels();if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;changedProfile();}});
 
 window.addEventListener('noor:entry-character',e=>{scene.portraitMode=e.detail.active;scene.cameraAngle=e.detail.active?scene.yaw+Math.PI:.42;scene.cameraDistance=e.detail.active?3:11.6;scene.cameraHeight=e.detail.active?2.1:4.1;});
+if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;scene.updateProfile(profile);}
 window.dispatchEvent(new Event('noor:app-ready'));

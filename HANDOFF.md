@@ -49,3 +49,6 @@ Node 빌드에서 재질별 병합 GLB/512~1K 모바일 텍스처 생성. 모스
 
 ## QA와 참고 이미지 상태
 scripts/browser-smoke.mjs는 로컬 Worker + Chromium에서 입장3단계/여성히잡/나침반위치·카바표시/아날로그조이스틱/모스크3개·32명렌더예산/RTL을검사하고 artifacts/에스크린샷저장. 실제보급폰FPS측정은아님. Dropbox /salah 8개PNG는목록확인만했으며원본요청은연결의네트워크정책으로차단됨. 우회하지말것. 사용자에게원본채팅첨부등지원되는입력경로요청필요. REFERENCE_ASSETS.md에토큰없는파일명목록만기록.
+
+## 오프라인 생성 검증 결과
+19개 Node 검사와 건축자산 생성/Worker dry-run 통과. 모바일 GLB: zayed 10 draws/17,572tri/762,016bytes, blue 11 draws/18,548tri/789,120bytes, nabawi 10 draws/26,856tri/1,300,612bytes. 고품질각각39,116/43,100/55,144tri. 최초브라우저검사는Playwright1.56의Ubuntu26지원부재로실행전실패; CI runner를Ubuntu24.04로고정하여재검사. 이메모작성당시실기기FPS측정없음.
