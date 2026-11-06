@@ -133,6 +133,16 @@ try{
     await page.mouse.click(point.x,point.y,{button:'right'});
     await page.locator('#playerMenu').waitFor({state:'visible'});
   }
+  // Real public messages become text-only head bubbles; private messages never do.
+  const publicBubble='<b>السلام عليكم · 안녕하세요</b>';
+  await guest.evaluate(text=>window.chatSocket.send(JSON.stringify({type:'chat',text})),publicBubble);
+  await page.waitForFunction(text=>[...window.__noorScene.remote.values()].some(a=>a.speechLabel.visible&&a.speechLabel.element.textContent===text),publicBubble);
+  assert.equal(await page.locator('.avatar-speech b').count(),0);
+  await page.screenshot({path:'artifacts/chat-speech-bubble.png'});
+  await page.locator('#publicChatTab').click();await page.locator('#chatInput').fill('My public bubble');await page.locator('#sendChatButton').click();
+  await page.waitForFunction(()=>window.__noorScene.local.speechLabel.visible&&window.__noorScene.local.speechLabel.element.textContent==='My public bubble');
+  await page.evaluate(()=>{window.__noorScene.local.speechUntil=0;for(const a of window.__noorScene.remote.values())a.speechUntil=0;});
+  await page.waitForFunction(()=>!window.__noorScene.local.speechLabel.visible&&[...window.__noorScene.remote.values()].every(a=>!a.speechLabel.visible));
   await rightClickGuest();assert.equal(await page.locator('#playerMenuTitle').textContent(),'Chat guest');
   await page.locator('#playerGreetAction').click();
   await guest.waitForFunction(id=>window.chatReceived.some(m=>m.type==='greeting'&&m.to===id),guestId);
@@ -143,13 +153,15 @@ try{
   await page.locator('#chatInput').fill('Private browser test');await page.locator('#sendChatButton').click();
   await guest.waitForFunction(()=>window.chatReceived.some(m=>m.type==='whisper'&&m.text==='Private browser test'));
   assert.equal(await other.evaluate(()=>window.chatReceived.some(m=>m.type==='whisper')),false);
+  assert.equal(await page.evaluate(()=>window.__noorScene.local.speechLabel.element.textContent.includes('Private browser test')),false);
   await page.locator('#peopleButton').click();await page.locator('#whispersOff').check();
   await page.waitForFunction(()=>!document.getElementById('whispersOff').disabled);
   await guest.evaluate(id=>window.chatSocket.send(JSON.stringify({type:'whisper',to:id,text:'Must not appear'})),mainId);
   await guest.waitForFunction(()=>window.chatReceived.some(m=>m.type==='notice'));
   assert.equal(await page.locator('#chatMessages').textContent(),'');
+  await page.evaluate(()=>window.__noorScene.showSpeech({type:'chat',playerId:window.__noorScene.selfId,accountId:window.__noorScene.accountId,text:'Hide on preference change'}));
   await page.locator('#publicChatOff').check();await page.waitForFunction(()=>!document.getElementById('publicChatOff').disabled);
-  const saved=await page.evaluate(async()=>{const r=await fetch('/api/social');return r.json();});assert.equal(saved.publicChat,false);assert.equal(saved.whispers,false);
+  const saved=await page.evaluate(async()=>{const r=await fetch('/api/social');return r.json();});assert.equal(saved.publicChat,false);assert.equal(saved.whispers,false);assert.equal(await page.evaluate(()=>window.__noorScene.local.speechLabel.visible),false);
   await page.locator('#roomPeople .friend-row').filter({hasText:'Chat guest'}).getByRole('button',{name:'차단',exact:true}).click();
   await page.waitForFunction(id=>window.__noorScene.blockedIds.has(id),guestId);
   await delay(100);

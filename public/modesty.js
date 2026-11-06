@@ -28,8 +28,8 @@ export function modestyAsset(source,id){
   g.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(joints,4));g.setAttribute('skinWeight',new THREE.Float32BufferAttribute(weights,4));parts.push(g);solids.push({bone,center,radii});
  };
  // Every piece is closed and overlaps its neighbour, including the crotch and waist.
- add(1,[0,.94,0],[.34,.28,.29]);add(2,[0,1.10,0],[.30,.21,.24]);
- for(const [side,upper,lower]of [[-1,12,13],[1,15,16]]){add(upper,[side*.10,.70,0],[.18,.29,.20]);add(lower,[side*.10,.285,0],[.145,.255,.175]);}
+ add(1,[0,.94,0],[.20,.19,.145]);add(2,[0,1.10,0],[.18,.13,.12]);
+ for(const [side,upper,lower]of [[-1,12,13],[1,15,16]]){add(upper,[side*.10,.70,0],[.13,.245,.14]);add(lower,[side*.10,.285,0],[.105,.23,.12]);}
  const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());geometry.userData.shared=true;
  const color=clothColor(source,id),material=new THREE.MeshStandardMaterial({color,roughness:1,metalness:0,side:THREE.DoubleSide});
  source.userData.modesty={geometry,material,color,solids};return source.userData.modesty;

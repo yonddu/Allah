@@ -1,3 +1,7 @@
+## Chat bubbles and support message follow-up · 2026-11-06
+
+Public-chat bubbles use the server-authoritative playerId and the same Community visibility filter as the dock. Whispers never become bubbles; prayer, block/privacy changes, disconnect and avatar disposal clear or hide them. They use textContent, auto text direction, a 4.5–9s expiry, head-following labels and a 12m range. The Ko-fi dialog now displays the requested support/peace message in all 21 languages. The first 150-view coverage review found opaque coverage but oversized undergarment ellipsoids; these have been tightened to body proportions and require a second visual review before deploying/restoring prostration.
+
 ## Urgent clothing coverage and settings/Taj corrections · 2026-11-06
 
 The user reported visible bare buttocks during prostration. Prior validation checked joint/floor contact and did not adequately check clothing coverage. Production interim commit 448e40a31a92220f9383f62a07b596b7697444e3 temporarily removes prostration from pose selection while full coverage is repaired. Interim build e90257a5-1dcb-4eeb-8c7a-f3bc2f43191f succeeded, including HTTPS verification of noorrealm.com. Settings now also opens character/outfit customization.

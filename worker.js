@@ -140,7 +140,7 @@ export class PrayerRoom {
         return;
       }
       if(sender.publicChat===false){fail();return;}
-      const item={type:'chat',id:crypto.randomUUID(),accountId:state.accountId,name:state.profile.name,text,at:now};
+      const item={type:'chat',id:crypto.randomUUID(),playerId:state.id,accountId:state.accountId,name:state.profile.name,text,at:now};
       for(const peer of peers){
         const viewer=access[peer.state.accountId];
         if(!peer.state.praying&&viewer&&viewer.publicChat!==false&&!blocked(viewer,state.accountId)&&!blocked(sender,peer.state.accountId)&&(!viewer.premium||peer.state.accountId===state.accountId||viewer.friends.includes(state.accountId)))this.send(peer.ws,item);

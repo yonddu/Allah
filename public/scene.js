@@ -104,15 +104,25 @@ export class Sanctuary {
     const avatar={root,hips,torso,arms,legs,head,rug,fringe,profile,materials,label,labelAnchor:new THREE.Vector3(),simple,human,pose:'standing',praying:false};
     const greetingElement=document.createElement('div');greetingElement.className='avatar-greeting';greetingElement.textContent='السلام عليكم';greetingElement.lang='ar';greetingElement.dir='rtl';greetingElement.dataset.noI18n='';
     const greetingLabel=new CSS2DObject(greetingElement);greetingLabel.position.y=2.17;greetingLabel.visible=false;root.add(greetingLabel);avatar.greetingLabel=greetingLabel;avatar.greetingUntil=0;
+    const speechElement=document.createElement('div');speechElement.className='avatar-speech';speechElement.dir='auto';speechElement.dataset.noI18n='';
+    const speechLabel=new CSS2DObject(speechElement);speechLabel.visible=false;speechLabel.center.set(.5,1);root.add(speechLabel);avatar.speechLabel=speechLabel;avatar.speechUntil=0;
     avatar.target=new THREE.Vector3();
     return avatar;
   }
   disposeAvatar(a){
     this.scene.remove(a.root);
     a.root.traverse(m=>{if(m.isMesh&&m.geometry&&!m.geometry.userData.shared&&!Object.values(this.geometry).includes(m.geometry))m.geometry.dispose();});
-    a.materials.forEach(m=>m.dispose());a.label.element.remove();a.greetingLabel.element.remove();a.human?.dispose();
+    a.materials.forEach(m=>m.dispose());a.label.element.remove();a.greetingLabel.element.remove();a.speechLabel.element.remove();a.human?.dispose();
   }
   updateProfile(profile){const old=this.local;this.local=this.makeAvatar(profile,true);this.scene.add(this.local.root);this.disposeAvatar(old);this.profile=profile;}
+  showSpeech(message){
+    if(this.praying||message.type!=='chat'||this.blockedIds?.has(message.accountId))return false;
+    const a=message.playerId===this.selfId?this.local:this.remote.get(message.playerId);
+    if(!a||a.praying||a.accountId&&a.accountId!==message.accountId||a===this.local&&this.accountId!==message.accountId)return false;
+    const text=typeof message.text==='string'?message.text.trim().slice(0,200):'';if(!text)return false;
+    a.speechLabel.element.textContent=text;a.speechUntil=performance.now()+Math.min(9000,4500+Array.from(text).length*35);return true;
+  }
+  clearSpeech(){for(const a of [this.local,...this.remote.values()]){a.speechUntil=0;a.speechLabel.visible=false;a.speechLabel.element.textContent='';}}
   playGreeting(id=null,targetId=null){
     if(this.praying)return;
     const avatar=id?this.remote.get(id):this.local;if(!avatar||avatar.praying||this.blockedIds?.has(avatar.accountId))return;
@@ -145,6 +155,10 @@ export class Sanctuary {
     a.greetingLabel.visible=greeting>=0&&!this.blockedIds?.has(a.accountId);
     a.human.update(praying?pose:'standing',praying,time,moving,dt,greeting);a.rug.visible=a.fringe.visible=praying;
     a.human.bones[5].getWorldPosition(a.labelAnchor);a.root.worldToLocal(a.labelAnchor);a.label.position.copy(a.labelAnchor);a.label.position.y+=.23;
+    a.speechLabel.position.copy(a.label.position);a.speechLabel.position.y+=.32;
+    const speaking=!this.praying&&!praying&&time*1000<a.speechUntil&&!this.blockedIds?.has(a.accountId)&&(a===this.local||a.root.position.distanceToSquared(this.local.root.position)<144);
+    a.speechLabel.visible=speaking;if(speaking)a.greetingLabel.visible=false;
+    if(time*1000>=a.speechUntil&&a.speechLabel.element.textContent)a.speechLabel.element.textContent='';
   }
 
   bindControls(){

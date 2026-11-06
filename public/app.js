@@ -84,7 +84,7 @@ $('prayerSoundToggle').addEventListener('change',e=>{sound.prayerEnabled=e.targe
 $('prayerAudioFile').addEventListener('change',e=>sound.setFile(e.target.files[0]));
 const poses=['standing','bowing','prostrating','sitting'],poseLabels=['서기','숙이기','엎드리기','앉기'];
 function prayerUI(){
-  community?.setPrayerMode(scene.praying);partyUi?.setPrayer(scene.praying);
+  community?.setPrayerMode(scene.praying);partyUi?.setPrayer(scene.praying);if(scene.praying)scene.clearSpeech();
   document.body.classList.toggle('prayer-mode',scene.praying);
   $('prayerQuranLink').hidden=!scene.praying;$('greetingButton').hidden=scene.praying;
   $('joystickThumb').setAttribute('aria-disabled',String(scene.praying));
@@ -123,13 +123,13 @@ network=new RoomConnection({
     if(scene.praying)network.send({type:'prayer',active:true,pose:scene.pose});
   },
   self:p=>{if(p.correction&&Math.hypot(p.correction.x,p.correction.z)>.08)scene.position={x:scene.position.x+p.correction.x,z:scene.position.z+p.correction.z};scene.protected=p.protected;if(p.authoritative&&(p.praying||scene.praying!==p.praying))scene.position={x:p.x,z:p.z};if(p.authoritative&&scene.praying!==p.praying){scene.praying=p.praying;scene.pose=p.pose;if(scene.praying){scene.cancelGreeting();sound.startPrayer();}else sound.stopPrayer();prayerUI();}},
-  player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.clearPlayers();community?.clear();partyUi?.reset();},
+  player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.clearSpeech();scene.clearPlayers();community?.clear();partyUi?.reset();},
   count:n=>$('onlineCount').textContent=n+'명 접속',
   recount:()=>$('onlineCount').textContent=(scene.remote.size+1)+'명 접속',
   notice:toast,party:message=>partyUi?.message(message),chat:message=>community?.chat(message),greeting:message=>{if(!scene.praying&&!scene.blockedIds?.has(message.accountId))scene.playGreeting(message.id===network.selfId?null:message.id,message.targetPlayerId||null);}
 });
 community=initCommunity({
-  getName:()=>profile.name,toast,onSession:session=>{scene.accountId=session.id;scene.blockedIds=new Set(session.blocked.map(p=>p.id));scene.friendIds=session.friends.map(p=>p.id).filter(id=>!scene.blockedIds.has(id));partyUi?.privacyChanged();},
+  getName:()=>profile.name,toast,onPublicChat:message=>scene.showSpeech(message),onSession:session=>{scene.clearSpeech();scene.accountId=session.id;scene.blockedIds=new Set(session.blocked.map(p=>p.id));scene.friendIds=session.friends.map(p=>p.id).filter(id=>!scene.blockedIds.has(id));partyUi?.privacyChanged();},
   sendChat:(text,to)=>network.send(to?{type:'whisper',text,to}:{type:'chat',text}),reconnect:()=>network.connect(currentRoom)
 });
 partyUi=initParty({send:data=>network.send(data),getSelfId:()=>network.selfId,getRoom:()=>currentRoom,getPlayers:()=>[...network.known.values()],getBlocked:()=>scene.blockedIds||new Set(),toast});

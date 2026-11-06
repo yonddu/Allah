@@ -1,5 +1,5 @@
 import {t} from './i18n.js';
-export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
+export function initCommunity({getName,toast,onSession,sendChat,reconnect,onPublicChat}){
   const $=id=>document.getElementById(id);
   let session=null,category='suggestion',page=0,currentPost=null,requestVersion=0,startPromise=null;
   let channel='chat',messages=[],collapsed=false,unread=0,prayerMode=false;const players=new Map();
@@ -156,6 +156,7 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
   function chat(message){
     if(!visibleMessage(message))return;
     messages.push(message);if(messages.length>100)messages.shift();
+    if(message.type==='chat')onPublicChat?.(message);
     if(message.type==='whisper'&&message.accountId!==session.id&&(channel!=='whisper'||collapsed))unread=Math.min(99,unread+1);
     renderChat();
   }
