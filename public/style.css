@@ -192,7 +192,7 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 .joystick .joystick-thumb{width:30px;height:30px;font-size:17px}
 .joystick-base:before{inset:8px}
 .chat-dock{right:8px;bottom:calc(52px + env(safe-area-inset-bottom));width:270px;max-width:calc(100% - 88px);border-radius:8px}
-.chat-toolbar{padding:1px 3px;gap:2px}.chat-toolbar button{min-height:24px;height:24px;padding:2px 5px;font-size:11px}
+.chat-toolbar{padding:1px 3px;gap:2px}.chat-toolbar button{min-height:24px;height:24px;padding:2px 5px;font-size:12px}
 .chat-toolbar>button{width:24px;font-size:16px}
 .chat-dock .chat-mode{display:none}.chat-dock #chatDisabledStatus:not([hidden]){display:block;margin:4px 6px;font-size:11px}
 .chat-dock .chat-messages{height:42px;padding:1px 6px}.chat-dock .chat-message,.chat-author{font-size:12px;line-height:1.45}
