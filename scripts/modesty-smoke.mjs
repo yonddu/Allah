@@ -7,8 +7,8 @@ try{
  await page.evaluate(async()=>{
   const {Color}=await import('/vendor/three.module.js'),s=window.__noorScene;s.renderer.setAnimationLoop(null);s.clearPlayers();s.hall.visible=false;s.scene.background=new Color('#b9c5c1');s.scene.fog=null;s.position={x:0,z:0};s.yaw=0;s.renderer.setPixelRatio(1);s.renderer.setSize(480,360,false);s.camera.aspect=480/360;s.camera.fov=45;s.camera.updateProjectionMatrix();window.qaTime=0;
  });
- const views=['front','back','left','right','top'],poses=['prostrating','sitting','bowing'],sheets=new Map(),report=[];
- for(const pose of poses){const canvas=createCanvas(1200,10*210),g=canvas.getContext('2d');g.fillStyle='#eff2ef';g.fillRect(0,0,canvas.width,canvas.height);sheets.set(pose,{canvas,g});}
+ const views=['front','back','left','right','top'],poses=['standing','prostrating','sitting','bowing'],sheets=new Map(),sockSheets=new Map(),report=[];
+ for(const pose of poses){const canvas=createCanvas(1200,10*210),g=canvas.getContext('2d');g.fillStyle='#eff2ef';g.fillRect(0,0,canvas.width,canvas.height);sheets.set(pose,{canvas,g});const sc=createCanvas(900,540),sg=sc.getContext('2d');sg.fillStyle='#eff2ef';sg.fillRect(0,0,900,540);sockSheets.set(pose,{canvas:sc,g:sg});}
  for(let n=1;n<=10;n++){
   const id='model'+String(n).padStart(2,'0');
   await page.evaluate(async({id,n})=>{const s=window.__noorScene;s.updateProfile({...s.profile,model:id,gender:n>=8?'female':'male'});await s.local.human.ready;s.local.root.position.set(0,0,0);s.local.root.rotation.y=0;},{id,n});
@@ -16,12 +16,19 @@ try{
    const result=await page.evaluate(({pose,view})=>{
     const s=window.__noorScene,a=s.local;for(let frame=0;frame<180;frame++)a.human.update(pose,true,window.qaTime+=1/60,false,1/60);a.rug.visible=a.fringe.visible=true;a.root.updateMatrixWorld(true);
     const cameras=[[0,1.25,-2.8],[0,1.25,2.8],[-2.8,1.25,0],[2.8,1.25,0],[0,3,.10]];s.camera.up.set(...(view===4?[0,0,-1]:[0,1,0]));s.camera.position.set(...cameras[view]);s.camera.lookAt(0,pose==='bowing'?.75:.35,.08);s.camera.updateMatrixWorld();s.renderer.render(s.scene,s.camera);
-    return {image:s.renderer.domElement.toDataURL('image/png'),enabled:a.human.modesty.enabled,visible:a.human.modesty.mesh.visible,triangles:s.renderer.info.render.triangles,draws:s.renderer.info.render.calls};
+    return {image:s.renderer.domElement.toDataURL('image/png'),enabled:a.human.modesty.enabled,visible:a.human.modesty.mesh.visible,socks:a.human.socks.enabled,socksVisible:a.human.socks.mesh?.visible||false,triangles:s.renderer.info.render.triangles,draws:s.renderer.info.render.calls};
    },{pose,view});
-   assert.ok(result.enabled&&result.visible,id+' '+pose+' '+views[view]+' clothing must remain covered');const bytes=Buffer.from(result.image.split(',')[1],'base64');await writeFile('artifacts/modesty/'+id+'-'+pose+'-'+views[view]+'.png',bytes);
+   if(pose!=='standing')assert.ok(result.enabled&&result.visible,id+' '+pose+' '+views[view]+' clothing must remain covered');assert.equal(result.socks,n>=8,id+' prayer socks');assert.equal(result.socksVisible,n>=8,id+' visible prayer socks');const bytes=Buffer.from(result.image.split(',')[1],'base64');await writeFile('artifacts/modesty/'+id+'-'+pose+'-'+views[view]+'.png',bytes);
    const {g}=sheets.get(pose);g.drawImage(await loadImage(bytes),view*240,(n-1)*210+22,240,188);g.fillStyle='#18392f';g.font='bold 12px sans-serif';g.fillText(id+' · '+pose+' · '+views[view],view*240+6,(n-1)*210+16);report.push({id,pose,view:views[view],covered:true});
+   if(n>=8&&view<3){
+    const closeup=await page.evaluate(view=>{const s=window.__noorScene,b=s.local.human.bones,target=b[14].getWorldPosition(s.cameraTarget).add(b[17].getWorldPosition(s.desiredCamera)).multiplyScalar(.5);target.y-=.015;
+     const positions=[[0,.25,-.75],[0,.25,.75],[0,.85,.02]],offset=positions[view];s.camera.up.set(...(view===2?[0,0,-1]:[0,1,0]));s.camera.position.copy(target).add({x:offset[0],y:offset[1],z:offset[2]});s.camera.lookAt(target);s.camera.updateMatrixWorld();s.renderer.render(s.scene,s.camera);return s.renderer.domElement.toDataURL('image/png');},view);
+    const bytes=Buffer.from(closeup.split(',')[1],'base64');await writeFile('artifacts/modesty/'+id+'-'+pose+'-socks-'+view+'.png',bytes);const {g}=sockSheets.get(pose);g.drawImage(await loadImage(bytes),view*300,(n-8)*180+20,300,160);g.fillStyle='#18392f';g.font='bold 13px sans-serif';g.fillText(id+' · '+pose+' · '+['front','back','top'][view],view*300+6,(n-8)*180+15);
+   }
+
   }
  }
  for(const pose of poses){const {canvas}=sheets.get(pose),bytes=canvas.toBuffer('image/jpeg',50);await writeFile('artifacts/modesty-'+pose+'-all-10.jpg',bytes);const encoded=bytes.toString('base64');for(let offset=0;offset<encoded.length;offset+=40000)console.log('NOOR_MODESTY_'+pose.toUpperCase()+'_CHUNK_'+(offset/40000)+':'+encoded.slice(offset,offset+40000));}
- assert.equal(report.length,150);assert.deepEqual(errors,[]);await writeFile('artifacts/modesty-report.json',JSON.stringify({views:150,characters:10,poses:3,covered:true,errors},null,2));console.log(JSON.stringify({modesty:'passed',characters:10,poses:3,views:150,errors}));
+ for(const pose of poses){const bytes=sockSheets.get(pose).canvas.toBuffer('image/jpeg',75);await writeFile('artifacts/prayer-socks-'+pose+'.jpg',bytes);const encoded=bytes.toString('base64');for(let offset=0;offset<encoded.length;offset+=40000)console.log('NOOR_SOCKS_'+pose.toUpperCase()+'_CHUNK_'+(offset/40000)+':'+encoded.slice(offset,offset+40000));}
+ assert.equal(report.length,200);assert.deepEqual(errors,[]);await writeFile('artifacts/modesty-report.json',JSON.stringify({views:200,characters:10,poses:4,covered:true,errors},null,2));console.log(JSON.stringify({modesty:'passed',characters:10,poses:4,views:200,errors}));
 }finally{await browser?.close();server.kill('SIGTERM');await writeFile('artifacts/modesty-worker.log',log);}

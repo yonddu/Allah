@@ -43,6 +43,26 @@ test('All ten supplied meshes plant forehead, knees and toes on the mat with hea
     const palm=new THREE.Vector3(0,0,-1).applyQuaternion(a.human.bones[handId].getWorldQuaternion(new THREE.Quaternion()));
     assert.ok(palm.y<-.98,id+' palms face the mat');
    }
+   let time=4;
+   for(const pose of ['standing','bowing','prostrating','sitting']){
+    for(let frame=0;frame<180;frame++)a.human.update(pose,true,time+=1/60,false,1/60);
+    a.root.updateMatrixWorld(true);a.human.skeleton.update();
+    let leftInner=-Infinity,rightInner=Infinity,floor=Infinity;
+    for(let i=0;i<p.count;i++)if(p.getY(i)<.07&&Math.abs(p.getX(i))>.025&&Math.abs(p.getX(i))<.4){
+     const point=mesh.applyBoneTransform(i,new THREE.Vector3().fromBufferAttribute(p,i));
+     if(p.getX(i)<0)leftInner=Math.max(leftInner,point.x);else rightInner=Math.min(rightInner,point.x);floor=Math.min(floor,point.y);
+    }
+    const gap=rightInner-leftInner;
+    assert.ok(gap>=.003&&gap<.025,id+' '+pose+' actual feet must be together without intersecting: '+gap);
+    assert.ok(Math.abs(floor-SUJUD.surfaceY)<.012,id+' '+pose+' soles/toes stay on the mat: '+floor);
+    assert.equal(a.human.socks.enabled,n>=8,id+' '+pose+' female prayer socks');
+    if(n>=8){assert.equal(a.human.socks.mesh.visible,true);assert.equal(a.human.socks.asset.material.transparent,false);assert.equal(a.human.socks.asset.material.opacity,1);}
+   }
+   // Leaving prayer must release foot placement and restore walking, including the lateral knee rotation.
+   a.human.update('standing',false,time+=.1,false,.1);if(n>=8)assert.equal(a.human.socks.enabled,true,'Keep covered while getting up');
+   for(let frame=0;frame<180;frame++)a.human.update('standing',false,time+=1/60,false,1/60);
+   assert.equal(a.human.socks.enabled,false);if(n>=8)assert.equal(a.human.socks.mesh.visible,false);
+   for(const boneId of [12,13,15,16])assert.ok(a.human.bones[boneId].quaternion.angleTo(new THREE.Quaternion())<.0001,id+' natural non-prayer stance');
    a.human.dispose();
   }
  }finally{globalThis.fetch=oldFetch;GLTFLoader.prototype.loadAsync=oldLoad;}

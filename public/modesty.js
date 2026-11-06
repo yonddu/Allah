@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {mergeGeometries} from './utils/BufferGeometryUtils.js';
+import {skinUserGeometry} from './user-skinning.js';
 const FALLBACK=['#e6e2d8','#e9e5dd','#262b30','#56483b','#3d5175','#b8d1d8','#3e4653','#202226','#c5bdae','#687b56'];
 function clothColor(source,id){
  const fallback=new THREE.Color(FALLBACK[Number(id.slice(-2))-1]||'#464d48'),image=[source.material].flat()[0]?.map?.image;
@@ -29,18 +30,32 @@ export function modestyAsset(source,id){
  };
  // Every piece is closed and overlaps its neighbour, including the crotch and waist.
  add(1,[0,.94,0],[.20,.19,.145]);add(2,[0,1.10,0],[.18,.13,.12]);
- for(const [side,upper,lower]of [[-1,12,13],[1,15,16]]){add(upper,[side*.10,.70,0],[.13,.245,.14]);add(lower,[side*.10,.285,0],[.105,.23,.12]);}
+ for(const [side,upper,lower,key]of [[-1,12,13,'left'],[1,15,16,'right']]){const x=source.userData.contacts?.feet[key].center.x??side*.1;add(upper,[x,.70,0],[.13,.245,.14]);add(lower,[x,.285,0],[.105,.23,.12]);}
  const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());geometry.userData.shared=true;
  const color=clothColor(source,id),material=new THREE.MeshStandardMaterial({color,roughness:1,metalness:0,side:THREE.DoubleSide});
  source.userData.modesty={geometry,material,color,solids};return source.userData.modesty;
 }
-export function coveredMaterial(base,active,color){
- if(Array.isArray(base))return base.map(m=>coveredMaterial(m,active,color));
+export function prayerSockAsset(source,id,config){
+ if(source.userData.prayerSocks)return source.userData.prayerSocks;
+ const parts=[],feet=source.userData.contacts.feet,color=new THREE.Color(id==='model08'?'#303235':'#e9e5dc');
+ for(const key of ['left','right']){
+  const foot=feet[key],width=(foot.max.x-foot.min.x)/2;
+  for(const [center,radii]of [
+   [[foot.center.x,.043,foot.center.z],[width+.003,.046,(foot.max.z-foot.min.z)/2+.005]],
+   [[foot.center.x,.12,.005],[Math.max(.038,width*.70),.075,.054]]
+  ]){const g=new THREE.SphereGeometry(1,12,8);g.scale(...radii);g.translate(...center);parts.push(g);}
+ }
+ const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());skinUserGeometry(geometry,config);geometry.userData.shared=true;
+ const material=new THREE.MeshStandardMaterial({color,roughness:1,metalness:0,side:THREE.DoubleSide});
+ source.userData.prayerSocks={geometry,material,color};return source.userData.prayerSocks;
+}
+export function coveredMaterial(base,active,color,socks={value:0},sockColor=new THREE.Color('#e9e5dc')){
+ if(Array.isArray(base))return base.map(m=>coveredMaterial(m,active,color,socks,sockColor));
  const material=base.clone();material.userData.noorBodyCoverage=true;
  material.onBeforeCompile=shader=>{
-  shader.uniforms.noorCovered=active;shader.uniforms.noorCloth={value:color};
+  shader.uniforms.noorCovered=active;shader.uniforms.noorCloth={value:color};shader.uniforms.noorSocks=socks;shader.uniforms.noorSockCloth={value:sockColor};
   shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vNoorRestBody;').replace('#include <begin_vertex>','#include <begin_vertex>\nvNoorRestBody=vec2(position.x,position.y);');
-  shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vNoorRestBody;uniform float noorCovered;uniform vec3 noorCloth;').replace('#include <map_fragment>','#include <map_fragment>\nif(noorCovered>.5 && vNoorRestBody.y>.52 && vNoorRestBody.y<1.23 && abs(vNoorRestBody.x)<.46 && diffuseColor.r>diffuseColor.g*1.04 && diffuseColor.g>diffuseColor.b*.98 && diffuseColor.r-diffuseColor.b>.008){diffuseColor.rgb=noorCloth;diffuseColor.a=1.;}');
+  shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vNoorRestBody;uniform float noorCovered;uniform vec3 noorCloth;uniform float noorSocks;uniform vec3 noorSockCloth;').replace('#include <map_fragment>','#include <map_fragment>\nif(noorCovered>.5 && vNoorRestBody.y>.52 && vNoorRestBody.y<1.23 && abs(vNoorRestBody.x)<.46 && diffuseColor.r>diffuseColor.g*1.04 && diffuseColor.g>diffuseColor.b*.98 && diffuseColor.r-diffuseColor.b>.008){diffuseColor.rgb=noorCloth;diffuseColor.a=1.;}\nif(noorSocks>.5 && vNoorRestBody.y<.18 && abs(vNoorRestBody.x)<.4){diffuseColor.rgb=noorSockCloth;diffuseColor.a=1.;}');
  };
- material.customProgramCacheKey=()=> 'noor-modest-cloth-v1';return material;
+ material.customProgramCacheKey=()=> 'noor-modest-cloth-v2';return material;
 }

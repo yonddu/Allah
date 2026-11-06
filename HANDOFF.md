@@ -1,3 +1,9 @@
+## Prayer socks and joined feet · 2026-11-06 (validation pending)
+
+User requests opaque socks for female characters during prayer and feet together for all characters in all prayer poses. Actual foot boundaries now calibrate leg bind positions and target ankle spacing per supplied mesh; this avoids fixed-offset crossing/overlap between differently authored models. Standing/bowing soles, and sitting/prostration toes/knees stay planted. Exiting prayer blends lateral leg rotation back to ordinary walking. Female models08–10 use closed opaque sock/cuff shells and a shader guard for original lower-foot texels; per-avatar uniforms keep this prayer-specific and keep coverage during the getting-up transition. The existing hip/leg undergarment follows the calibrated leg positions.
+
+Local actual-mesh tests pass all10 models and all4 poses: foot inner gap 3–25mm, mat contact, female-only sock activation, transition coverage, restored non-prayer stance, existing forehead/knee/toe/palm checks. Local Wrangler cannot start because uv_interface_addresses returns system error1; use GitHub's normal Verify runner for integration renders. Extended visual check to200 full-body views plus36 closeups of female socks (three models x four poses x three views). Inspect the resulting rendered sheets before deployment.
+
 ## Completed release · 2026-11-06
 
 Live application: https://noorrealm.com (old workers.dev URL also stays active).

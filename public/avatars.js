@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {selectedModel} from './user-model-catalog.js';
 import {skinUserGeometry} from './user-skinning.js';
-import {modestyAsset,coveredMaterial} from './modesty.js';
-import {SUJUD,findBodyContacts,prostrationSpineZ,plantProstrationLegs,palmFacing} from './avatar-kinematics.js';
+import {modestyAsset,prayerSockAsset,coveredMaterial} from './modesty.js';
+import {SUJUD,findBodyContacts,prostrationSpineZ,plantProstrationLegs,plantStandingPrayerLegs,palmFacing} from './avatar-kinematics.js';
 const v=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const I={root:0,hips:1,spine:2,chest:3,neck:4,head:5,la:6,le:7,lh:8,ra:9,re:10,rh:11,ll:12,lk:13,lf:14,rl:15,rk:16,rf:17};
 const cache=new Map(),fileCache=new Map();let catalogReady;
@@ -44,13 +44,14 @@ function armIK(bones,side,target,hint){
 export function makeHumanAvatar(profile,tier='low',local=false){
  const root=new THREE.Group(),hips=new THREE.Group(),simple=new THREE.Group(),bones=rig({armY:1.42,shoulder:.21,upper:.25,lower:.24});root.add(hips,simple);hips.add(bones[0]);
  let poseAt=-Infinity,poseState=null,armReach=.49,contacts={forehead:v(0,1.72,-.08),toes:{left:v(-.1,.025,-.14),right:v(.1,.025,-.14)}};
- let skeleton=new THREE.Skeleton(bones),mesh=null,cover=null,coverage=null,stages=null,detailed=true,disposed=false,lastCovered=-Infinity;
- const active={value:0},materialCopies=new Map();
- const materialFor=source=>{if(!materialCopies.has(source.material))materialCopies.set(source.material,coveredMaterial(source.material,active,coverage.color));return materialCopies.get(source.material);};
+ let skeleton=new THREE.Skeleton(bones),mesh=null,cover=null,coverage=null,sockMesh=null,sockAsset=null,stages=null,detailed=true,disposed=false,lastCovered=-Infinity,lastPrayer=-Infinity;
+ const female=selectedModel(profile).gender==='female',active={value:0},sockActive={value:0},materialCopies=new Map();
+ const materialFor=source=>{if(!materialCopies.has(source.material))materialCopies.set(source.material,coveredMaterial(source.material,active,coverage.color,sockActive,sockAsset?.color));return materialCopies.get(source.material);};
  const human={
   skeleton,bones,assetId:selectedModel(profile).id,loaded:false,
   get contacts(){return contacts;},
   get modesty(){return {enabled:active.value===1,mesh:cover,asset:coverage};},
+  get socks(){return {enabled:sockActive.value===1,mesh:sockMesh,asset:sockAsset};},
   setQuality(){},
   setDetail(value){detailed=value;if(mesh&&stages){const source=stages[local?0:(detailed?1:2)];mesh.geometry=source.geometry;mesh.material=materialFor(source);}},
   dispose(){disposed=true;skeleton.dispose();for(const material of materialCopies.values())for(const m of [material].flat())m.dispose();},
@@ -58,10 +59,11 @@ export function makeHumanAvatar(profile,tier='low',local=false){
    if(!praying)pose='standing';
    if(praying&&pose!=='standing')lastCovered=time;
    active.value=time-lastCovered<.8?1:0;if(cover)cover.visible=active.value===1;
+   if(praying)lastPrayer=time;sockActive.value=female&&time-lastPrayer<.8?1:0;if(sockMesh)sockMesh.visible=sockActive.value===1;
    const greetingWeight=greeting>=0?Math.min(1,greeting/.20,(1-greeting)/.24):0;
    const state=pose+praying+moving+(greetingWeight>0);if(!local&&!detailed&&state===poseState&&time-poseAt<1/12)return;
    if(!local&&!detailed)dt=Math.min(.25,Math.max(dt,time-poseAt));poseAt=time;poseState=state;
-   const kneeling=pose==='sitting'||pose==='prostrating',prostrating=pose==='prostrating',bowing=pose==='bowing',s=1-Math.exp(-dt*10),hip=prostrating?SUJUD.hipY:kneeling?.39:.92;
+   const kneeling=pose==='sitting'||pose==='prostrating',prostrating=pose==='prostrating',bowing=pose==='bowing',s=1-Math.exp(-dt*10),hip=prostrating?SUJUD.hipY:kneeling?.39:praying?.965:.92;
    bones[I.hips].position.y=THREE.MathUtils.lerp(bones[I.hips].position.y,hip+(moving?Math.sin(time*10)*.016:0),s);
    bones[I.hips].position.z=THREE.MathUtils.lerp(bones[I.hips].position.z,prostrating?SUJUD.hipZ:0,s);
    bones[I.hips].rotation.x=THREE.MathUtils.lerp(bones[I.hips].rotation.x,prostrating?SUJUD.hipAngle:0,s);
@@ -71,13 +73,13 @@ export function makeHumanAvatar(profile,tier='low',local=false){
    bones[I.head].rotation.x=THREE.MathUtils.lerp(bones[I.head].rotation.x,prostrating?SUJUD.headAngle:-.13*greetingWeight,s);
    for(const side of [-1,1]){
     const leg=bones[side<0?I.ll:I.rl],knee=bones[side<0?I.lk:I.rk];
-    if(prostrating)continue;
+    if(praying)continue;
     bones[side<0?I.lf:I.rf].quaternion.identity();
-    leg.rotation.x=THREE.MathUtils.lerp(leg.rotation.x,kneeling?(prostrating?.85:1.0):moving?Math.sin(time*8+side)*.30:0,s);
-    knee.rotation.x=THREE.MathUtils.lerp(knee.rotation.x,kneeling?(prostrating?-1.9:-2.2):moving?Math.max(0,-Math.sin(time*8+side))*.30:0,s);
+    leg.quaternion.slerp(new THREE.Quaternion().setFromAxisAngle(v(1,0,0),moving?Math.sin(time*8+side)*.30:0),s);
+    knee.quaternion.slerp(new THREE.Quaternion().setFromAxisAngle(v(1,0,0),moving?Math.max(0,-Math.sin(time*8+side))*.30:0),s);
    }
    root.updateMatrixWorld(true);
-   if(prostrating)plantProstrationLegs(root,bones,contacts);
+   if(praying&&human.loaded){if(kneeling)plantProstrationLegs(root,bones,contacts);else plantStandingPrayerLegs(root,bones,contacts);}
    for(const side of [-1,1]){
     let target,hint;
     if(prostrating){target=v(side*.24,.085,-.40).applyMatrix4(root.matrixWorld);hint=v(side*.45,.23,-.18).applyMatrix4(root.matrixWorld);}
@@ -106,13 +108,15 @@ export function makeHumanAvatar(profile,tier='low',local=false){
  human.ready=userAsset(human.assetId,local).then(asset=>{
   if(disposed)return;
   const c=asset.config;contacts=asset.meshes[0].userData.contacts;armReach=c.upper+c.lower;bones[I.chest].position.y=c.armY-.045-1.12;
+  bones[I.ll].position.x=contacts.feet.left.center.x;bones[I.rl].position.x=contacts.feet.right.center.x;
   bones[I.neck].position.y=1.52-(c.armY-.045);
   for(const side of [-1,1]){bones[side<0?I.la:I.ra].position.x=side*c.shoulder;bones[side<0?I.le:I.re].position.x=side*c.upper;bones[side<0?I.lh:I.rh].position.x=side*c.lower;}
   // Bind the supplied mesh in its untouched T-pose before applying animation.
   for(const bone of bones)bone.quaternion.identity();bones[I.hips].position.set(0,.92,0);bones[I.spine].position.set(0,.20,0);root.updateMatrixWorld(true);
   skeleton.dispose();skeleton=new THREE.Skeleton(bones);human.skeleton=skeleton;stages=asset.meshes;
-  const source=stages[local?0:(detailed?1:2)];coverage=modestyAsset(source,human.assetId);mesh=new THREE.SkinnedMesh(source.geometry,materialFor(source));mesh.frustumCulled=true;mesh.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.9,0),1.8);mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.userModel=human.assetId;hips.add(mesh);mesh.bind(skeleton);
+  const source=stages[local?0:(detailed?1:2)];coverage=modestyAsset(source,human.assetId);if(female)sockAsset=prayerSockAsset(source,human.assetId,c);mesh=new THREE.SkinnedMesh(source.geometry,materialFor(source));mesh.frustumCulled=true;mesh.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.9,0),1.8);mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.userModel=human.assetId;hips.add(mesh);mesh.bind(skeleton);
   cover=new THREE.SkinnedMesh(coverage.geometry,coverage.material);cover.name='Closed prayer undergarment';cover.frustumCulled=true;cover.boundingSphere=new THREE.Sphere(v(0,.9,0),1.8);cover.castShadow=true;cover.receiveShadow=true;hips.add(cover);cover.bind(skeleton,mesh.bindMatrix);cover.visible=active.value===1;human.loaded=true;
+  if(sockAsset){sockMesh=new THREE.SkinnedMesh(sockAsset.geometry,sockAsset.material);sockMesh.name='Opaque prayer socks';sockMesh.frustumCulled=true;sockMesh.boundingSphere=new THREE.Sphere(v(0,.9,0),1.8);sockMesh.castShadow=true;sockMesh.receiveShadow=true;hips.add(sockMesh);sockMesh.bind(skeleton,mesh.bindMatrix);sockMesh.visible=false;}
   human.update('standing',false,0,false,1);
  });
  return {root,hips,simple,human,head:bones[I.head],torso:bones[I.spine],arms:[bones[I.la],bones[I.ra]],legs:[bones[I.ll],bones[I.rl]],materials:[]};
