@@ -1,3 +1,11 @@
+## Completed prayer/contact and avatar-menu repair · 2026-11-06 (Asia/Seoul)
+
+- Deployed application commit: f74dd40e78c6e185ca94821871f3f82b584ef982.
+- GitHub Verify run 42191526873: success. All 39 Node tests passed, including actual forehead/toe skin vertices and knee anchors for all ten user-supplied models, head facing floor and separated from knees, palms facing inward at multiple avatar yaws, and server-side directed-greeting validation. Browser tests passed actual right-click picking, directed greeting and whisper selection/delivery, four prayer poses, onboarding, languages/RTL, chat/block/mute, both courtyards and 50-slot admission/51st rejection.
+- The side-view prostration image emitted by the CI renderer was inspected: forehead is on the mat forward of the knees, palms on the mat, pelvis raised. Supplied garments still use automatic weights, so cloth folds are approximations. No manual garment rigging is claimed.
+- Cloudflare build d998553a-7980-453b-852f-76c8ae800adc finished stopped/success and deployed to https://allah.songyd1018.workers.dev . Reload existing tabs for new modules. Production remains 50. Geometry/material budgets are unchanged. Actual low-end-phone FPS remains unmeasured.
+- Remote 100-client network test: 2,000/2,000 movement acknowledgements, ACK p95 98ms, public 100/private 2 delivery. Software-render capacity snapshots are not physical Android FPS.
+
 ## Prayer contact, inward palms and avatar action menu · 2026-11-06
 
 - User reported that prostration folded the face onto the knees and that the hands still faced outward. Replaced numeric wrist roll with a world-space palm frame derived from forearm direction and inward torso normal. Added actual-mesh forehead/toe landmarks, a calibrated pelvis/spine/neck pose and planted knee/ankle solving. Prostration faces downward with forehead and toes on the mat, and head forward of knees. Supplied geometry/UVs remain unchanged.
