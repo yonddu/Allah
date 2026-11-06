@@ -70,7 +70,7 @@ export default {
       headers.set('X-Noor-Room',room);headers.set('X-Noor-Account',user.id);headers.set('X-Noor-Name',encodeURIComponent(user.name));
       return env.ROOMS.get(env.ROOMS.idFromName(room)).fetch(new Request(request,{headers}));
     }
-    if(['/api/session','/api/social','/api/posts','/api/friends/request','/api/friends/respond','/api/friends/remove','/api/chat/preferences','/api/blocks'].includes(url.pathname)||/^\/api\/posts\/[a-f0-9-]{36}$/.test(url.pathname))return env.COMMUNITY.get(env.COMMUNITY.idFromName('community')).fetch(request);
+    if(['/api/session','/api/social','/api/posts','/api/duas','/api/friends/request','/api/friends/respond','/api/friends/remove','/api/chat/preferences','/api/blocks'].includes(url.pathname)||/^\/api\/(posts\/[a-f0-9-]{36}|duas\/[a-f0-9-]{36}(\/amin)?)$/.test(url.pathname))return env.COMMUNITY.get(env.COMMUNITY.idFromName('community')).fetch(request);
     if(url.pathname.startsWith('/api/'))return new Response('Not found',{status:404});
     return env.ASSETS.fetch(request);
   }

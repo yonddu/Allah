@@ -1,7 +1,14 @@
 import {sanitizeProfile,validatePost} from './public/core.js';
+import {DuaWall} from './dua-wall.js';
 const json=(data,status=200,headers={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store',...headers}});
 const hash=async value=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))].map(b=>b.toString(16).padStart(2,'0')).join('');
 const cookieToken=request=>(request.headers.get('Cookie')||'').split(';').map(p=>p.trim()).find(p=>p.startsWith('noor_session='))?.slice(13);
+async function readPayload(request){
+  const reader=request.body?.getReader();if(!reader)throw new SyntaxError('Missing body');
+  const decoder=new TextDecoder();let bytes=0,raw='';
+  try{while(true){const {done,value}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>12000){await reader.cancel();throw new RangeError('Body too large');}raw+=decoder.decode(value,{stream:true});}raw+=decoder.decode();}
+  finally{reader.releaseLock();}return JSON.parse(raw);
+}
 export class Community {
   constructor(ctx,env){
     this.ctx=ctx;this.env=env;this.sql=ctx.storage.sql;
@@ -12,6 +19,7 @@ export class Community {
     this.sql.exec('CREATE TABLE IF NOT EXISTS rate_limits (actor TEXT NOT NULL, kind TEXT NOT NULL, bucket INTEGER NOT NULL, count INTEGER NOT NULL, PRIMARY KEY(actor,kind,bucket))');
     this.sql.exec('CREATE TABLE IF NOT EXISTS chat_preferences (owner TEXT PRIMARY KEY, public_chat INTEGER NOT NULL DEFAULT 1, whispers INTEGER NOT NULL DEFAULT 1)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS blocks (owner TEXT NOT NULL, target TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY(owner,target))');
+    this.duas=new DuaWall(this);
   }
   one(query,...args){return this.sql.exec(query,...args).toArray()[0];}
   friends(id){return this.sql.exec('SELECT u.id,u.code,u.name FROM friendships f JOIN users u ON u.id=CASE WHEN f.sender=? THEN f.receiver ELSE f.sender END WHERE (f.sender=? OR f.receiver=?) AND f.accepted=1',id,id,id).toArray();}
@@ -53,12 +61,13 @@ export class Community {
     if(Number(request.headers.get('Content-Length')||0)>12000)return json({error:'요청이 너무 큽니다.'},413);
     let data={};
     if(mutating&&request.method!=='DELETE'){
-      try{const raw=await request.text();if(raw.length>12000)return json({error:'요청이 너무 큽니다.'},413);data=JSON.parse(raw);}
-      catch{return json({error:'입력 형식을 확인해주세요.'},400);}
+      try{data=await readPayload(request);}
+      catch(error){return error instanceof RangeError?json({error:'요청이 너무 큽니다.'},413):json({error:'입력 형식을 확인해주세요.'},400);}
       if(!data||typeof data!=='object')return json({error:'입력 형식을 확인해주세요.'},400);
     }
     let user=await this.user(request);
     const ipHash=await hash(request.headers.get('CF-Connecting-IP')||'local-development');
+    if(path==='/api/duas'||path.startsWith('/api/duas/')){const response=this.duas.handle(request,url,user,ipHash,data);return response||json({error:'duaMissing'},404);}
     if(path==='/api/session'&&request.method==='POST'){
       const name=sanitizeProfile({name:data.name}).name;
       if(!user){

@@ -1,7 +1,8 @@
 import {t} from './i18n.js';
+import {initDuaWall} from './dua-wall.js';
 export function initCommunity({getName,toast,onSession,sendChat,reconnect,onPublicChat}){
   const $=id=>document.getElementById(id);
-  let session=null,category='suggestion',page=0,currentPost=null,requestVersion=0,startPromise=null,sessionVersion=0,stopped=false;
+  let session=null,category='dua',page=0,currentPost=null,requestVersion=0,startPromise=null,sessionVersion=0,stopped=false;
   let channel='chat',messages=[],collapsed=false,unread=0,prayerMode=false;const players=new Map();
   const open=id=>$(id).showModal();
   const date=value=>new Intl.DateTimeFormat(document.documentElement.lang||'en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(value));
@@ -34,7 +35,10 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect,onPubl
     return startPromise;
   }
   function handler(id,event,fn){$(id).addEventListener(event,e=>{Promise.resolve(fn(e)).catch(error=>toast(error.message));});}
+  const duaWall=initDuaWall({getSession:()=>session,ensureSession:start,toast});
   async function loadPosts(){
+    const dua=category==='dua';$('duaWall').hidden=!dua;$('communityPosts').hidden=dua;$('writePostButton').hidden=dua;duaWall.setActive(dua);
+    if(dua){requestVersion++;return duaWall.load({refresh:true});}
     const version=++requestVersion;$('boardStatus').textContent='글을 불러오고 있습니다…';
     try{
       const result=await api('/api/posts?category='+category+'&page='+page);if(version!==requestVersion)return;
@@ -167,5 +171,5 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect,onPubl
   function clear(){players.clear();messages=[];unread=0;renderChat();renderPeople();}
   window.addEventListener('languagechange',()=>{if($('boardDialog').open)loadPosts();if($('friendsDialog').open)renderFriends();renderChat();renderPeople();});
   function setPrayerMode(active){if(prayerMode===active)return;prayerMode=active;if(active){messages=[];unread=0;$('chatInput').blur();$('chatInput').value='';}renderChat();}
-  return {start,stop(){stopped=true;sessionVersion++;startPromise=null;session=null;clear();$('myFriendCode').textContent=t('연결 중…');$('friendBadge').textContent='';},chat,setPrayerMode,beginWhisper,player,leave,clear,refresh:refreshFriends,get session(){return session;},updateName:async()=>{if(session)sessionUpdated(await api('/api/session','POST',{name:getName()}));}};
+  return {start,stop(){duaWall.stop();stopped=true;sessionVersion++;startPromise=null;session=null;clear();$('myFriendCode').textContent=t('연결 중…');$('friendBadge').textContent='';},chat,setPrayerMode,beginWhisper,player,leave,clear,refresh:refreshFriends,get session(){return session;},updateName:async()=>{if(session)sessionUpdated(await api('/api/session','POST',{name:getName()}));}};
 }
