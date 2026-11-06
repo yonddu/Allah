@@ -7,11 +7,23 @@ try{
  await page.evaluate(async()=>{
   const {Color}=await import('/vendor/three.module.js'),s=window.__noorScene;s.renderer.setAnimationLoop(null);s.clearPlayers();s.hall.visible=false;s.scene.background=new Color('#b9c5c1');s.scene.fog=null;s.position={x:0,z:0};s.yaw=0;s.renderer.setPixelRatio(1);s.renderer.setSize(480,360,false);s.camera.aspect=480/360;s.camera.fov=45;s.camera.updateProjectionMatrix();window.qaTime=0;
  });
- const views=['front','back','left','right','top'],poses=['standing','prostrating','sitting','bowing'],sheets=new Map(),sockSheets=new Map(),report=[];
+ const views=['front','back','left','right','top'],poses=['standing','prostrating','sitting','bowing'],sheets=new Map(),sockSheets=new Map(),report=[],armReport=[];
+ const armSheets=[0,1].map(()=>{const canvas=createCanvas(960,1000),g=canvas.getContext('2d');g.fillStyle='#eff2ef';g.fillRect(0,0,960,1000);return {canvas,g};});
+ await mkdir('artifacts/resting-arms',{recursive:true});
  for(const pose of poses){const canvas=createCanvas(1200,10*210),g=canvas.getContext('2d');g.fillStyle='#eff2ef';g.fillRect(0,0,canvas.width,canvas.height);sheets.set(pose,{canvas,g});const sc=createCanvas(900,540),sg=sc.getContext('2d');sg.fillStyle='#eff2ef';sg.fillRect(0,0,900,540);sockSheets.set(pose,{canvas:sc,g:sg});}
  for(let n=1;n<=10;n++){
   const id='model'+String(n).padStart(2,'0');
   await page.evaluate(async({id,n})=>{const s=window.__noorScene;s.updateProfile({...s.profile,model:id,gender:n>=8?'female':'male'});await s.local.human.ready;s.local.root.position.set(0,0,0);s.local.root.rotation.y=0;},{id,n});
+  for(let view=0;view<4;view++){
+   const result=await page.evaluate(view=>{
+    const s=window.__noorScene,a=s.local;for(let frame=0;frame<240;frame++)a.human.update('standing',false,window.qaTime+=1/60,false,1/60);a.rug.visible=a.fringe.visible=false;a.root.updateMatrixWorld(true);
+    const cameras=[[-1.8,1.3,-1],[1.8,1.3,-1],[-2,1.3,0],[2,1.3,0]];s.camera.up.set(0,1,0);s.camera.position.set(...cameras[view]);s.camera.lookAt(0,1.2,0);s.camera.updateMatrixWorld();s.renderer.render(s.scene,s.camera);
+    const b=a.human.bones,positions=[6,7,8,9,10,11].map(i=>{const p=b[i].getWorldPosition(b[i].position.clone());return {x:p.x,y:p.y,z:p.z};});
+    return {image:s.renderer.domElement.toDataURL('image/png'),positions};
+   },view);
+   for(const offset of [0,3]){const [shoulder,elbow,wrist]=result.positions.slice(offset,offset+3);assert.ok(elbow.z>shoulder.z+.015,id+' resting elbow must not bend backward');assert.ok(wrist.z<elbow.z-.025,id+' wrist stays forward of elbow');}
+   const bytes=Buffer.from(result.image.split(',')[1],'base64');await writeFile(`artifacts/resting-arms/${id}-${view}.png`,bytes);const {g}=armSheets[Math.floor((n-1)/5)];g.drawImage(await loadImage(bytes),view*240,((n-1)%5)*200+20,240,180);g.fillStyle='#18392f';g.font='12px sans-serif';g.fillText(id+' / '+['left oblique','right oblique','left side','right side'][view],view*240+5,((n-1)%5)*200+15);armReport.push({id,view,positions:result.positions});
+  }
   for(const pose of poses)for(let view=0;view<views.length;view++){
    const result=await page.evaluate(({pose,view})=>{
     const s=window.__noorScene,a=s.local;for(let frame=0;frame<180;frame++)a.human.update(pose,true,window.qaTime+=1/60,false,1/60);a.rug.visible=a.fringe.visible=true;a.root.updateMatrixWorld(true);
@@ -29,6 +41,8 @@ try{
   }
  }
  for(const pose of poses){const {canvas}=sheets.get(pose),bytes=canvas.toBuffer('image/jpeg',50);await writeFile('artifacts/modesty-'+pose+'-all-10.jpg',bytes);const encoded=bytes.toString('base64');for(let offset=0;offset<encoded.length;offset+=40000)console.log('NOOR_MODESTY_'+pose.toUpperCase()+'_CHUNK_'+(offset/40000)+':'+encoded.slice(offset,offset+40000));}
+ for(let i=0;i<armSheets.length;i++)await writeFile('artifacts/resting-arms-group-'+i+'.png',armSheets[i].canvas.toBuffer('image/png'));
+ assert.equal(armReport.length,40);await writeFile('artifacts/resting-arms-report.json',JSON.stringify(armReport,null,2));
  for(const pose of poses){const bytes=sockSheets.get(pose).canvas.toBuffer('image/jpeg',75);await writeFile('artifacts/prayer-socks-'+pose+'.jpg',bytes);const encoded=bytes.toString('base64');for(let offset=0;offset<encoded.length;offset+=40000)console.log('NOOR_SOCKS_'+pose.toUpperCase()+'_CHUNK_'+(offset/40000)+':'+encoded.slice(offset,offset+40000));}
  assert.equal(report.length,200);assert.deepEqual(errors,[]);await writeFile('artifacts/modesty-report.json',JSON.stringify({views:200,characters:10,poses:4,covered:true,errors},null,2));console.log(JSON.stringify({modesty:'passed',characters:10,poses:4,views:200,errors}));
 }finally{await browser?.close();server.kill('SIGTERM');await writeFile('artifacts/modesty-worker.log',log);}

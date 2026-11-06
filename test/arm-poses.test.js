@@ -39,6 +39,13 @@ test('All supplied arms carry palm orientation through the sleeves without twist
      }
      assert.ok(Math.abs(upper.getWorldPosition(v()).distanceTo(elbow.getWorldPosition(v()))-runtime[id].rig.upper)<1e-5,label+' upper arm length');
      assert.ok(Math.abs(elbow.getWorldPosition(v()).distanceTo(hand.getWorldPosition(v()))-runtime[id].rig.lower)<1e-5,label+' forearm length');
+     if(pose==='idle'){
+      const shoulderPosition=a.root.worldToLocal(upper.getWorldPosition(v())),elbowPosition=a.root.worldToLocal(elbow.getWorldPosition(v())),wristPosition=a.root.worldToLocal(hand.getWorldPosition(v()));
+      assert.ok(elbowPosition.z>shoulderPosition.z+.015,label+' resting elbow remains behind the shoulder line');
+      assert.ok(wristPosition.z<elbowPosition.z-.025,label+' forearm bends forward rather than backward');
+      const upperDirection=elbowPosition.clone().sub(shoulderPosition).normalize(),lowerDirection=wristPosition.clone().sub(elbowPosition).normalize();
+      assert.ok(upperDirection.angleTo(lowerDirection)<.4,label+' relaxed elbow has only a slight bend');
+     }
      // Check the authored palm vertices as skinned, not only the synthetic bone axes.
      const p=mesh.geometry.attributes.position,normals=mesh.geometry.attributes.normal,weights=mesh.geometry.attributes.skinWeight,joints=mesh.geometry.attributes.skinIndex;
      let samples=0,alignment=0;

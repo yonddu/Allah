@@ -87,9 +87,10 @@ export function makeHumanAvatar(profile,tier='low',local=false){
     else if(kneeling){target=v(side*.13,.45,-.23).applyMatrix4(root.matrixWorld);hint=v(side*.25,.68,-.04).applyMatrix4(root.matrixWorld);}
     else if(praying){target=v(side*-.025,-.22,-.20).applyMatrix4(bones[I.chest].matrixWorld);hint=v(side*.32,-.30,-.06).applyMatrix4(bones[I.chest].matrixWorld);}
     else{
-     target=v(side*.24,.045-armReach*.96,moving?Math.sin(time*8+side)*.10:0);
+     target=v(side*.24,.045-armReach*(moving?.96:.985),-.025+(moving?Math.sin(time*8+side)*.10:0));
      if(side>0&&greetingWeight>0)target.lerp(v(-.045,-.04,-.22),greetingWeight);
-     target.applyMatrix4(bones[I.chest].matrixWorld);hint=v(bones[side<0?I.la:I.ra].position.x,-armReach*.48,-.12).applyMatrix4(bones[I.chest].matrixWorld);
+     // In -Z-forward space a resting elbow sits behind the wrist, not in front of it.
+     target.applyMatrix4(bones[I.chest].matrixWorld);hint=v(bones[side<0?I.la:I.ra].position.x,-armReach*.48,side>0?THREE.MathUtils.lerp(.12,-.12,greetingWeight):.12).applyMatrix4(bones[I.chest].matrixWorld);
     }
     const rootRotation=root.getWorldQuaternion(new THREE.Quaternion());
     const normal=kneeling?v(0,-1,0):praying?v(0,0,1):side>0&&greetingWeight>0?v(0,0,1):v(-side,0,0);
