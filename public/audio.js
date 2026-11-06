@@ -16,7 +16,7 @@ export class Soundscape {
       if(document.hidden){this.water.pause();this.ctx?.suspend();}
       else if(this.enabled&&!this.praying)this.toast('소리를 다시 들으려면 소리 켜기를 눌러주세요.');
     });
-    window.addEventListener('pagehide',()=>{this.recitation.pause();this.water.pause();this.ctx?.close();if(this.localUrl)URL.revokeObjectURL(this.localUrl);});
+    window.addEventListener('pagehide',event=>{this.enabled=false;this.praying=false;this.recitation.pause();this.water.pause();this.ctx?.close().catch(()=>{});this.ctx=null;this.master=null;this.wind=null;if(!event.persisted&&this.localUrl)URL.revokeObjectURL(this.localUrl);});
   }
   async enable(){
     this.enabled=true;

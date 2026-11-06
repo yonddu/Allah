@@ -17,6 +17,7 @@ let generatedName=false;
 let toastTimer,profile=loadProfile(),savedRoom;
 try{savedRoom=localStorage.getItem('noor-room');}catch{}
 let currentRoom=parseRoom(savedRoom)?.key||'mecca:1',scene,network,community,playerMenu,partyUi;
+let pageGeneration=0,pageLeaving=false;
 function toast(message){
   $('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),4500);
 }
@@ -123,11 +124,12 @@ network=new RoomConnection({
     if(scene.praying)network.send({type:'prayer',active:true,pose:scene.pose});
   },
   self:p=>{if(p.correction&&Math.hypot(p.correction.x,p.correction.z)>.08)scene.position={x:scene.position.x+p.correction.x,z:scene.position.z+p.correction.z};scene.protected=p.protected;if(p.authoritative&&(p.praying||scene.praying!==p.praying))scene.position={x:p.x,z:p.z};if(p.authoritative&&scene.praying!==p.praying){scene.praying=p.praying;scene.pose=p.pose;if(scene.praying){scene.cancelGreeting();sound.startPrayer();}else sound.stopPrayer();prayerUI();}},
-  player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.clearSpeech();scene.clearPlayers();community?.clear();partyUi?.reset();},
+  player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.selfId=null;scene.clearSpeech();scene.clearPlayers();community?.clear();partyUi?.reset();},
   count:n=>$('onlineCount').textContent=n+'명 접속',
   recount:()=>$('onlineCount').textContent=(scene.remote.size+1)+'명 접속',
   notice:toast,party:message=>partyUi?.message(message),chat:message=>community?.chat(message),greeting:message=>{if(!scene.praying&&!scene.blockedIds?.has(message.accountId))scene.playGreeting(message.id===network.selfId?null:message.id,message.targetPlayerId||null);}
 });
+network.suspended=true;
 community=initCommunity({
   getName:()=>profile.name,toast,onPublicChat:message=>scene.showSpeech(message),onSession:session=>{scene.clearSpeech();scene.accountId=session.id;scene.blockedIds=new Set(session.blocked.map(p=>p.id));scene.friendIds=session.friends.map(p=>p.id).filter(id=>!scene.blockedIds.has(id));partyUi?.privacyChanged();},
   sendChat:(text,to)=>network.send(to?{type:'whisper',text,to}:{type:'chat',text}),reconnect:()=>network.connect(currentRoom)
@@ -147,7 +149,7 @@ scene.onPlayerMenu=(id,x,y)=>{
   playerMenu.open({id,accountId:avatar.accountId,name:avatar.profile.name,praying:avatar.praying},x,y);
 };
 scene.onPlayerMenuClose=()=>playerMenu.close();
-$('reconnectButton').addEventListener('click',async()=>{try{await community.start();network.retry=0;network.connect(currentRoom);$('settingsDialog').close();}catch(e){toast(e.message);}});
+$('reconnectButton').addEventListener('click',async()=>{const generation=pageGeneration;try{await community.start();if(pageLeaving||generation!==pageGeneration)return;network.resume();network.retry=0;network.connect(currentRoom);$('settingsDialog').close();}catch(e){toast(e.message);}});
 let chosenMap=parseRoom(currentRoom).map,chosenServer=parseRoom(currentRoom).server,roomsVersion=0;
 function mapLabels(){
   const room=parseRoom(currentRoom),map=MAPS[room.map];
@@ -178,15 +180,26 @@ async function loadServers(){
 }
 $('mapButton').addEventListener('click',()=>{window.dispatchEvent(new Event('noor:select-room'));chosenMap=parseRoom(currentRoom).map;chosenServer=parseRoom(currentRoom).server;renderMaps();openDialog('mapDialog');loadServers();});
 $('enterRoomButton').addEventListener('click',async()=>{
+  const generation=pageGeneration;
   $('enterRoomButton').disabled=true;
   try{
     sound.enable().then(()=>$('soundButton').querySelector('.utility-label').textContent='소리 설정').catch(()=>{});
     await scene.local.human.ready;
     if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={...MAPS[chosenMap].spawn};scene.cameraDistance=PLAY_CAMERA.distance;scene.cameraHeight=PLAY_CAMERA.height;scene.cameraAngle=MAPS[chosenMap].cameraAngle;scene.snapCamera();
     mapLabels();try{localStorage.setItem('noor-room',currentRoom);}catch{}
-    await community.start();network.retry=0;network.connect(currentRoom);window.dispatchEvent(new Event('noor:entered'));$('mapDialog').close();
+    await community.start();if(pageLeaving||generation!==pageGeneration)return;network.resume();network.retry=0;network.connect(currentRoom);window.dispatchEvent(new Event('noor:entered'));$('mapDialog').close();
   }catch(e){$('roomStatus').textContent=e.message;}
   finally{$('enterRoomButton').disabled=false;}
+});
+window.addEventListener('pagehide',()=>{
+  if(pageLeaving)return;pageLeaving=true;pageGeneration++;
+  network.disconnect({notify:true,suspend:true});community.stop();playerMenu.close();
+  if(scene.praying)setPrayer(false);
+});
+window.addEventListener('pageshow',event=>{
+  if(!event.persisted)return;pageLeaving=false;
+  for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
+  window.dispatchEvent(new Event('noor:select-room'));renderMaps();openDialog('mapDialog');loadServers();
 });
 const locationService=initLocation(toast);initPrayerTimes({location:locationService,toast});updateChoices();mapLabels();prayerUI();
 setInterval(()=>{if(!document.hidden)network.movement(scene.position,scene.yaw);},150);
@@ -196,9 +209,7 @@ await scene.environmentReady;
 $('enterRoomButton').disabled=false;
 requestAnimationFrame(()=>{$('loading').hidden=true;});
 if(new URLSearchParams(location.search).has('qa')){window.__noorScene=scene;window.__noorParty=partyUi;}
-community.start().then(()=>{if(parseRoom(savedRoom))network.connect(currentRoom);}).catch(()=>toast('온라인 연결을 준비하지 못했습니다. 설정에서 다시 연결할 수 있습니다.'));
-if(!parseRoom(savedRoom)||$('mapDialog').open){renderMaps();openDialog('mapDialog');loadServers();}
-window.addEventListener('pagehide',()=>{network.generation++;clearTimeout(network.timer);network.socket?.close();});
+renderMaps();openDialog('mapDialog');loadServers();
 
 setInterval(()=>{if(!document.hidden&&community.session)community.refresh().catch(()=>{});},30000);
 

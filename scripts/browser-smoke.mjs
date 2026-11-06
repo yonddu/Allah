@@ -247,7 +247,29 @@ try{
   await page.locator('#qualitySelect').selectOption('high');
   await page.waitForFunction(()=>window.__noorScene.hallReady&&window.__noorScene.loadedAsset==='high',null,{timeout:30000});
   assert.equal(await page.evaluate(()=>window.__noorScene.renderer.shadowMap.autoUpdate),true);
-  await writeFile('artifacts/browser-report.json',JSON.stringify({capacity50:true,note:'Desktop Chromium with software WebGL; these are rendering budgets, not real-phone FPS measurements.',maps,errors},null,2));
+  await page.locator('#settingsDialog [data-close]').click();
+  // Navigation, refresh and a restored page all require a fresh explicit room entry.
+  const retained=await page.evaluate(()=>({room:localStorage.getItem('noor-room'),profile:localStorage.getItem('noor-profile'),account:window.__noorScene.accountId,player:window.__noorScene.selfId}));
+  const observerMessages=[],observer=new TestSocket('ws://127.0.0.1:8787/api/room?room='+encodeURIComponent(retained.room),{origin:'http://127.0.0.1:8787',headers:{Cookie:cookie}});
+  const waitUntil=async check=>{for(let n=0;n<200;n++){if(await check())return;await delay(100);}throw new Error('Page exit cleanup timed out');};
+  const countRoom=async()=>{const r=await fetch('http://127.0.0.1:8787/api/rooms?map='+retained.room.split(':')[0]);return (await r.json()).rooms.find(r=>r.key===retained.room).count;};
+  const verifyLobby=async()=>{
+    await page.waitForFunction(()=>window.__noorScene?.hallReady,null,{timeout:60000});await page.locator('#mapDialog').waitFor({state:'visible'});
+    assert.equal(await page.evaluate(()=>!!window.__noorScene.selfId),false);assert.equal(await page.locator('#statusDot').getAttribute('class'),'status-dot');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('noor-profile')),retained.profile);assert.equal(await countRoom(),1);
+  };
+  const enterAgain=async()=>{await page.locator('#enterRoomButton').click();await page.waitForFunction(()=>document.getElementById('statusDot').classList.contains('connected'));assert.equal(await page.evaluate(()=>window.__noorScene.accountId),retained.account);await waitUntil(async()=>await countRoom()===2);};
+  try{
+    await new Promise((resolve,reject)=>{observer.once('error',reject);observer.on('message',raw=>{const message=JSON.parse(raw);observerMessages.push(message);if(message.type==='welcome')resolve();});});
+    await page.goto('http://127.0.0.1:8787/api/health');
+    await waitUntil(()=>observerMessages.some(m=>m.type==='leave'&&m.id===retained.player));await waitUntil(async()=>await countRoom()===1);
+    await page.goBack({waitUntil:'commit'});await verifyLobby();await delay(1200);assert.equal(await countRoom(),1);await enterAgain();
+    await page.reload({waitUntil:'domcontentloaded'});await waitUntil(async()=>await countRoom()===1);await verifyLobby();await enterAgain();
+    await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));await waitUntil(async()=>await countRoom()===1);
+    await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));await verifyLobby();await delay(1200);assert.equal(await countRoom(),1);await enterAgain();
+    await page.close();await waitUntil(async()=>await countRoom()===1);
+  }finally{observer.close();}
+  await writeFile('artifacts/browser-report.json',JSON.stringify({capacity50:true,exitLogout:true,note:'Desktop Chromium with software WebGL; these are rendering budgets, not real-phone FPS measurements.',maps,errors},null,2));
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({browser:'passed',maps:maps.map(m=>({map:m.map,drawCalls:m.drawCalls,triangles:m.triangles})),crowdDrawCalls:crowd.drawCalls}));
 }catch(error){

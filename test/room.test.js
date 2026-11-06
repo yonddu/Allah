@@ -2,6 +2,27 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {prayerYaw} from '../public/core.js';
 import worker,{PrayerRoom,roomCapacity} from '../worker.js';
+
+test('Leave removes only the authenticated page, releases capacity immediately and is idempotent',async()=>{
+ const {room,socket}=setup(),a=socket('a','owner',{praying:true}),anotherTab=socket('another-tab','owner'),peer=socket('peer','other');
+ room.protectedSockets.add(a);room.batchClients.add(a);room.pendingMoves.set('a',a.deserializeAttachment());
+ const leave=account=>room.fetch(new Request('https://room.internal/leave?player=a',{method:'POST',headers:{'X-Noor-Account':account}}));
+ assert.equal((await leave('other')).status,204);assert.equal(room.players().length,3);
+ assert.equal((await leave('owner')).status,204);assert.equal(room.players().length,2);assert.equal(a.deserializeAttachment(),null);assert.ok(anotherTab.deserializeAttachment());
+ assert.equal(room.protectedSockets.has(a),false);assert.equal(room.batchClients.has(a),false);assert.equal(room.pendingMoves.has('a'),false);
+ assert.equal(peer.messages.filter(m=>m.type==='leave'&&m.id==='a').length,1);
+ await leave('owner');room.webSocketClose(a,1000);assert.equal(peer.messages.filter(m=>m.type==='leave'&&m.id==='a').length,1);
+});
+
+test('Leave endpoint rejects foreign origins and oversized bodies, and derives identity from the session',async()=>{
+ let forwarded;const env={COMMUNITY:{idFromName:n=>n,get:()=>({fetch:async()=>Response.json({id:'owner'})})},ROOMS:{idFromName:n=>n,get:room=>({fetch:async request=>{forwarded={room,request};return new Response(null,{status:204});}})}};
+ const request=(body,origin='https://noor.example')=>new Request('https://noor.example/api/leave',{method:'POST',headers:{Origin:origin},body});
+ const payload=JSON.stringify({room:'taj:2',player:'own-player',account:'forged'});
+ assert.equal((await worker.fetch(request(payload,'https://evil.example'),env)).status,403);assert.equal(forwarded,undefined);
+ assert.equal((await worker.fetch(request('x'.repeat(1025)),env)).status,413);assert.equal((await worker.fetch(request('{broken'),env)).status,400);
+ assert.equal((await worker.fetch(request(payload),env)).status,204);assert.equal(forwarded.room,'taj:2');assert.equal(forwarded.request.headers.get('X-Noor-Account'),'owner');assert.equal(new URL(forwarded.request.url).searchParams.get('player'),'own-player');
+ env.COMMUNITY.get=()=>({fetch:async()=>new Response(null,{status:401})});assert.equal((await worker.fetch(request(payload),env)).status,401);
+});
 function setup(){
   const sockets=[],access={};
   const ctx={getWebSockets:()=>sockets,blockConcurrencyWhile:fn=>fn()};

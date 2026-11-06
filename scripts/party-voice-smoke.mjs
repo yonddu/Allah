@@ -10,7 +10,7 @@ try{
    window.micRequests=0;const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=(...args)=>{window.micRequests++;return get(...args);};
   },name);
   const page=await context.newPage();pages.push(page);page.on('pageerror',error=>errors.push(error.message));await page.route('**/*',route=>route.request().url().startsWith(origin)?route.continue():route.abort());
-  await page.goto(origin+'/?qa=1',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__noorScene?.selfId&&window.__noorParty,null,{timeout:60000});
+  await page.goto(origin+'/?qa=1',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__noorScene?.hallReady,null,{timeout:60000});await page.locator('#enterRoomButton').click();await page.waitForFunction(()=>window.__noorScene?.selfId&&window.__noorParty,null,{timeout:60000});
   await page.evaluate(()=>window.__noorScene.renderer.setAnimationLoop(null));
  }
  const [a,b,c]=pages,bId=await b.evaluate(()=>window.__noorScene.selfId);

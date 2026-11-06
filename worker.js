@@ -3,11 +3,28 @@ import {RoomParties} from './party-room.js';
 import {sanitizeProfile,constrainedMove,publicPlayer,PRAYER_POSES,prayerAreaAllows,canBeginPrayer,parseRoom,MAPS,legalPosition,prayerYaw} from './public/core.js';
 // A server-only override permits isolated capacity tests; production defaults to50.
 export const roomCapacity=env=>[32,50,64,100].includes(Number(env?.NOOR_ROOM_CAPACITY))?Number(env.NOOR_ROOM_CAPACITY):50;
+async function leavePayload(request){
+  if(Number(request.headers.get('Content-Length')||0)>1024)throw new RangeError('Request too large');
+  const reader=request.body?.getReader();if(!reader)throw new SyntaxError('Missing body');
+  const decoder=new TextDecoder();let size=0,text='';
+  try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>1024){await reader.cancel();throw new RangeError('Request too large');}text+=decoder.decode(part.value,{stream:true});}text+=decoder.decode();}
+  finally{reader.releaseLock();}
+  return JSON.parse(text);
+}
 
 export default {
   async fetch(request,env) {
     const url=new URL(request.url);
     if(url.pathname==='/api/health')return Response.json({ok:true,mode:'anonymous-prototype',payments:false});
+    if(url.pathname==='/api/leave'&&request.method==='POST'){
+      if(request.headers.get('Origin')!==url.origin)return new Response('Origin not allowed',{status:403});
+      let data;try{data=await leavePayload(request);}catch(error){return new Response(error instanceof RangeError?'Request too large':'Invalid request',{status:error instanceof RangeError?413:400});}
+      const room=parseRoom(data?.room)?.key,player=data?.player;
+      if(!room||typeof player!=='string'||!player||player.length>100)return new Response('Invalid room or player',{status:400});
+      const identity=await env.COMMUNITY.get(env.COMMUNITY.idFromName('community')).fetch(new Request('https://community.internal/session',{headers:{Cookie:request.headers.get('Cookie')||''}}));
+      if(!identity.ok)return new Response('Session required',{status:401});const user=await identity.json();
+      return env.ROOMS.get(env.ROOMS.idFromName(room)).fetch(new Request('https://room.internal/leave?player='+encodeURIComponent(player),{method:'POST',headers:{'X-Noor-Account':user.id}}));
+    }
     if(url.pathname==='/api/voice/ice'&&request.method==='GET'){
       if(request.headers.get('Origin')&&request.headers.get('Origin')!==url.origin)return new Response('Origin not allowed',{status:403});
       const room=parseRoom(url.searchParams.get('room'))?.key,player=url.searchParams.get('player');if(!room||!player)return new Response('Invalid room',{status:400});
@@ -76,6 +93,11 @@ export class PrayerRoom {
     }
   }
   async fetch(request){
+    if(new URL(request.url).pathname==='/leave'&&request.method==='POST'){
+      const account=request.headers.get('X-Noor-Account');if(!account)return new Response('Session required',{status:401});
+      const id=new URL(request.url).searchParams.get('player'),peer=this.players().find(p=>p.state.id===id&&p.state.accountId===account);
+      if(peer)this.webSocketClose(peer.ws,1000);return new Response(null,{status:204});
+    }
     if(new URL(request.url).pathname==='/voice-authorize')return new Response(null,{status:this.parties.authorize(request.headers.get('X-Noor-Account'),new URL(request.url).searchParams.get('player'))?204:403});
     if(new URL(request.url).pathname==='/status')return Response.json({count:this.players().length});
     if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return new Response('WebSocket required',{status:426});
@@ -186,8 +208,9 @@ export class PrayerRoom {
   webSocketClose(ws,code){
     this.batchClients.delete(ws);this.protectedSockets.delete(ws);
     const state=ws.deserializeAttachment();this.parties.closed(ws,state);if(state)this.pendingMoves.delete(state.id);
+    ws.serializeAttachment(null);
     try{ws.close(code===1006?1000:code,'Disconnected');}catch{}
     if(state)this.broadcast({type:'leave',id:state.id},ws);
   }
-  webSocketError(ws){try{ws.close(1011,'Connection error');}catch{}}
+  webSocketError(ws){this.webSocketClose(ws,1011);}
 }
