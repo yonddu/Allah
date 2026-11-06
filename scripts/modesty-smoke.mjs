@@ -15,7 +15,7 @@ try{
   for(const pose of poses)for(let view=0;view<views.length;view++){
    const result=await page.evaluate(({pose,view})=>{
     const s=window.__noorScene,a=s.local;for(let frame=0;frame<180;frame++)a.human.update(pose,true,window.qaTime+=1/60,false,1/60);a.rug.visible=a.fringe.visible=true;a.root.updateMatrixWorld(true);
-    const cameras=[[0,1.25,-2.8],[0,1.25,2.8],[-2.8,1.25,0],[2.8,1.25,0],[0,3,.10]];s.camera.up.set(...(view===4?[0,0,-1]:[0,1,0]));s.camera.position.set(...cameras[view]);s.camera.lookAt(0,pose==='bowing'?.75:.35,.08);s.camera.updateMatrixWorld();s.renderer.render(s.scene,s.camera);
+    const cameras=[[0,1.25,-2.8],[0,1.25,2.8],[-2.8,1.25,0],[2.8,1.25,0],[0,3,.10]];s.camera.up.set(...(view===4?[0,0,-1]:[0,1,0]));s.camera.position.set(...cameras[view]);s.camera.lookAt(0,pose==='bowing'||pose==='standing'?.80:.35,.08);s.camera.updateMatrixWorld();s.renderer.render(s.scene,s.camera);
     return {image:s.renderer.domElement.toDataURL('image/png'),enabled:a.human.modesty.enabled,visible:a.human.modesty.mesh.visible,socks:a.human.socks.enabled,socksVisible:a.human.socks.mesh?.visible||false,triangles:s.renderer.info.render.triangles,draws:s.renderer.info.render.calls};
    },{pose,view});
    if(pose!=='standing')assert.ok(result.enabled&&result.visible,id+' '+pose+' '+views[view]+' clothing must remain covered');assert.equal(result.socks,n>=8,id+' prayer socks');assert.equal(result.socksVisible,n>=8,id+' visible prayer socks');const bytes=Buffer.from(result.image.split(',')[1],'base64');await writeFile('artifacts/modesty/'+id+'-'+pose+'-'+views[view]+'.png',bytes);

@@ -133,6 +133,8 @@ try{
     await page.mouse.click(point.x,point.y,{button:'right'});
     await page.locator('#playerMenu').waitFor({state:'visible'});
   }
+  // The peer tabs may background the game; bring it forward as a real user would before testing head labels.
+  await page.bringToFront();
   // Real public messages become text-only head bubbles; private messages never do.
   const publicBubble='<b>السلام عليكم · 안녕하세요</b>';
   await guest.evaluate(text=>window.chatSocket.send(JSON.stringify({type:'chat',text})),publicBubble);
@@ -150,6 +152,7 @@ try{
   await rightClickGuest();await page.locator('#playerWhisperAction').click();
   assert.equal(await page.locator('#whisperTarget').inputValue(),guestId);
   assert.equal(await page.locator('#whisperChatTab').getAttribute('aria-selected'),'true');
+  await delay(1250); // Respect the server's 1200ms chat interval after the public message.
   await page.locator('#chatInput').fill('Private browser test');await page.locator('#sendChatButton').click();
   await guest.waitForFunction(()=>window.chatReceived.some(m=>m.type==='whisper'&&m.text==='Private browser test'));
   assert.equal(await other.evaluate(()=>window.chatReceived.some(m=>m.type==='whisper')),false);
@@ -218,6 +221,7 @@ try{
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({browser:'passed',maps:maps.map(m=>({map:m.map,drawCalls:m.drawCalls,triangles:m.triangles})),crowdDrawCalls:crowd.drawCalls}));
 }catch(error){
+  if(page)try{console.error('BROWSER_FAILURE_STATE:'+JSON.stringify(await page.evaluate(()=>({visibility:document.visibilityState,praying:window.__noorScene?.praying,now:performance.now(),speechUntil:window.__noorScene?.local.speechUntil,speechVisible:window.__noorScene?.local.speechLabel.visible,speechText:window.__noorScene?.local.speechLabel.element.textContent,chat:document.getElementById('chatMessages')?.textContent,connection:document.getElementById('statusDot')?.className}))));}catch{}
   if(page)try{await page.screenshot({path:'artifacts/failure.png'});}catch{}
   await writeFile('artifacts/failure.txt',String(error.stack||error));
   throw error;
