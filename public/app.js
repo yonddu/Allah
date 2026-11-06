@@ -82,7 +82,7 @@ $('bgmVolume').addEventListener('input',e=>sound.setVolume(Number(e.target.value
 $('prayerVolume').addEventListener('input',e=>sound.setPrayerVolume(Number(e.target.value)/100));
 $('prayerSoundToggle').addEventListener('change',e=>{sound.prayerEnabled=e.target.checked;if(!e.target.checked)sound.recitation.pause();else if(scene.praying)sound.playRecitation();});
 $('prayerAudioFile').addEventListener('change',e=>sound.setFile(e.target.files[0]));
-const poses=['standing','bowing','sitting'],poseLabels=['서기','숙이기','앉기'];
+const poses=['standing','bowing','prostrating','sitting'],poseLabels=['서기','숙이기','엎드리기','앉기'];
 function prayerUI(){
   community?.setPrayerMode(scene.praying);partyUi?.setPrayer(scene.praying);
   document.body.classList.toggle('prayer-mode',scene.praying);

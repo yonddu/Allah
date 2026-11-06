@@ -122,7 +122,8 @@ export function parseRoom(value){
 }
 export function prayerYaw(mapId,position){
  if(mapId==='mecca')return 0;
- return -(qibla(27.1751,78.0421).bearing||0)*Math.PI/180;
+ // Virtual Taj courtyard: along the pool toward its entrance (+Z), as marked by the user.
+ return Math.PI;
 }
 
 export function joystickVector(dx,dy,radius,deadzone=.12){

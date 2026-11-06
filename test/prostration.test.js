@@ -20,7 +20,11 @@ test('All ten supplied meshes plant forehead, knees and toes on the mat with hea
    const id='model'+String(n).padStart(2,'0'),a=makeHumanAvatar({model:id,gender:n>=8?'female':'male'},'low',true);
    await a.human.ready;for(let frame=0;frame<240;frame++)a.human.update('prostrating',true,frame/60,false,1/60);
    a.root.updateMatrixWorld(true);a.human.skeleton.update();
-   let mesh;a.root.traverse(node=>{if(node.isSkinnedMesh)mesh=node;});
+   let mesh;a.root.traverse(node=>{if(node.isSkinnedMesh&&node.userData.userModel)mesh=node;});
+   assert.ok(a.human.modesty.enabled,id+' closed cloth must be active for prostration');
+   assert.ok(a.human.modesty.mesh.visible,id+' opaque cloth must be rendered');
+   assert.ok([mesh.material].flat().every(m=>m.userData.noorBodyCoverage),id+' hip texture protection');
+   assert.equal(a.human.modesty.asset.solids.length,6,id+' closed overlapping waist/hip/leg layers');
    const c=a.human.contacts,p=mesh.geometry.attributes.position;
    assert.ok(c.foreheadIndex>=0,id+' forehead landmark must come from actual geometry');
    const forehead=mesh.applyBoneTransform(c.foreheadIndex,new THREE.Vector3().fromBufferAttribute(p,c.foreheadIndex));

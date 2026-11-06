@@ -86,3 +86,7 @@ test('User model choices cannot bypass gender and head-covering restrictions',()
  assert.equal(sanitizeProfile({gender:'female',model:'model10'}).model,'model10');
  assert.equal(sanitizeProfile({model:'https://other.example/evil.glb'}).model,'model01');
 });
+
+test('Taj prayer follows the user-marked pool-side path in +Z for both body and mat',async()=>{
+ const {prayerYaw}=await import('../public/core.js'),yaw=prayerYaw('taj',{x:10,z:24});assert.ok(Math.abs(Math.sin(yaw))<1e-8);assert.ok(-Math.cos(yaw)>.999);assert.equal(prayerYaw('mecca',{x:0,z:18}),0);
+});

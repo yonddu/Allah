@@ -49,6 +49,9 @@ try{
   await page.waitForFunction(()=>document.getElementById('statusDot').classList.contains('connected'),null,{timeout:20000});
   assert.equal(await page.locator('#app > #scene').count(),1);
   assert.equal(await page.locator('.welcome-copy').count(),0);
+  await page.locator('#settingsButton').click();await page.locator('#settingsCharacterButton').click();assert.equal(await page.locator('#customPanel').isVisible(),true);
+  await page.locator('[data-field="gender"] [data-value="male"]').click();await page.evaluate(()=>window.__noorScene.local.human.ready);assert.equal(await page.evaluate(()=>window.__noorScene.local.human.assetId),'model01');
+  await page.locator('[data-field="gender"] [data-value="female"]').click();await page.locator('#characterChoices [data-value="model09"]').click();await page.evaluate(()=>window.__noorScene.local.human.ready);await page.locator('#closeCustomize').click();
   assert.equal(await page.locator('#qiblaCard').count(),0);
   assert.equal(await page.locator('#fenceButton').count(),0);
   assert.equal(await page.locator('#quranLink').getAttribute('href'),'https://quran.com/');

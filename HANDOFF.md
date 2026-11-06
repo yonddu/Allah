@@ -1,3 +1,13 @@
+## Urgent clothing coverage and settings/Taj corrections · 2026-11-06
+
+The user reported visible bare buttocks during prostration. Prior validation checked joint/floor contact and did not adequately check clothing coverage. Production interim commit 448e40a31a92220f9383f62a07b596b7697444e3 temporarily removes prostration from pose selection while full coverage is repaired. Interim build e90257a5-1dcb-4eeb-8c7a-f3bc2f43191f succeeded, including HTTPS verification of noorrealm.com. Settings now also opens character/outfit customization.
+
+Current repair adds a closed opaque garment underlayer at waist/pelvis/both thighs/calves plus a per-avatar shader guard against exposed skin-tone texels in the covered hip region. No face/hand/foot texture is changed; original supplied meshes/UVs remain. Coverage remains through pose-to-standing transitions. The material copies are per avatar so one person's prayer does not recolor another standing person. All 10 characters are to be rendered from front/back/left/right/top in prostrating/sitting/bowing poses (150 images), with contact sheets for visual review. Restore the fourth prayer pose only with the repaired asset code.
+
+User also marked Taj prayer direction along the pool-side path toward the entrance (+Z). prayerYaw(taj) now returns PI; body, mat and invisible movement barrier use that same shared direction. Noor sanctuary remains -Z. This is virtual map alignment, not a real geographic Qibla compass.
+
+Donation/party/domain work is complete in the deployed interim code: Ko-fi QR decoded correctly; all 47 prior tests, browser flows and actual synthetic-microphone WebRTC audio delivery passed GitHub run 42198463458. First domain verification ran before DNS/TLS propagation and failed; the next build e90257a5-1dcb-4eeb-8c7a-f3bc2f43191f passed HTTPS health verification. Production voice relay credentials were validated by the deploy script; do not expose private keys.
+
 ## In progress: donation, private party voice, noorrealm.com · 2026-11-06
 
 - Added central bottom Support button and modal with https://ko-fi.com/solh130919 and a lossless SVG QR. The 29x29 supplied QR pattern matches version 3/M/mask 2; independent jsQR decoding confirms the exact destination. The SVG adds a four-module quiet zone. No payment request or transfer is performed by the app.
