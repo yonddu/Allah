@@ -20,7 +20,7 @@ test('Party cap, leader-only removal, leave and disconnect are authoritative',as
  await s.send(1,{type:'party-kick',to:'p2'});assert.ok(s.sockets[2].deserializeAttachment().partyId);
  await s.send(0,{type:'party-kick',to:'p2'});assert.equal(s.sockets[2].deserializeAttachment().partyId,null);
  await s.send(0,{type:'party-leave'});assert.equal(s.sockets[1].messages.at(-1).party.leaderId,'p1');
- s.room.webSocketClose(s.sockets[1],1000);assert.equal(s.sockets[3].messages.at(-1).party.members.some(m=>m.id==='p1'),false);
+ s.room.webSocketClose(s.sockets[1],1000);assert.equal(s.sockets[3].messages.findLast(m=>m.type==='party-state').party.members.some(m=>m.id==='p1'),false);
 });
 test('Audio signaling is limited to consenting voice members and never broadcasts SDP',async()=>{
  const s=setup();await s.join(1);await s.send(0,{type:'party-voice',enabled:true,epoch:'a'});await s.send(1,{type:'party-voice',enabled:true,epoch:'b'});
