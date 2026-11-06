@@ -1,3 +1,14 @@
+## Deployment completed · 2026-11-06 (Asia/Seoul)
+
+- Deployed application commit:9339585a933d4e063db36ea9a636d643122b6bee.
+- GitHub Verify run42158372299: success.33Node tests, reproducible supplied-model build, Worker dry-run, real50-slot admission/51st rejection, onboarding/three female presets/mandatorycovering, analog movement, private/public chat/mute/block, both maps/complete Taj dome, Qibla/five prayers, RTL, and100-client stress all passed. Browser page errors:0.
+-100-client CI:2,000/2,000 moves acknowledged,2,000 delivered batch frames,12,478,000bytes,3,015ms; local ACKp95=90ms. Public recipients100,whisper recipients2;101st rejected. These are isolated local-emulator metrics.
+- Standing50-avatar view:63draws/361,131triangles;100:113draws/684,081triangles. Software WebGL screenshots were inspected. These do not prove physical entry-level Android30fps. The3–4GB/30fps target remains; actual-phone profiling is outstanding.
+- Cloudflare deployment build:d4b4d33c-5a19-49ff-a439-1e15e66b0d83. Deploy command succeeded; Worker version79a5791d-7925-4a89-94da-b9d1a2011121. API status/binding verification recorded in session: production NOOR_ROOM_CAPACITY=50.
+- Play:https://allah.songyd1018.workers.dev . Reload an existing tab for the new user-supplied GLB catalog, centred camera/readable names and50-person limit. Existing movement clients keep legacy full-state compatibility.
+- Material visual limit: the supplied GLBs have no author-painted skin weights. Automatic18-bone prayer poses are functional, but long garment folds at deep bends/prostration still need manual rigging/weight refinement. Preserve supplied faces/clothes and do not replace them with invented meshes.
+- Public URL probes from this executor returned403; the successful Cloudflare deployment API, deployed binding, build logs and local integration tests were used for verification. Do not interpret executor-proxy denial as a confirmed public-site failure.
+
 ## Latest decision:50 visitors per production room · 2026-11-06
 
 User explicitly changed the production limit from32 to50, retaining the3–4GB Android /720–1080p /30fps target. wrangler.jsonc now pins NOOR_ROOM_CAPACITY=50; Worker default/API room capacity and offline UI fallback are50. The real local browser test fills50 slots and rejects51 with503.100 remains an isolated capacity override; do not imply100-person phone30fps. Unknown-memory mobile browsers default to the conservative low profile.50/100 rendering are included in the capacity report; real entry-level-device FPS is still unmeasured.
