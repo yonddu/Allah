@@ -14,7 +14,8 @@ test('Greeting uses right hand on chest and slight nod; walking relaxes palms an
   assert.equal(a.human.bones.length,22);
   for(let n=0;n<20;n++)a.human.update('prostrating',false,n/30,true,1/30);
   assert.equal(a.human.bones[2].rotation.x,0,'Prayer poses cannot be used while walking');
-  assert.ok(Math.abs(a.human.bones[20].rotation.y)>.7);
+  assert.ok(a.human.bones[20].rotation.y>.7);
+  assert.ok(a.human.bones[18].rotation.y<-.7,'Fingers curl toward the palm, never backward');
   assert.ok(Math.abs(a.human.bones[11].rotation.x)>1);
   for(let n=0;n<20;n++)a.human.update('standing',false,1+n/30,false,1/30,.5);
   const chest=a.human.bones[3].getWorldPosition(new THREE.Vector3()),hand=a.human.bones[11].getWorldPosition(new THREE.Vector3());

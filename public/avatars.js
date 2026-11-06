@@ -79,8 +79,8 @@ export function makeHumanAvatar(profile,tier='low',local=false){
     // Rotate relaxed palms toward the thighs instead of presenting them to the front.
     hand.rotation.set(prostrating?Math.PI/2:praying?0:side*1.15*(1-greetingWeight),0,0);
     const curl=praying||greetingWeight>0?0:moving?.86:.36,knuckle=side<0?18:20;
-    bones[knuckle].rotation.y=THREE.MathUtils.lerp(bones[knuckle].rotation.y,-side*curl,s);
-    bones[knuckle+1].rotation.y=THREE.MathUtils.lerp(bones[knuckle+1].rotation.y,-side*curl*.75,s);
+    bones[knuckle].rotation.y=THREE.MathUtils.lerp(bones[knuckle].rotation.y,side*curl,s);
+    bones[knuckle+1].rotation.y=THREE.MathUtils.lerp(bones[knuckle+1].rotation.y,side*curl*.75,s);
    }
   }
  };

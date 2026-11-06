@@ -146,3 +146,8 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 .map-art.mecca{background:linear-gradient(#84bddb,#e4e7db)}
 .map-art.mecca:before{inset:48px 15px 3px;background:#eee8d6;box-shadow:none;transform:none;border:0;border-radius:4px}
 .map-art.mecca:after{content:'';width:60px;height:40px;left:calc(50% - 30px);top:18px;background:#216d6c;border:2px solid #c5a76e;border-radius:55% 55% 10% 10%;box-shadow:-48px 18px 0 -8px #e9e2ce,48px 18px 0 -8px #e9e2ce}
+/* Keep the ordinary three actions on one row, below chat rather than under it. */
+.actionbar,html:not([lang=ko]) .actionbar{width:max-content;flex-wrap:nowrap;white-space:nowrap}
+.prayer-mode .actionbar,html:not([lang=ko]) .prayer-mode .actionbar{flex-wrap:wrap;white-space:normal}
+.topbar .room-pill{min-width:0;max-width:calc(100vw - 140px);flex:1}
+.topbar #currentMapName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

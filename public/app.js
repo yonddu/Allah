@@ -117,7 +117,7 @@ network=new RoomConnection({
     scene.position={x:self.x,z:self.z};scene.yaw=self.yaw;scene.protected=self.protected;
     if(scene.praying)network.send({type:'prayer',active:true,pose:scene.pose});
   },
-  self:p=>{if(p.correction&&Math.hypot(p.correction.x,p.correction.z)>.08)scene.position={x:scene.position.x+p.correction.x,z:scene.position.z+p.correction.z};scene.protected=p.protected;if(p.authoritative&&scene.praying!==p.praying){scene.praying=p.praying;scene.pose=p.pose;if(scene.praying){scene.cancelGreeting();sound.startPrayer();}else sound.stopPrayer();prayerUI();}},
+  self:p=>{if(p.correction&&Math.hypot(p.correction.x,p.correction.z)>.08)scene.position={x:scene.position.x+p.correction.x,z:scene.position.z+p.correction.z};scene.protected=p.protected;if(p.authoritative&&(p.praying||scene.praying!==p.praying))scene.position={x:p.x,z:p.z};if(p.authoritative&&scene.praying!==p.praying){scene.praying=p.praying;scene.pose=p.pose;if(scene.praying){scene.cancelGreeting();sound.startPrayer();}else sound.stopPrayer();prayerUI();}},
   player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.clearPlayers();community?.clear();},
   count:n=>$('onlineCount').textContent=n+'명 접속',
   recount:()=>$('onlineCount').textContent=(scene.remote.size+1)+'명 접속',
