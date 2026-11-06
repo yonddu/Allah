@@ -43,3 +43,12 @@ Adhan JS4.4.6 (Batoul Apps, MIT) and @photostructure/tz-lookup11.7.0 (CC0) are i
 - Dropbox `chracter` 폴더에 제공된 Meshy GLB10개를 사용합니다. 원본 파일명과 SHA256은 `scripts/user-model-sources.json`에 기록했습니다.
 - 원본 얼굴·복장·UV를 유지하며 크기와 방향을 통일하고 텍스처 크기를 조정했습니다. 간소화로 외형이 손상되는 모델은 원본 형상을 유지합니다.
 - 빌드 도구: glTF-Transform core4.2.1 (MIT), meshoptimizer0.25.0 (MIT). 두 라이브러리는 빌드 단계에서 사용됩니다.
+
+## Architectural references
+
+The Makkah courtyard is a simplified architectural interpretation rather than a measured reconstruction. Geometry, baked surface patterns and lighting colors are authored in this repository. Reference photographs are not distributed as game assets; the kiswah band uses non-text geometric ornament.
+
+- [Grand Mosque architecture and marble details, Saudi Press Agency](https://spa.gov.sa/en/N2531355)
+- [Mataf courtyard, Saudipedia](https://saudipedia.com/en/mataf-of-the-grand-mosque)
+- [Column marble inlays and palm capitals, Sheikh Zayed Grand Mosque Centre](https://www.szgmc.gov.ae/en/islamic-architecture/The%20Columns)
+- [Taj exterior inlays and terrace, official Taj Mahal site](https://tajmahal.gov.in/the-taj-exteriors.aspx)

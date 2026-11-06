@@ -1,8 +1,15 @@
 export {Community} from './community.js';
 import {RoomParties} from './party-room.js';
+import {recommendedRoom} from './public/room-allocation.js';
 import {sanitizeProfile,constrainedMove,publicPlayer,PRAYER_POSES,prayerAreaAllows,canBeginPrayer,parseRoom,MAPS,legalPosition,prayerYaw} from './public/core.js';
 // A server-only override permits isolated capacity tests; production defaults to50.
 export const roomCapacity=env=>[32,50,64,100].includes(Number(env?.NOOR_ROOM_CAPACITY))?Number(env.NOOR_ROOM_CAPACITY):50;
+async function mapRooms(env,map){
+ return Promise.all([1,2,3].map(async server=>{
+  const key=map+':'+server,r=await env.ROOMS.get(env.ROOMS.idFromName(key)).fetch('https://room.internal/status'),status=await r.json();
+  return {key,server,count:Math.max(0,Number(status.count)||0),capacity:roomCapacity(env)};
+ }));
+}
 async function leavePayload(request){
   if(Number(request.headers.get('Content-Length')||0)>1024)throw new RangeError('Request too large');
   const reader=request.body?.getReader();if(!reader)throw new SyntaxError('Missing body');
@@ -43,11 +50,12 @@ export default {
     if(url.pathname==='/api/rooms'&&request.method==='GET'){
       const requested=url.searchParams.get('map')||'mecca',map=parseRoom(requested+':1')?.map;
       if(!map)return new Response('Unknown map',{status:400});
-      const rooms=await Promise.all([1,2,3].map(async server=>{
-        const key=map+':'+server,r=await env.ROOMS.get(env.ROOMS.idFromName(key)).fetch('https://room.internal/status'),status=await r.json();
-        return {key,server,count:status.count,capacity:roomCapacity(env)};
-      }));
-      return Response.json({rooms},{headers:{'Cache-Control':'no-store'}});
+      const rooms=await mapRooms(env,map);
+      return Response.json({rooms,recommendedServer:recommendedRoom(rooms)?.server??null},{headers:{'Cache-Control':'no-store'}});
+    }
+    if(url.pathname==='/api/presence'&&request.method==='GET'){
+      const entries=await Promise.all(Object.keys(MAPS).map(async map=>{const rooms=await mapRooms(env,map);return [map,{rooms,total:rooms.reduce((n,r)=>n+r.count,0)}];}));
+      return Response.json({total:entries.reduce((n,[,m])=>n+m.total,0),maps:Object.fromEntries(entries)},{headers:{'Cache-Control':'no-store'}});
     }
     if(url.pathname==='/api/room'){
       if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return new Response('WebSocket required',{status:426});

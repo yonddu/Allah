@@ -3,6 +3,14 @@ import assert from 'node:assert/strict';
 import {prayerYaw} from '../public/core.js';
 import worker,{PrayerRoom,roomCapacity} from '../worker.js';
 
+test('Public presence counts every courtyard and recommends occupied rooms without exposing identities',async()=>{
+ const env={ROOMS:{idFromName:n=>n,get:key=>({fetch:async()=>Response.json({count:({'mecca:2':3,'taj:1':2,'makkah:1':4})[key]||0})})}};
+ const response=await worker.fetch(new Request('https://noor.example/api/presence'),env),data=await response.json();
+ assert.equal(response.headers.get('Cache-Control'),'no-store');assert.equal(data.total,9);assert.equal(data.maps.mecca.total,3);assert.equal(data.maps.makkah.total,4);
+ assert.equal(JSON.stringify(data).includes('accountId'),false);
+ const rooms=await(await worker.fetch(new Request('https://noor.example/api/rooms?map=mecca'),env)).json();assert.equal(rooms.recommendedServer,2);assert.equal(rooms.rooms.length,3);
+});
+
 test('Leave removes only the authenticated page, releases capacity immediately and is idempotent',async()=>{
  const {room,socket}=setup(),a=socket('a','owner',{praying:true}),anotherTab=socket('another-tab','owner'),peer=socket('peer','other');
  room.protectedSockets.add(a);room.batchClients.add(a);room.pendingMoves.set('a',a.deserializeAttachment());

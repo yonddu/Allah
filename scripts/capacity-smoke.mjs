@@ -64,5 +64,16 @@ try{
   });assert.equal(result.userModelsReady,count);assert.ok(result.triangles<750000);assert.ok(result.drawCalls<140);
   rendering.push({count,...result});await page.screenshot({path:'artifacts/capacity-'+count+'.png'});
  }
- const report={note:'Isolated local Worker and desktop software WebGL, not physical 3–4GB Android FPS. Production room capacity is50;100 is an isolated test override.',network,rendering};await writeFile('artifacts/capacity-report.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+ const courtyards50=[];
+ for(const map of ['taj','makkah']){
+  await page.evaluate(async map=>{
+   const {MAPS}=await import('/core.js'),s=window.__noorScene;await s.setMap(map);s.clearPlayers();s.position={...MAPS[map].spawn};s.cameraAngle=0;s.cameraHeight=4;s.cameraDistance=13;s.snapCamera();
+   for(let i=0;i<49;i++)s.syncPlayer({id:'courtyard-'+i,accountId:'test-'+i,profile:{name:'Visitor '+i,model:'model02',gender:'male'},x:s.position.x+(i%10-4.5)*.8,z:s.position.z-2-Math.floor(i/10)*.8,yaw:0,pose:'standing',praying:false,protected:false});
+   await Promise.all([...s.remote.values()].map(a=>a.human.ready));
+  },map);
+  await delay(1200);
+  const result=await page.evaluate(()=>{const s=window.__noorScene;s.renderedAt=-1e9;s.last=performance.now()-34;s.frame();return s.diagnostics();});
+  assert.equal(result.userModelsReady,50);assert.ok(result.drawCalls<100);assert.ok(result.triangles<450000);courtyards50.push({map,...result});await page.screenshot({path:'artifacts/courtyard-'+map+'-50.png'});
+ }
+ const report={note:'Isolated local Worker and desktop software WebGL, not physical 3–4GB Android FPS. Production room capacity is50;100 is an isolated test override.',network,rendering,courtyards50};await writeFile('artifacts/capacity-report.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }finally{for(const c of clients)c.ws.close();if(browser)await browser.close();server.kill('SIGTERM');await writeFile('artifacts/capacity-worker.log',log);}

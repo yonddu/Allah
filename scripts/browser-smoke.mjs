@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {WebSocket as TestSocket} from 'ws';
 import {checkFirstVisits} from './entry-browser-checks.mjs';
+import {checkRoomGathering} from './gathering-browser-checks.mjs';
 await mkdir('artifacts',{recursive:true});
 const stateDirectory=await mkdtemp(join(tmpdir(),'noor-browser-test-'));
 let log='';
@@ -19,6 +20,7 @@ try{
   if(!healthy)throw new Error('Local Worker did not start.\n'+log);
   browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   await checkFirstVisits(browser,'http://127.0.0.1:8787');
+  await checkRoomGathering(browser,'http://127.0.0.1:8787');
   const context=await browser.newContext({locale:'en-US',viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
   await context.addInitScript(()=>{Object.defineProperty(navigator,'deviceMemory',{get:()=>4,configurable:true});Object.defineProperty(navigator,'hardwareConcurrency',{get:()=>4,configurable:true});});
   page=await context.newPage();const errors=[];
@@ -239,7 +241,7 @@ try{
   assert.equal(crowd.remoteVisitors,31);assert.equal(crowd.userModelsReady,32);assert.ok(crowd.drawCalls>=35,'Crowd body meshes must be rendered: '+JSON.stringify(crowd));assert.ok(crowd.drawCalls<180,JSON.stringify(crowd));assert.ok(crowd.triangles<300000,JSON.stringify(crowd));
   await page.screenshot({path:'artifacts/mobile-32-visitors.png'});
   const maps=[{map:'mecca',...crowd}];
-  for(const map of ['taj']){
+  for(const map of ['taj','makkah']){
     await page.locator('#mapButton').click();
     await page.locator('.map-card[data-map="'+map+'"]').click();
     await page.locator('#enterRoomButton').click();

@@ -28,14 +28,20 @@ test('All supplied arms carry palm orientation through the sleeves without twist
     for(const [side,upperId,elbowId,handId]of [[-1,6,7,8],[1,9,10,11]]){
      const upper=a.human.bones[upperId],elbow=a.human.bones[elbowId],hand=a.human.bones[handId],label=id+' '+local+' '+yaw+' '+pose+' '+side;
      const palm=v(0,0,-1).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion()));
-     const normal=(kneeling?v(0,-1,0):praying||pose==='greeting'&&side>0?v(0,0,1):v(-side,0,0)).applyQuaternion(rotation);
+     const normal=(pose==='sitting'?v(0,.34,.94).normalize():kneeling?v(0,-1,0):praying||pose==='greeting'&&side>0?v(0,0,1):v(-side,0,0)).applyQuaternion(rotation);
      assert.ok(palm.dot(normal)>(pose==='standing'?.85:.90),label+' palm faces the correct surface');
      if(!kneeling){
       assert.ok(hand.quaternion.angleTo(new THREE.Quaternion())<.005,label+' wrist does not absorb arm roll');
       const forearmPalm=v(0,0,-1).applyQuaternion(elbow.getWorldQuaternion(new THREE.Quaternion()));assert.ok(palm.dot(forearmPalm)>.999,label+' sleeve and palm share their roll');
      }else{
-      assert.ok(v(side,0,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion())).dot(v(0,0,-1).applyQuaternion(rotation))>.999,label+' fingers point forward');
+      const fingers=(pose==='sitting'?v(0,.94,-.34).normalize():v(0,0,-1)).applyQuaternion(rotation);
+      assert.ok(v(side,0,0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion())).dot(fingers)>.999,label+' fingers follow the prayer gesture');
       assert.ok(hand.quaternion.angleTo(new THREE.Quaternion())<1.3,label+' wrist flexion remains bounded');
+      if(pose==='sitting'){
+       const wrist=a.root.worldToLocal(hand.getWorldPosition(v())),joint=a.root.worldToLocal(elbow.getWorldPosition(v()));
+       assert.ok(wrist.y>.88&&wrist.y<1.05&&wrist.z<-.20,label+' cupped hands are raised in front of the chest');
+       assert.ok(joint.y<wrist.y-.08,label+' relaxed elbow remains below the raised palm');
+      }
      }
      assert.ok(Math.abs(upper.getWorldPosition(v()).distanceTo(elbow.getWorldPosition(v()))-runtime[id].rig.upper)<1e-5,label+' upper arm length');
      assert.ok(Math.abs(elbow.getWorldPosition(v()).distanceTo(hand.getWorldPosition(v()))-runtime[id].rig.lower)<1e-5,label+' forearm length');

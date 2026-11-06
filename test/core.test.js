@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {qibla,KAABA,sanitizeProfile,DEFAULT_PROFILE,legalPosition,constrainedMove,prayerAreaAllows,canBeginPrayer,validatePost,parseRoom,joystickVector} from '../public/core.js';
+
+test('The Makkah courtyard keeps visitors outside the Kaaba and points prayer toward it',async()=>{
+ const {prayerYaw}=await import('../public/core.js');assert.deepEqual(parseRoom('makkah:2'),{map:'makkah',server:2,key:'makkah:2'});
+ assert.equal(legalPosition(0,-12,'makkah'),false);assert.equal(legalPosition(0,-23,'makkah'),false);assert.equal(legalPosition(11,-10,'makkah'),false);assert.equal(legalPosition(0,21,'makkah'),true);
+ for(const p of [{x:0,z:21},{x:30,z:-12},{x:-30,z:20},{x:0,z:-40}]){
+  const yaw=prayerYaw('makkah',p),dx=-p.x,dz=-12-p.z,len=Math.hypot(dx,dz);assert.ok((-Math.sin(yaw)*dx-Math.cos(yaw)*dz)/len>.9999);
+ }
+});
 test('Qibla uses a great-circle bearing in several hemispheres',()=>{
   const seoul=qibla(37.5665,126.978),newYork=qibla(40.7128,-74.006),jakarta=qibla(-6.2088,106.8456);
   assert.ok(seoul.bearing>280&&seoul.bearing<290);

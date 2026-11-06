@@ -48,5 +48,30 @@ const prayerLabels={
 };
 FEATURE_KEYS.push('prayerTime','remaining','localClock','locationPurpose');
 for(const [code,labels]of Object.entries(prayerLabels))FEATURE_LOCALES[code].push(...labels);
+const worldLabels={
+ en:['{n} online','{n} here','Joined the shared server so you can pray together.','Visitors gather in one server when it is quiet.','Makkah courtyard','Makkah · Saudi Arabia','Kaaba · marble courtyard · layered arcades'],
+ ar:['{n} متصل','{n} هنا','انتقلت إلى الخادم المشترك للصلاة مع الآخرين.','نجتمع في خادم واحد عندما يقل عدد الزوار.','ساحة مكة','مكة المكرمة · السعودية','الكعبة · صحن رخامي · أروقة متعددة الطوابق'],
+ ur:['{n} آن لائن','{n} یہاں','مل کر دعا کرنے کے لیے مشترکہ سرور میں شامل ہو گئے۔','زائرین کم ہوں تو سب ایک سرور میں جمع ہوتے ہیں۔','مکہ کا صحن','مکہ · سعودی عرب','کعبہ · سنگ مرمر کا صحن · کئی منزلہ محرابیں'],
+ id:['{n} daring','{n} di sini','Bergabung ke server bersama agar dapat berdoa bersama.','Saat sepi, pengunjung berkumpul dalam satu server.','Pelataran Makkah','Makkah · Arab Saudi','Kabah · pelataran marmer · serambi bertingkat'],
+ bn:['{n} অনলাইনে','{n} এখানে','একসঙ্গে প্রার্থনা করতে যৌথ সার্ভারে যোগ দিয়েছেন।','দর্শনার্থী কম হলে সবাই এক সার্ভারে মিলিত হন।','মক্কার প্রাঙ্গণ','মক্কা · সৌদি আরব','কাবা · মার্বেলের প্রাঙ্গণ · বহুতল খিলান'],
+ tr:['{n} çevrimiçi','{n} burada','Birlikte dua etmek için ortak sunucuya katıldınız.','Ziyaretçi az olduğunda tek sunucuda toplanılır.','Mekke avlusu','Mekke · Suudi Arabistan','Kâbe · mermer avlu · katlı revaklar'],
+ fa:['{n} آنلاین','{n} اینجا','برای دعا با دیگران به سرور مشترک پیوستید.','هنگام خلوتی، بازدیدکنندگان در یک سرور جمع می‌شوند.','صحن مکه','مکه · عربستان سعودی','کعبه · صحن مرمری · رواق‌های چندطبقه'],
+ ms:['{n} dalam talian','{n} di sini','Menyertai pelayan bersama untuk berdoa bersama.','Ketika lengang, pengunjung berkumpul pada satu pelayan.','Halaman Makkah','Makkah · Arab Saudi','Kaabah · halaman marmar · serambi bertingkat'],
+ hi:['{n} ऑनलाइन','{n} यहाँ','साथ दुआ करने के लिए साझा सर्वर से जुड़े।','कम आगंतुक होने पर सभी एक सर्वर में मिलते हैं।','मक्का का प्रांगण','मक्का · सऊदी अरब','काबा · संगमरमर का प्रांगण · बहुमंज़िला मेहराबें'],
+ fr:['{n} en ligne','{n} ici','Vous avez rejoint le serveur commun pour prier ensemble.','Quand il y a peu de visiteurs, ils se retrouvent sur un seul serveur.','Cour de La Mecque','La Mecque · Arabie saoudite','Kaaba · cour en marbre · arcades à étages'],
+ ha:['{n} a layi','{n} a nan','An haɗa ku da sabar gama gari don yin addu’a tare.','Idan baƙi ba su da yawa, suna taruwa a sabar ɗaya.','Filin Makka','Makka · Saudiyya','Ka’aba · farfajiyar marmara · baka masu hawa'],
+ sw:['{n} mtandaoni','{n} hapa','Umejiunga na seva ya pamoja ili kuomba pamoja.','Wageni wanapokuwa wachache, hukusanyika kwenye seva moja.','Ua wa Makka','Makka · Saudi Arabia','Kaaba · ua wa marumaru · matao ya ghorofa'],
+ ps:['{n} آنلاین','{n} دلته','د ګډې دعا لپاره له ګډ سرور سره یوځای شوئ.','کله چې لیدونکي لږ وي، په یوه سرور کې راټولېږي.','د مکې صحن','مکه · سعودي عربستان','کعبه · د مرمرو صحن · څوپوړیز رواقونه'],
+ so:['{n} onlayn','{n} halkan','Waxaad ku biirtay serverka wadajirka ah si aad u wada ducaysataan.','Marka martidu yar tahay, hal server ayay ku kulmaan.','Barxadda Makka','Makka · Sacuudi Carabiya','Kacbada · barxad marmar ah · tiirar dabaqyo leh'],
+ uz:['{n} onlayn','{n} shu yerda','Birga duo qilish uchun umumiy serverga qo‘shildingiz.','Tashrifchilar kam bo‘lsa, bitta serverda to‘planishadi.','Makka hovlisi','Makka · Saudiya Arabistoni','Ka’ba · marmar hovli · ko‘p qavatli ravoqlar'],
+ ru:['{n} в сети','{n} здесь','Вы перешли на общий сервер для совместной молитвы.','Когда посетителей мало, они собираются на одном сервере.','Двор Мекки','Мекка · Саудовская Аравия','Кааба · мраморный двор · многоярусные аркады'],
+ kk:['{n} желіде','{n} осында','Бірге дұға ету үшін ортақ серверге қосылдыңыз.','Келушілер аз кезде бір серверге жиналады.','Мекке ауласы','Мекке · Сауд Арабиясы','Қағба · мәрмәр аула · көпқабатты аркалар'],
+ az:['{n} onlayn','{n} burada','Birlikdə dua etmək üçün ortaq serverə qoşuldunuz.','Ziyarətçi az olduqda bir serverdə toplaşırlar.','Məkkə həyəti','Məkkə · Səudiyyə Ərəbistanı','Kəbə · mərmər həyət · çoxmərtəbəli tağlar'],
+ tg:['{n} онлайн','{n} ин ҷо','Барои дуои якҷоя ба сервери умумӣ пайвастед.','Вақте меҳмонон каманд, дар як сервер ҷамъ мешаванд.','Саҳни Макка','Макка · Арабистони Саудӣ','Каъба · саҳни мармарӣ · равоқҳои бисёрошёна'],
+ zh:['{n} 人在线','{n} 人在此','已加入公共服务器，一同祈祷。','访客较少时，大家会聚集在同一服务器。','麦加广场','麦加 · 沙特阿拉伯','克尔白 · 大理石庭院 · 多层拱廊'],
+ ko:['{n}명 접속','현재 공간 {n}명','함께 기도할 수 있도록 공용 서버로 모였습니다.','사람이 적을 때는 한 서버에 모입니다.','메카 광장','메카 · 사우디아라비아','카바 · 대리석 광장 · 다층 아치 회랑']
+};
+FEATURE_KEYS.push('online','here','gathered','gatheringHint','makkah','makkahCity','makkahDescription');
+for(const [code,labels]of Object.entries(worldLabels))FEATURE_LOCALES[code].push(...labels);
 export const featureText=key=>FEATURE_LOCALES[currentLanguage()]?.[FEATURE_KEYS.indexOf(key)]||FEATURE_LOCALES.en[FEATURE_KEYS.indexOf(key)]||key;
 export function applyFeatureLabels(){for(const el of document.querySelectorAll('[data-feature]')){el.textContent=featureText(el.dataset.feature);}for(const el of document.querySelectorAll('[data-feature-label]')){el.setAttribute('aria-label',featureText(el.dataset.featureLabel));}}

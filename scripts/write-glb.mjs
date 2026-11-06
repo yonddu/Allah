@@ -21,6 +21,7 @@ export async function writeGlb(path,model,tier='low'){
   }
   const primitives=model.batches.map(({material,geometry:g})=>{
     const primitive={attributes:{POSITION:attribute(g.getAttribute('position'),'VEC3',true),NORMAL:attribute(g.getAttribute('normal'),'VEC3'),TEXCOORD_0:attribute(g.getAttribute('uv'),'VEC2')},material:materialIndices.get(material),mode:4};
+    if(g.getAttribute('color'))primitive.attributes.COLOR_0=attribute(g.getAttribute('color'),'VEC3');
     const index=g.getIndex();primitive.indices=accessors.push({bufferView:append(index.array,34963),componentType:index.array.BYTES_PER_ELEMENT===2?5123:5125,count:index.count,type:'SCALAR'})-1;
     triangles+=index.count/3;return primitive;
   });

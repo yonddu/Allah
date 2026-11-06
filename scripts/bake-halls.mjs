@@ -85,6 +85,31 @@ export async function bakeHalls(){
     const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#699ec6');sky.addColorStop(.43,'#b9d9e6');sky.addColorStop(.50,'#e1e5d9');sky.addColorStop(.54,'#dbd8bf');sky.addColorStop(1,'#9b9b87');g.fillStyle=sky;g.fillRect(0,0,w,h);
     for(let n=0;n<8;n++){const x=60+n*143,y=130+(n%3)*14,cloud=g.createRadialGradient(x,y,1,x,y,70);cloud.addColorStop(0,'#ffffff65');cloud.addColorStop(1,'#ffffff00');g.fillStyle=cloud;g.fillRect(x-70,y-70,140,140);}
   });
+  custom('court',1024,1024,(g,w,h)=>{
+    g.drawImage(canvases.marble,0,0,w,h);g.fillStyle='#ffffff38';g.fillRect(0,0,w,h);
+    g.strokeStyle='#9c9c8c35';g.lineWidth=.6;
+    for(let i=0;i<=64;i++){g.beginPath();g.moveTo(i*w/64,0);g.lineTo(i*w/64,h);g.moveTo(0,i*h/64);g.lineTo(w,i*h/64);g.stroke();}
+    g.drawImage(canvases['floor-inlay'],0,0,w,h);
+  });
+  custom('kiswah',512,512,(g,w,h)=>{
+    g.fillStyle='#131817';g.fillRect(0,0,w,h);
+    for(let n=0;n<10000;n++){g.fillStyle=n%2?'#1b201b':'#101514';g.fillRect((n*137)%w,(n*311)%h,1,2);}
+    g.strokeStyle='#252b23';g.lineWidth=1;
+    for(let y=-32;y<h;y+=64)for(let x=0;x<w;x+=64){g.beginPath();g.moveTo(x,y+32);g.lineTo(x+28,y);g.lineTo(x+56,y+32);g.lineTo(x+28,y+64);g.closePath();g.stroke();}
+  });
+  custom('brocade',512,128,(g,w,h)=>{
+    g.fillStyle='#171c19';g.fillRect(0,0,w,h);g.strokeStyle='#c7a657';g.lineWidth=4;
+    for(const y of [7,18,h-18,h-7]){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}
+    for(let x=32;x<w;x+=64){g.beginPath();g.ellipse(x,64,19,29,0,0,Math.PI*2);g.stroke();for(let n=0;n<8;n++){const a=n*Math.PI/4;g.beginPath();g.moveTo(x,64);g.lineTo(x+Math.cos(a)*15,64+Math.sin(a)*23);g.stroke();}}
+  });
+  custom('lattice',512,512,(g,w,h)=>{
+    g.fillStyle='#30443e';g.fillRect(0,0,w,h);g.strokeStyle='#708479';g.lineWidth=3;
+    for(let y=-32;y<h;y+=64)for(let x=-32;x<w;x+=64){
+      g.beginPath();for(let n=0;n<16;n++){const a=n*Math.PI/8,r=n%2?12:28,px=x+32+Math.cos(a)*r,py=y+32+Math.sin(a)*r;n?g.lineTo(px,py):g.moveTo(px,py);}g.closePath();g.stroke();
+      g.strokeRect(x+2,y+2,60,60);
+    }
+    g.strokeStyle='#192e28';g.lineWidth=12;g.strokeRect(4,4,w-8,h-8);
+  });
   const files=[],models={};
   for(const [name,c]of Object.entries(canvases)){
     for(const tier of ['high','low']){
@@ -94,10 +119,10 @@ export async function bakeHalls(){
     }
   }
   if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;
-  for(const map of ['mecca','taj'])for(const tier of ['low','high']){
+  for(const map of ['mecca','taj','makkah'])for(const tier of ['low','high']){
     const model=buildArchitecture(map,tier),path='halls/'+map+'-'+tier+'.glb',stats=await writeGlb('public/assets/'+path,model,tier);
     model.batches.forEach(p=>p.geometry.dispose());models[map+'-'+tier]=stats;files.push(path);
-    if(stats.drawCalls>16||stats.triangles>(tier==='low'?85000:250000)||stats.bytes>(tier==='low'?3500000:9000000))throw new Error('Architecture exceeds budget: '+map+' '+tier+' '+JSON.stringify(stats));
+    if(stats.drawCalls>16||stats.triangles>(tier==='low'?60000:200000)||stats.bytes>(tier==='low'?3500000:9000000))throw new Error('Architecture exceeds budget: '+map+' '+tier+' '+JSON.stringify(stats));
     console.log(map+' '+tier+': '+stats.drawCalls+' draws, '+stats.triangles+' triangles, '+stats.bytes+' bytes');
   }
   const info={fingerprint,models,files};await writeFile('public/assets/build-info.json',JSON.stringify(info,null,2));return info;
