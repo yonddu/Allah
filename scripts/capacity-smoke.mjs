@@ -50,8 +50,9 @@ try{
  const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
  await context.addInitScript(()=>{Object.defineProperty(navigator,'deviceMemory',{get:()=>4});Object.defineProperty(navigator,'hardwareConcurrency',{get:()=>4});});
  const page=await context.newPage();await page.route('**/*',route=>route.request().url().startsWith(origin)?route.continue():route.abort());
- await page.goto(origin+'/?qa=1');await page.waitForFunction(()=>!!window.__noorScene?.local.human.loaded,null,{timeout:60000});
- await page.evaluate(()=>{document.querySelector('#mapDialog').close();document.getElementById('scene').removeAttribute('style');document.getElementById('app').prepend(document.getElementById('scene'));const s=window.__noorScene;s.container=document.getElementById('scene');s.resize();s.portraitMode=false;s.cameraAngle=0;s.cameraHeight=4;s.cameraDistance=13;});
+ await page.goto(origin+'/?qa=1');await page.waitForFunction(()=>window.__noorScene?.hallReady&&window.__noorScene?.local.human.loaded&&window.__noorScene?.selfId&&document.getElementById('statusDot').classList.contains('connected'),null,{timeout:60000});
+ // Automatic entry clears stale visitors; only start the synthetic crowd after it completes.
+ await page.evaluate(()=>{const s=window.__noorScene;s.resize();s.portraitMode=false;s.cameraAngle=0;s.cameraHeight=4;s.cameraDistance=13;});
  const rendering=[];
  for(const count of [32,50,100]){
   await page.evaluate(async count=>{const {sanitizeProfile}=await import('/core.js'),s=window.__noorScene;s.clearPlayers();const origin={...s.position};for(let i=0;i<count-1;i++)s.syncPlayer({id:'capacity-'+i,accountId:'test-'+i,profile:sanitizeProfile({name:'Visitor '+i,model:'model02'}),x:origin.x+(i%10-4.5)*.8,z:origin.z-1-Math.floor(i/10)*.8,yaw:0,pose:'standing',praying:false,protected:false});await Promise.all([...s.remote.values()].map(a=>a.human.ready));},count);
