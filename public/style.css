@@ -172,3 +172,5 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 .avatar-speech{position:relative;max-width:min(240px,65vw);min-width:36px;padding:9px 13px;border:1px solid #c7cfc6;border-radius:15px;background:#fffdf3f5;color:#18352e;font:500 14px/1.5 Manrope,"Noto Sans KR",sans-serif;text-align:start;white-space:pre-wrap;overflow-wrap:anywhere;unicode-bidi:plaintext;box-shadow:0 3px 12px #0003;pointer-events:none}
 .avatar-speech:after{content:"";position:absolute;bottom:-7px;left:calc(50% - 6px);width:12px;height:12px;background:#fffdf3;transform:rotate(45deg);border-right:1px solid #c7cfc6;border-bottom:1px solid #c7cfc6}
 .donation-message{font-size:14px!important;line-height:1.8!important;color:var(--ink)!important;white-space:pre-line;margin:16px 0}
+
+.location-purpose{margin:16px 0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#d6b57b0b;color:var(--ink);font-size:13px;line-height:1.7;text-align:start}
