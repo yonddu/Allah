@@ -2,13 +2,14 @@ import * as THREE from 'three';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {selectedModel} from './user-model-catalog.js';
 import {skinUserGeometry} from './user-skinning.js';
+import {SUJUD,findBodyContacts,prostrationSpineZ,plantProstrationLegs,palmFacing} from './avatar-kinematics.js';
 const v=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const I={root:0,hips:1,spine:2,chest:3,neck:4,head:5,la:6,le:7,lh:8,ra:9,re:10,rh:11,ll:12,lk:13,lf:14,rl:15,rk:16,rf:17};
 const cache=new Map(),fileCache=new Map();let catalogReady;
 function template(file,config){
  if(!fileCache.has(file))fileCache.set(file,new GLTFLoader().loadAsync('/user-models/'+file).then(gltf=>{
   let mesh;gltf.scene.traverse(n=>{if(n.isMesh)mesh=n;});if(!mesh)throw new Error('Empty character model');
-  skinUserGeometry(mesh.geometry,config);for(const m of [mesh.material].flat())if(m.map)m.map.anisotropy=2;return mesh;
+  skinUserGeometry(mesh.geometry,config);mesh.userData.contacts=findBodyContacts(mesh.geometry);for(const m of [mesh.material].flat())if(m.map)m.map.anisotropy=2;return mesh;
  }).catch(error=>{fileCache.delete(file);throw error;}));
  return fileCache.get(file);
 }
@@ -41,10 +42,11 @@ function armIK(bones,side,target,hint){
 }
 export function makeHumanAvatar(profile,tier='low',local=false){
  const root=new THREE.Group(),hips=new THREE.Group(),simple=new THREE.Group(),bones=rig({armY:1.42,shoulder:.21,upper:.25,lower:.24});root.add(hips,simple);hips.add(bones[0]);
- let poseAt=-Infinity,poseState=null,armReach=.49;
+ let poseAt=-Infinity,poseState=null,armReach=.49,contacts={forehead:v(0,1.72,-.08),toes:{left:v(-.1,.025,-.14),right:v(.1,.025,-.14)}};
  let skeleton=new THREE.Skeleton(bones),mesh=null,stages=null,detailed=true,disposed=false;
  const human={
   skeleton,bones,assetId:selectedModel(profile).id,loaded:false,
+  get contacts(){return contacts;},
   setQuality(){},
   setDetail(value){detailed=value;if(mesh&&stages){const source=stages[local?0:(detailed?1:2)];mesh.geometry=source.geometry;mesh.material=source.material;}},
   dispose(){disposed=true;skeleton.dispose();},
@@ -53,20 +55,26 @@ export function makeHumanAvatar(profile,tier='low',local=false){
    const greetingWeight=greeting>=0?Math.min(1,greeting/.20,(1-greeting)/.24):0;
    const state=pose+praying+moving+(greetingWeight>0);if(!local&&!detailed&&state===poseState&&time-poseAt<1/12)return;
    if(!local&&!detailed)dt=Math.min(.25,Math.max(dt,time-poseAt));poseAt=time;poseState=state;
-   const kneeling=pose==='sitting'||pose==='prostrating',prostrating=pose==='prostrating',bowing=pose==='bowing',s=1-Math.exp(-dt*10),hip=prostrating?.54:kneeling?.39:.92;
+   const kneeling=pose==='sitting'||pose==='prostrating',prostrating=pose==='prostrating',bowing=pose==='bowing',s=1-Math.exp(-dt*10),hip=prostrating?SUJUD.hipY:kneeling?.39:.92;
    bones[I.hips].position.y=THREE.MathUtils.lerp(bones[I.hips].position.y,hip+(moving?Math.sin(time*10)*.016:0),s);
-   bones[I.spine].position.y=THREE.MathUtils.lerp(bones[I.spine].position.y,prostrating?.045:.20,s);
-   bones[I.spine].rotation.x=THREE.MathUtils.lerp(bones[I.spine].rotation.x,prostrating?-2.45:bowing?-1.04:0,s);
-   bones[I.head].rotation.x=THREE.MathUtils.lerp(bones[I.head].rotation.x,-.13*greetingWeight,s);
+   bones[I.hips].position.z=THREE.MathUtils.lerp(bones[I.hips].position.z,prostrating?SUJUD.hipZ:0,s);
+   bones[I.hips].rotation.x=THREE.MathUtils.lerp(bones[I.hips].rotation.x,prostrating?SUJUD.hipAngle:0,s);
+   bones[I.spine].position.y=THREE.MathUtils.lerp(bones[I.spine].position.y,.20,s);
+   bones[I.spine].position.z=THREE.MathUtils.lerp(bones[I.spine].position.z,prostrating?prostrationSpineZ(contacts):0,s);
+   bones[I.spine].rotation.x=THREE.MathUtils.lerp(bones[I.spine].rotation.x,prostrating?SUJUD.spineAngle:bowing?-1.04:0,s);
+   bones[I.head].rotation.x=THREE.MathUtils.lerp(bones[I.head].rotation.x,prostrating?SUJUD.headAngle:-.13*greetingWeight,s);
    for(const side of [-1,1]){
     const leg=bones[side<0?I.ll:I.rl],knee=bones[side<0?I.lk:I.rk];
+    if(prostrating)continue;
+    bones[side<0?I.lf:I.rf].quaternion.identity();
     leg.rotation.x=THREE.MathUtils.lerp(leg.rotation.x,kneeling?(prostrating?.85:1.0):moving?Math.sin(time*8+side)*.30:0,s);
     knee.rotation.x=THREE.MathUtils.lerp(knee.rotation.x,kneeling?(prostrating?-1.9:-2.2):moving?Math.max(0,-Math.sin(time*8+side))*.30:0,s);
    }
    root.updateMatrixWorld(true);
+   if(prostrating)plantProstrationLegs(root,bones,contacts);
    for(const side of [-1,1]){
     let target,hint;
-    if(prostrating){target=v(side*.22,.075,-.65).applyMatrix4(root.matrixWorld);hint=v(side*.40,.26,-.40).applyMatrix4(root.matrixWorld);}
+    if(prostrating){target=v(side*.24,.085,-.40).applyMatrix4(root.matrixWorld);hint=v(side*.45,.23,-.18).applyMatrix4(root.matrixWorld);}
     else if(bowing){target=v(side*.115,.53,-.10).applyMatrix4(root.matrixWorld);hint=v(side*.31,.80,-.20).applyMatrix4(root.matrixWorld);}
     else if(kneeling){target=v(side*.13,.43,-.34).applyMatrix4(root.matrixWorld);hint=v(side*.32,.64,-.12).applyMatrix4(root.matrixWorld);}
     else if(praying){target=v(side*-.025,-.22,-.20).applyMatrix4(bones[I.chest].matrixWorld);hint=v(side*.32,-.30,-.06).applyMatrix4(bones[I.chest].matrixWorld);}
@@ -76,9 +84,14 @@ export function makeHumanAvatar(profile,tier='low',local=false){
      target.applyMatrix4(bones[I.chest].matrixWorld);hint=v(side*.32,-armReach*.48,-.10).applyMatrix4(bones[I.chest].matrixWorld);
     }
     armIK(bones,side,target,hint);const hand=bones[side<0?I.lh:I.rh];
-    // Rotate relaxed palms toward the thighs instead of presenting them to the front.
-    hand.rotation.set(prostrating?Math.PI/2:praying?0:side*1.15*(1-greetingWeight),0,0);
-    const curl=praying||greetingWeight>0?0:moving?.86:.36,knuckle=side<0?18:20;
+    const rootRotation=root.getWorldQuaternion(new THREE.Quaternion());
+    if(prostrating)palmFacing(hand,side,v(0,0,-1).applyQuaternion(rootRotation),v(0,-1,0).applyQuaternion(rootRotation),s);
+    else if(!praying){
+     const elbow=bones[side<0?I.le:I.re],direction=hand.getWorldPosition(v()).sub(elbow.getWorldPosition(v()));
+     const normal=side>0&&greetingWeight>0?v(0,0,1):v(-side,0,0);
+     palmFacing(hand,side,direction,normal.applyQuaternion(rootRotation),s);
+    }else hand.quaternion.identity();
+    const curl=praying||greetingWeight>0?0:moving?.70:.48,knuckle=side<0?18:20;
     bones[knuckle].rotation.y=THREE.MathUtils.lerp(bones[knuckle].rotation.y,side*curl,s);
     bones[knuckle+1].rotation.y=THREE.MathUtils.lerp(bones[knuckle+1].rotation.y,side*curl*.75,s);
    }
@@ -86,11 +99,11 @@ export function makeHumanAvatar(profile,tier='low',local=false){
  };
  human.ready=userAsset(human.assetId,local).then(asset=>{
   if(disposed)return;
-  const c=asset.config;armReach=c.upper+c.lower;bones[I.chest].position.y=c.armY-.045-1.12;
+  const c=asset.config;contacts=asset.meshes[0].userData.contacts;armReach=c.upper+c.lower;bones[I.chest].position.y=c.armY-.045-1.12;
   bones[I.neck].position.y=1.52-(c.armY-.045);
   for(const side of [-1,1]){bones[side<0?I.la:I.ra].position.x=side*c.shoulder;bones[side<0?I.le:I.re].position.x=side*c.upper;bones[side<0?I.lh:I.rh].position.x=side*c.lower;}
   // Bind the supplied mesh in its untouched T-pose before applying animation.
-  for(const bone of bones)bone.quaternion.identity();bones[I.hips].position.y=.92;bones[I.spine].position.y=.20;root.updateMatrixWorld(true);
+  for(const bone of bones)bone.quaternion.identity();bones[I.hips].position.set(0,.92,0);bones[I.spine].position.set(0,.20,0);root.updateMatrixWorld(true);
   skeleton.dispose();skeleton=new THREE.Skeleton(bones);human.skeleton=skeleton;stages=asset.meshes;
   const source=stages[local?0:(detailed?1:2)];mesh=new THREE.SkinnedMesh(source.geometry,source.material);mesh.frustumCulled=true;mesh.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.9,0),1.8);mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.userModel=human.assetId;hips.add(mesh);mesh.bind(skeleton);human.loaded=true;
   human.update('standing',false,0,false,1);

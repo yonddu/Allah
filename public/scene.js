@@ -113,21 +113,32 @@ export class Sanctuary {
     a.materials.forEach(m=>m.dispose());a.label.element.remove();a.greetingLabel.element.remove();a.human?.dispose();
   }
   updateProfile(profile){const old=this.local;this.local=this.makeAvatar(profile,true);this.scene.add(this.local.root);this.disposeAvatar(old);this.profile=profile;}
-  playGreeting(id=null){
+  playGreeting(id=null,targetId=null){
     if(this.praying)return;
     const avatar=id?this.remote.get(id):this.local;if(!avatar||avatar.praying||this.blockedIds?.has(avatar.accountId))return;
+    if(targetId){
+     const other=targetId===this.selfId?this.local:this.remote.get(targetId);
+     if(other){const from=id?avatar.target:this.position,to=other===this.local?this.position:other.target,angle=Math.atan2(from.x-to.x,from.z-to.z);if(id)avatar.targetYaw=angle;else this.yaw=angle;}
+    }
     avatar.greetingStart=performance.now();avatar.greetingUntil=avatar.greetingStart+GREETING_DURATION;
   }
-  cancelGreeting(){for(const avatar of [this.local,...this.remote.values()]){avatar.greetingUntil=0;avatar.greetingLabel.visible=false;}}
+  cancelGreeting(){this.onPlayerMenuClose?.();for(const avatar of [this.local,...this.remote.values()]){avatar.greetingUntil=0;avatar.greetingLabel.visible=false;}}
   syncPlayer(p){
     if(!this.remote.has(p.id)){const a=this.makeAvatar(p.profile);a.root.position.set(p.x,0,p.z);a.root.rotation.y=p.yaw;this.remote.set(p.id,a);this.scene.add(a.root);}
     let a=this.remote.get(p.id);
     if(JSON.stringify(a.profile)!==JSON.stringify(p.profile)){
       const old=a;a=this.makeAvatar(p.profile);a.root.position.copy(old.root.position);a.root.rotation.y=old.root.rotation.y;this.disposeAvatar(old);this.remote.set(p.id,a);this.scene.add(a.root);
     }
-    a.target.set(p.x,0,p.z);a.targetYaw=p.yaw;a.praying=p.praying;a.pose=p.pose;a.protected=p.protected;a.accountId=p.accountId;
+    a.id=p.id;a.target.set(p.x,0,p.z);a.targetYaw=p.yaw;a.praying=p.praying;a.pose=p.pose;a.protected=p.protected;a.accountId=p.accountId;
   }
-  removePlayer(id){const a=this.remote.get(id);if(a)this.disposeAvatar(a);this.remote.delete(id);}
+  pickPlayer(clientX,clientY){
+    const rect=this.renderer.domElement.getBoundingClientRect();if(!rect.width||!rect.height)return null;
+    this.raycaster.setFromCamera(new THREE.Vector2((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1),this.camera);
+    const meshes=[],owners=new Map();
+    for(const a of this.remote.values())if(!this.blockedIds?.has(a.accountId)&&a.hips.visible)a.root.traverse(node=>{if(node.isSkinnedMesh&&node.visible){meshes.push(node);owners.set(node,a);}});
+    const hit=this.raycaster.intersectObjects(meshes,false)[0];return hit?owners.get(hit.object):null;
+  }
+  removePlayer(id){this.onPlayerMenuClose?.();const a=this.remote.get(id);if(a)this.disposeAvatar(a);this.remote.delete(id);}
   clearPlayers(){for(const id of [...this.remote.keys()])this.removePlayer(id);}
   applyPose(a,pose,praying,time,moving,dt){
     const greeting=!this.praying&&!praying&&!moving&&time*1000<a.greetingUntil?Math.max(0,(time*1000-a.greetingStart)/GREETING_DURATION):-1;
@@ -138,7 +149,7 @@ export class Sanctuary {
 
   bindControls(){
     window.addEventListener('keydown',e=>{
-      if(e.target.closest('input,textarea,select,dialog')||document.querySelector('dialog[open]'))return;
+      if(e.target.closest('input,textarea,select,dialog,[role="menu"]')||document.querySelector('dialog[open]'))return;
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'].includes(e.key)){e.preventDefault();this.keys.add(e.key.toLowerCase());}
     });
     window.addEventListener('keyup',e=>this.keys.delete(e.key.toLowerCase()));
@@ -163,15 +174,26 @@ export class Sanctuary {
     stick.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer){e.preventDefault();moveStick(e);}});
     for(const event of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(event,e=>{if(e.pointerId===stickPointer)this.resetJoystick();});
     window.addEventListener('blur',this.resetJoystick);
-    const el=this.renderer.domElement,pointers=new Map();let drag=null,pinch=0;
-    el.addEventListener('pointerdown',e=>{el.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});drag={x:e.clientX,y:e.clientY};});
+    const el=this.renderer.domElement,pointers=new Map();let drag=null,pinch=0,holdTimer=null,holdOrigin=null;
+    const cancelHold=()=>{clearTimeout(holdTimer);holdTimer=null;};
+    const openPlayerMenu=(avatar,event)=>{
+      if(!avatar||this.praying){this.onPlayerMenuClose?.();return;}
+      this.keys.clear();this.direction.clear();this.resetJoystick();pointers.clear();drag=null;pinch=0;this.moving=false;
+      this.onPlayerMenu?.(avatar.id,event.clientX,event.clientY);
+    };
+    el.addEventListener('contextmenu',event=>{event.preventDefault();cancelHold();openPlayerMenu(this.pickPlayer(event.clientX,event.clientY),event);});
+    el.addEventListener('pointerdown',e=>{
+      if(e.button!==0)return;this.onPlayerMenuClose?.();cancelHold();
+      el.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});drag=holdOrigin={x:e.clientX,y:e.clientY};
+      if(e.pointerType==='touch'&&pointers.size===1){const avatar=this.pickPlayer(e.clientX,e.clientY);if(avatar)holdTimer=setTimeout(()=>{openPlayerMenu(avatar,e);if(el.hasPointerCapture(e.pointerId))el.releasePointerCapture(e.pointerId);},550);}
+    });
     el.addEventListener('pointermove',e=>{
-      if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(!pointers.has(e.pointerId))return;if(holdOrigin&&Math.hypot(e.clientX-holdOrigin.x,e.clientY-holdOrigin.y)>8)cancelHold();pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(pointers.size===2){const [a,b]=[...pointers.values()],dist=Math.hypot(a.x-b.x,a.y-b.y);if(pinch)this.cameraDistance=THREE.MathUtils.clamp(this.cameraDistance+(pinch-dist)*.03,3,40);pinch=dist;drag=null;return;}
       if(drag){this.cameraAngle-=(e.clientX-drag.x)*.006;this.cameraHeight=THREE.MathUtils.clamp(this.cameraHeight+(e.clientY-drag.y)*.022,1.1,12);}
       drag={x:e.clientX,y:e.clientY};
     });
-    const up=e=>{pointers.delete(e.pointerId);drag=null;pinch=0;};
+    const up=e=>{cancelHold();holdOrigin=null;pointers.delete(e.pointerId);drag=null;pinch=0;};
     el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
     el.addEventListener('wheel',e=>{e.preventDefault();this.cameraDistance=THREE.MathUtils.clamp(this.cameraDistance+e.deltaY*.008,3,40);},{passive:false});
   }

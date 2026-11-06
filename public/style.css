@@ -151,3 +151,10 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 .prayer-mode .actionbar,html:not([lang=ko]) .prayer-mode .actionbar{flex-wrap:wrap;white-space:normal}
 .topbar .room-pill{min-width:0;max-width:calc(100vw - 140px);flex:1}
 .topbar #currentMapName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Avatar actions are outside the 3D canvas and remain readable at every render scale. */
+.player-menu{position:fixed;z-index:40;min-width:160px;max-width:calc(100vw - 16px);padding:6px;border-radius:12px;color:var(--ink);background:#102f28fa}
+.player-menu-title{padding:7px 9px 9px;border-bottom:1px solid var(--line);margin-bottom:3px;font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player-menu button{display:block;width:100%;min-height:42px;text-align:start;padding:9px 12px;font-size:13px;background:transparent}
+.player-menu button:hover,.player-menu button:focus-visible{background:#d6b57b22;color:var(--gold)}
+.player-menu button:disabled{opacity:.4;cursor:default}

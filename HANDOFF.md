@@ -1,3 +1,9 @@
+## Prayer contact, inward palms and avatar action menu · 2026-11-06
+
+- User reported that prostration folded the face onto the knees and that the hands still faced outward. Replaced numeric wrist roll with a world-space palm frame derived from forearm direction and inward torso normal. Added actual-mesh forehead/toe landmarks, a calibrated pelvis/spine/neck pose and planted knee/ankle solving. Prostration faces downward with forehead and toes on the mat, and head forward of knees. Supplied geometry/UVs remain unchanged.
+- Right-clicking another visible avatar opens Greet / Whisper; touch devices use a 550ms hold, cancelled by dragging. Menu actions respect prayer mode, blocks and whisper preferences; leaving avatars close the menu. Greeting targets are validated on server and the sender faces the selected visitor. No automatic messages are sent as greetings.
+- The execution environment is unavailable in this turn. Source changes are made against the current GitHub head and validation runs in the existing GitHub Actions pipeline, including actual-mesh contact tests for all ten models and real browser context-menu interactions. Final results/deployment are recorded after validation.
+
 ## Completed respectful-interaction release · 2026-11-06 (Asia/Seoul)
 
 - Deployed application commit: bcb96a9f9c29a9f99eac2aaf5a1c47cae1a8e603.

@@ -5,6 +5,7 @@ import {Sanctuary} from './scene.js';
 import {initPrayerTimes} from './prayer-times.js';
 import {initLocation} from './location.js';
 import {RoomConnection} from './network.js';
+import {initPlayerMenu} from './player-menu.js';
 import {initCommunity} from './social.js';
 import {Soundscape} from './audio.js';
 import {USER_MODELS} from './user-model-catalog.js';
@@ -13,7 +14,7 @@ const $=id=>document.getElementById(id);
 let generatedName=false;
 let toastTimer,profile=loadProfile(),savedRoom;
 try{savedRoom=localStorage.getItem('noor-room');}catch{}
-let currentRoom=parseRoom(savedRoom)?.key||'mecca:1',scene,network,community;
+let currentRoom=parseRoom(savedRoom)?.key||'mecca:1',scene,network,community,playerMenu;
 function toast(message){
   $('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),4500);
 }
@@ -100,12 +101,13 @@ function setPrayer(active){
 $('prayerButton').addEventListener('click',()=>setPrayer(!scene.praying));
 $('poseButton').addEventListener('click',()=>{scene.pose=poses[(poses.indexOf(scene.pose)+1)%poses.length];network.send({type:'prayer',active:true,pose:scene.pose});prayerUI();});
 let greetingTimer;
-$('greetingButton').addEventListener('click',()=>{
-  if(scene.praying)return;
+function greetPlayer(to=null){
+  if(scene.praying||$('greetingButton').disabled)return;
   $('greetingButton').disabled=true;
-  if(!network?.send({type:'greeting'}))scene.playGreeting();
+  if(!network?.send(to?{type:'greeting',to}:{type:'greeting'}))scene.playGreeting();
   clearTimeout(greetingTimer);greetingTimer=setTimeout(()=>{$('greetingButton').disabled=false;},5000);
-});
+}
+$('greetingButton').addEventListener('click',()=>greetPlayer());
 network=new RoomConnection({
   profile:()=>profile,
   status:state=>{
@@ -114,19 +116,32 @@ network=new RoomConnection({
     if(state==='offline'){scene.protected=false;$('roomStatus').textContent='온라인 연결이 끊어져 재연결 중입니다. 개인 미리보기는 계속 이용할 수 있습니다.';}
   },
   welcome:self=>{
-    scene.position={x:self.x,z:self.z};scene.yaw=self.yaw;scene.protected=self.protected;
+    scene.selfId=self.id;scene.position={x:self.x,z:self.z};scene.yaw=self.yaw;scene.protected=self.protected;
     if(scene.praying)network.send({type:'prayer',active:true,pose:scene.pose});
   },
   self:p=>{if(p.correction&&Math.hypot(p.correction.x,p.correction.z)>.08)scene.position={x:scene.position.x+p.correction.x,z:scene.position.z+p.correction.z};scene.protected=p.protected;if(p.authoritative&&(p.praying||scene.praying!==p.praying))scene.position={x:p.x,z:p.z};if(p.authoritative&&scene.praying!==p.praying){scene.praying=p.praying;scene.pose=p.pose;if(scene.praying){scene.cancelGreeting();sound.startPrayer();}else sound.stopPrayer();prayerUI();}},
   player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.clearPlayers();community?.clear();},
   count:n=>$('onlineCount').textContent=n+'명 접속',
   recount:()=>$('onlineCount').textContent=(scene.remote.size+1)+'명 접속',
-  notice:toast,chat:message=>community?.chat(message),greeting:message=>{if(!scene.praying&&!scene.blockedIds?.has(message.accountId))scene.playGreeting(message.id===network.selfId?null:message.id);}
+  notice:toast,chat:message=>community?.chat(message),greeting:message=>{if(!scene.praying&&!scene.blockedIds?.has(message.accountId))scene.playGreeting(message.id===network.selfId?null:message.id,message.targetPlayerId||null);}
 });
 community=initCommunity({
   getName:()=>profile.name,toast,onSession:session=>{scene.accountId=session.id;scene.blockedIds=new Set(session.blocked.map(p=>p.id));scene.friendIds=session.friends.map(p=>p.id).filter(id=>!scene.blockedIds.has(id));},
   sendChat:(text,to)=>network.send(to?{type:'whisper',text,to}:{type:'chat',text}),reconnect:()=>network.connect(currentRoom)
 });
+playerMenu=initPlayerMenu({
+  canWhisper:()=>community?.session?.whispers!==false,
+  onAction:(action,person)=>{
+    const avatar=scene.remote.get(person.id);
+    if(scene.praying||!avatar||avatar.praying||scene.blockedIds?.has(avatar.accountId))return;
+    if(action==='greeting')greetPlayer(avatar.accountId);else community.beginWhisper(avatar.accountId);
+  }
+});
+scene.onPlayerMenu=(id,x,y)=>{
+  const avatar=scene.remote.get(id);if(!avatar||scene.praying||scene.blockedIds?.has(avatar.accountId))return;
+  playerMenu.open({id,accountId:avatar.accountId,name:avatar.profile.name,praying:avatar.praying},x,y);
+};
+scene.onPlayerMenuClose=()=>playerMenu.close();
 $('reconnectButton').addEventListener('click',async()=>{try{await community.start();network.retry=0;network.connect(currentRoom);$('settingsDialog').close();}catch(e){toast(e.message);}});
 let chosenMap=parseRoom(currentRoom).map,chosenServer=parseRoom(currentRoom).server,roomsVersion=0;
 function mapLabels(){

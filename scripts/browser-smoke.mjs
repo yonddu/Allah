@@ -78,7 +78,19 @@ try{
   assert.equal(await page.locator('#prayerQuranLink').getAttribute('href'),'https://quran.com/');
   assert.equal(await page.locator('#chatDock').isVisible(),false);
   assert.equal(await page.locator('#greetingButton').isVisible(),false);
-  for(let n=0;n<4;n++){await delay(500);await page.screenshot({path:'artifacts/prayer-pose-'+n+'.png'});await page.locator('#poseButton').click();}
+  for(let n=0;n<4;n++){
+    await delay(500);await page.screenshot({path:'artifacts/prayer-pose-'+n+'.png'});
+    if(n===2){
+      const visual=await page.evaluate(()=>{
+        const s=window.__noorScene,previous={angle:s.cameraAngle,height:s.cameraHeight,distance:s.cameraDistance,portrait:s.portraitMode};
+        for(let frame=0;frame<180;frame++)s.local.human.update('prostrating',true,performance.now()/1000,false,1/60);
+        s.cameraAngle=Math.PI/2;s.cameraHeight=.9;s.cameraDistance=2.6;s.portraitMode=false;s.snapCamera();s.local.root.updateMatrixWorld(true);s.renderer.render(s.scene,s.camera);
+        const source=s.renderer.domElement,c=document.createElement('canvas');c.width=320;c.height=Math.round(source.height*.6/source.width*320);c.getContext('2d').drawImage(source,0,source.height*.20,source.width,source.height*.60,0,0,c.width,c.height);
+        const data=c.toDataURL('image/jpeg',.6);s.cameraAngle=previous.angle;s.cameraHeight=previous.height;s.cameraDistance=previous.distance;s.portraitMode=previous.portrait;s.snapCamera();return data;
+      });console.log('NOOR_PROSTRATION_QA:'+visual);
+    }
+    await page.locator('#poseButton').click();
+  }
   await page.locator('#prayerButton').click();
   assert.equal(await page.locator('#prayerQuranLink').isVisible(),false);
   assert.equal(await page.locator('#chatDock').isVisible(),true);
@@ -106,8 +118,25 @@ try{
     },name);
   }
   const guest=peerContexts[0].pages()[0],other=peerContexts[1].pages()[0],guestId=await guest.evaluate(()=>window.chatIdentity.id);
-  await page.locator('#peopleButton').click();
-  await page.locator('#roomPeople .friend-row').filter({hasText:'Chat guest'}).getByRole('button',{name:'귓속말',exact:true}).click();
+  await page.evaluate(async()=>{
+    const s=window.__noorScene;await Promise.all([...s.remote.values()].map(a=>a.human.ready));
+    s.cameraAngle=0;s.cameraDistance=9;s.cameraHeight=1.6;s.portraitMode=false;s.snapCamera();
+  });
+  async function rightClickGuest(){
+    const point=await page.evaluate(id=>{
+      const s=window.__noorScene,a=[...s.remote.values()].find(a=>a.accountId===id),p=a.root.position.clone();p.y=1.05;p.project(s.camera);const r=s.renderer.domElement.getBoundingClientRect();
+      return {x:r.x+(p.x+1)*r.width/2,y:r.y+(1-p.y)*r.height/2};
+    },guestId);
+    await page.mouse.click(point.x,point.y,{button:'right'});
+    await page.locator('#playerMenu').waitFor({state:'visible'});
+  }
+  await rightClickGuest();assert.equal(await page.locator('#playerMenuTitle').textContent(),'Chat guest');
+  await page.locator('#playerGreetAction').click();
+  await guest.waitForFunction(id=>window.chatReceived.some(m=>m.type==='greeting'&&m.to===id),guestId);
+  assert.equal(await page.locator('#playerMenu').isVisible(),false);
+  await rightClickGuest();await page.locator('#playerWhisperAction').click();
+  assert.equal(await page.locator('#whisperTarget').inputValue(),guestId);
+  assert.equal(await page.locator('#whisperChatTab').getAttribute('aria-selected'),'true');
   await page.locator('#chatInput').fill('Private browser test');await page.locator('#sendChatButton').click();
   await guest.waitForFunction(()=>window.chatReceived.some(m=>m.type==='whisper'&&m.text==='Private browser test'));
   assert.equal(await other.evaluate(()=>window.chatReceived.some(m=>m.type==='whisper')),false);

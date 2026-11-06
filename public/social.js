@@ -126,6 +126,8 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
     for(const id of ['roomPeople','blockedPeople'])if(!$(id).children.length)$(id).append(element('p','field-note','아직 없습니다.'));
   }
   function beginWhisper(id){
+    if(prayerMode)return false;
+    if(session?.whispers===false){toast('채팅이 꺼져 있습니다.');return false;}
     if(!roomPeople().some(p=>p.id===id)){toast('귓속말 상대를 선택해주세요.');return;}
     selectChannel('whisper');setCollapsed(false);$('whisperTarget').value=id;$('chatInput').focus();
   }
@@ -162,5 +164,5 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
   function clear(){players.clear();messages=[];unread=0;renderChat();renderPeople();}
   window.addEventListener('languagechange',()=>{if($('boardDialog').open)loadPosts();if($('friendsDialog').open)renderFriends();renderChat();renderPeople();});
   function setPrayerMode(active){if(prayerMode===active)return;prayerMode=active;if(active){messages=[];unread=0;$('chatInput').blur();$('chatInput').value='';}renderChat();}
-  return {start,chat,setPrayerMode,player,leave,clear,refresh:refreshFriends,get session(){return session;},updateName:async()=>{if(session)sessionUpdated(await api('/api/session','POST',{name:getName()}));}};
+  return {start,chat,setPrayerMode,beginWhisper,player,leave,clear,refresh:refreshFriends,get session(){return session;},updateName:async()=>{if(session)sessionUpdated(await api('/api/session','POST',{name:getName()}));}};
 }

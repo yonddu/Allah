@@ -93,9 +93,13 @@ export class PrayerRoom {
     if(!data||typeof data!=='object'){ws.serializeAttachment(state);return;}
     if(data.type==='greeting'){
       if(state.praying||now-(state.greetingAt||0)<5000){ws.serializeAttachment(state);return;}
-      state.greetingAt=now;ws.serializeAttachment(state);
       const peers=this.players(),access=await this.access(peers.map(p=>p.state.accountId));
-      const item={type:'greeting',id:state.id,accountId:state.accountId,at:now};
+      const target=typeof data.to==='string'?peers.find(p=>p.state.accountId===data.to&&!p.state.praying&&p.state.accountId!==state.accountId):null;
+      if(data.to&&(!target||(access[target.state.accountId]?.blocked||[]).includes(state.accountId)||(access[state.accountId]?.blocked||[]).includes(target.state.accountId))){ws.serializeAttachment(state);return;}
+      if(target)state.yaw=Math.atan2(state.x-target.state.x,state.z-target.state.z);
+      state.greetingAt=now;ws.serializeAttachment(state);
+      if(target){this.pendingMoves.delete(state.id);this.broadcast({type:'state',player:publicPlayer(state)});}
+      const item={type:'greeting',id:state.id,accountId:state.accountId,at:now,...(target?{to:target.state.accountId,targetPlayerId:target.state.id}:{})};
       for(const peer of peers)if(!peer.state.praying&&!(access[peer.state.accountId]?.blocked||[]).includes(state.accountId)&&!(access[state.accountId]?.blocked||[]).includes(peer.state.accountId))this.send(peer.ws,item);
       return;
     }

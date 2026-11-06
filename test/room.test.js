@@ -104,3 +104,14 @@ test('Prayer entry rejects occupied mats; gestures are bounded, private from blo
  const greeting=b.messages.find(m=>m.type==='greeting');assert.equal(greeting.accountId,'u1');assert.equal(greeting.text,undefined);assert.equal(c.messages.some(m=>m.type==='greeting'),false);
  await room.webSocketMessage(a,JSON.stringify({type:'greeting'}));assert.equal(b.messages.filter(m=>m.type==='greeting').length,1);
 });
+
+test('Directed greetings face the chosen visitor and cannot target blocked, absent or praying accounts',async()=>{
+ const {room,socket,access}=setup(),a=socket('a','u1'),b=socket('b','u2',{x:5}),c=socket('c','u3',{x:10});
+ await room.webSocketMessage(a,JSON.stringify({type:'greeting',to:'u2',accountId:'u3'}));
+ const event=b.messages.find(m=>m.type==='greeting');assert.equal(event.accountId,'u1');assert.equal(event.to,'u2');assert.equal(event.targetPlayerId,'b');
+ assert.ok(Math.abs(a.deserializeAttachment().yaw+Math.PI/2)<1e-8,'Face target at positive X');
+ const reset=()=>{const state=a.deserializeAttachment();state.greetingAt=0;a.serializeAttachment(state);for(const ws of [a,b,c])ws.messages.length=0;};
+ reset();access.u2.blocked=['u1'];await room.webSocketMessage(a,JSON.stringify({type:'greeting',to:'u2'}));assert.equal(b.messages.some(m=>m.type==='greeting'),false);
+ reset();access.u2.blocked=[];const bs=b.deserializeAttachment();bs.praying=true;b.serializeAttachment(bs);await room.webSocketMessage(a,JSON.stringify({type:'greeting',to:'u2'}));assert.equal(c.messages.some(m=>m.type==='greeting'),false);
+ reset();await room.webSocketMessage(a,JSON.stringify({type:'greeting',to:'absent'}));assert.equal(c.messages.some(m=>m.type==='greeting'),false);
+});
