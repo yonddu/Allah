@@ -1,3 +1,12 @@
+## Completed respectful-interaction release · 2026-11-06 (Asia/Seoul)
+
+- Deployed application commit: bcb96a9f9c29a9f99eac2aaf5a1c47cae1a8e603.
+- GitHub Verify run 42185106757: success. 37 Node tests, build and Worker dry-run, mobile onboarding, greeting, prayer-only Quran.com button, hidden chat/greeting in prayer, all four prayer poses, settings language/RTL, both courtyards, public/private chat/mute/block, and actual 50-slot admission/51st rejection passed. Browser page errors: 0. Final mobile screenshots were inspected; chat and bottom actions no longer overlap.
+- Cloudflare build 7746cf06-7370-4870-88a4-fd9ffeb6cc3a: stopped/success; deploy log confirms Worker version a95cf84f-a9d0-43a8-b909-87db5c0e8fcc and https://allah.songyd1018.workers.dev . Existing visitors must reload for updated assets/UI.
+- 100-client isolated network check: 2,000/2,000 move acknowledgements; ACK p95 97ms; 100 public recipients and 2 whisper recipients; overflow 503. These are local-emulator metrics, not Internet/mobile measurements.
+- Actual 32-avatar scene: 53 draws / 229,019 triangles, including prayer mats. Capacity renderer recorded 50 bodies ready / 59 draws / 346,496 triangles, but its later software-render frame sampler produced no fresh frames and the 100-body counters were stale. Do not claim measured physical-phone FPS or a fresh 100-body render budget. Production remains 50; entry-level Android profiling is outstanding.
+- Visual limits remain: supplied meshes use automatic skin weights; deep prayer bends and long garments are approximate and may benefit from hand-painted weights. Greeting and relaxed walking poses were additionally reviewed using CPU renders of the actual supplied mesh. No replacement character was invented.
+
 ## Respectful prayer interactions and courtyard refresh · 2026-11-06 (Asia/Seoul)
 
 Current user requests supersede the older paid-fence/Qibla/Kaaba plans below.
