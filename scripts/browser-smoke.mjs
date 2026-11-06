@@ -24,6 +24,7 @@ try{
   await page.route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:8787')?route.continue():route.abort());
   await page.goto('http://127.0.0.1:8787/?qa=1',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>!!window.__noorScene?.hallReady,null,{timeout:60000});
+  await page.waitForFunction(()=>window.__noorScene?.portraitMode);
   assert.equal(await page.locator('html').getAttribute('lang'),'en');
   assert.equal(await page.locator('#languageSelect').inputValue(),'en');
   assert.equal(await page.locator('#entryStepLanguage').count(),0);

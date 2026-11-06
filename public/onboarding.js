@@ -25,7 +25,7 @@ export function initOnboarding(){
   $('entryNextButton').addEventListener('click',()=>{if(ready)show(step+1);});
   $('entryBackButton').addEventListener('click',()=>show(step-1));
   dialog.addEventListener('cancel',e=>{if(needsSetup)e.preventDefault();});
-  window.addEventListener('noor:app-ready',()=>{ready=true;$('entryNextButton').disabled=false;$('entryLoadingStatus').hidden=true;});
+  window.addEventListener('noor:app-ready',()=>{ready=true;show(step);});
   window.addEventListener('noor:select-room',()=>show(needsSetup?step:2));
   window.addEventListener('noor:entered',()=>{
     restore();needsSetup=false;try{localStorage.setItem('noor-onboarded','1');}catch{}
