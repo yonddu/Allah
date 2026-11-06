@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import {skySchedule,skyState} from './sky-core.js';
 import {congregationDay} from './congregation-core.js';
+import {CourtyardLanterns} from './lanterns.js';
 // One low-poly background draw: no ray marching, extra render targets or downloaded sky textures.
 export class VenueSky{
  constructor(world){
-  this.world=world;this.last=-Infinity;this.now=()=>Date.now();
+  this.world=world;this.last=-Infinity;this.now=()=>Date.now();this.lanterns=new CourtyardLanterns(world);
   this.uniforms={daylight:{value:1},twilight:{value:0},sunDir:{value:new THREE.Vector3()},moonDir:{value:new THREE.Vector3()},drift:{value:0}};
   this.material=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,depthTest:false,uniforms:this.uniforms,vertexShader:`varying vec3 direction;void main(){direction=position;vec4 p=projectionMatrix*modelViewMatrix*vec4(position,1.);gl_Position=p.xyww;}`,fragmentShader:`
    varying vec3 direction;uniform float daylight,twilight,drift;uniform vec3 sunDir,moonDir;
@@ -30,6 +31,7 @@ export class VenueSky{
   const light=state.daylight;w.sun.intensity=.12+light*2.08;w.sun.position.fromArray(state.day?state.sun:state.moon).multiplyScalar(24);w.hemi.intensity=.32+light*.53;w.scene.environmentIntensity=.16+light*.34;
   w.scene.fog.color.setRGB(.025+light*.58,.045+light*.68,.09+light*.67);w.renderer.toneMappingExposure=.85+light*.1;
   if(this.hall!==w.hall){this.hall=w.hall;this.hallMaterials=new Set();w.hall?.traverse(n=>{for(const m of [n.material].flat())if(m?.color){m.userData.skyBase??=m.color.clone();this.hallMaterials.add(m);}});}
-  for(const m of this.hallMaterials||[]){m.color.copy(m.userData.skyBase);m.color.multiply(new THREE.Color(.30+.70*light,.37+.63*light,.53+.47*light));}
+  for(const m of this.hallMaterials||[]){m.color.copy(m.userData.skyBase);m.color.multiply(new THREE.Color(.30+.70*light,.37+.63*light,.53+.47*light));if(m.name==='Warm lantern glass')m.color.lerp(new THREE.Color(1,.72,.32),this.lanterns.brightness||0);}
+  this.lanterns.update(w.mapId,light,camera);
  }
 }

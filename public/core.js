@@ -1,4 +1,5 @@
 import {avatarSelection} from './avatar-catalog.js';
+import {LANTERN_LAYOUT} from './lantern-layout.js';
 export const KAABA = Object.freeze({lat:21.422487, lon:39.826206});
 export const COLORS = Object.freeze({
   skin: ['#f1c9a7','#d9a078','#ad7351','#774c38','#473029'],
@@ -77,7 +78,7 @@ export function relativeBearing(bearing,heading) {
 }
 export function legalPosition(x,z,mapId='mecca') {
   const map=MAPS[mapId]||MAPS.mecca;
-  return Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x)<=map.bounds.x&&Math.abs(z)<=map.bounds.z&&map.obstacles.every(o=>o.kind==='circle'?Math.hypot(x-o.x,z-o.z)>o.r+.45:!(x>o.x1-.45&&x<o.x2+.45&&z>o.z1-.45&&z<o.z2+.45));
+  return Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x)<=map.bounds.x&&Math.abs(z)<=map.bounds.z&&(LANTERN_LAYOUT[mapId]||LANTERN_LAYOUT.mecca).every(p=>Math.hypot(x-p.x,z-p.z)>.83)&&map.obstacles.every(o=>o.kind==='circle'?Math.hypot(x-o.x,z-o.z)>o.r+.45:!(x>o.x1-.45&&x<o.x2+.45&&z>o.z1-.45&&z<o.z2+.45));
 }
 export function constrainedMove(current,desired,seconds,mapId='mecca') {
   if(!desired||!Number.isFinite(desired.x)||!Number.isFinite(desired.z)) return {x:current.x,z:current.z};
