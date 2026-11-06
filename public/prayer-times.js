@@ -1,8 +1,10 @@
 import {t} from './i18n.js';
 import {PRAYER_NAMES,PRAYER_METHODS,zoneAt,validZone,prayerSchedule,prayerCountdowns,formatPrayerCountdown} from './prayer-times-core.js';
 export const PRAYER_CITIES=[
- ['Jakarta','ID',-6.2088,106.8456,'Asia/Jakarta'],['Makkah','SA',21.422487,39.826206,'Asia/Riyadh'],['Madinah','SA',24.4672,39.6111,'Asia/Riyadh'],['Dubai','AE',25.2048,55.2708,'Asia/Dubai'],['Karachi','PK',24.8607,67.0011,'Asia/Karachi'],['Dhaka','BD',23.8103,90.4125,'Asia/Dhaka'],['New Delhi','IN',28.6139,77.2090,'Asia/Kolkata'],['Kuala Lumpur','MY',3.1390,101.6869,'Asia/Kuala_Lumpur'],['Istanbul','TR',41.0082,28.9784,'Europe/Istanbul'],['Cairo','EG',30.0444,31.2357,'Africa/Cairo'],['Tehran','IR',35.6892,51.3890,'Asia/Tehran'],['Lagos','NG',6.5244,3.3792,'Africa/Lagos'],['Lahore','PK',31.5204,74.3587,'Asia/Karachi'],['Tashkent','UZ',41.2995,69.2401,'Asia/Tashkent'],['Seoul','KR',37.5665,126.978,'Asia/Seoul'],['Daegu','KR',35.8714,128.6014,'Asia/Seoul'],['London','GB',51.5074,-.1278,'Europe/London'],['New York','US',40.7128,-74.006,'America/New_York']
+ ['Jakarta','ID',-6.2088,106.8456,'Asia/Jakarta'],['Makkah','SA',21.422487,39.826206,'Asia/Riyadh'],['Madinah','SA',24.4672,39.6111,'Asia/Riyadh'],['Dubai','AE',25.2048,55.2708,'Asia/Dubai'],['Karachi','PK',24.8607,67.0011,'Asia/Karachi'],['Dhaka','BD',23.8103,90.4125,'Asia/Dhaka'],['New Delhi','IN',28.6139,77.2090,'Asia/Kolkata'],['Kuala Lumpur','MY',3.1390,101.6869,'Asia/Kuala_Lumpur'],['Istanbul','TR',41.0082,28.9784,'Europe/Istanbul'],['Cairo','EG',30.0444,31.2357,'Africa/Cairo'],['Tehran','IR',35.6892,51.3890,'Asia/Tehran'],['Lagos','NG',6.5244,3.3792,'Africa/Lagos'],['Lahore','PK',31.5204,74.3587,'Asia/Karachi'],['Tashkent','UZ',41.2995,69.2401,'Asia/Tashkent'],['Seoul','KR',37.5665,126.978,'Asia/Seoul'],['London','GB',51.5074,-.1278,'Europe/London'],['New York','US',40.7128,-74.006,'America/New_York']
 ];
+// Keep stored city IDs stable: 15 is retired; London remains 16 and New York 17.
+const retiredCityId=15;
 export function initPrayerTimes({location:locationSource,toast}){
  const $=id=>document.getElementById(id);let location=null,schedule=null,settings={method:'auto',madhab:'Shafi',ishaOffset:0},dayKey='',zoneOverride=null;
  try{const saved=JSON.parse(localStorage.getItem('noor-prayer-settings'));if(saved&&typeof saved==='object')settings={...settings,method:PRAYER_METHODS.includes(saved.method)?saved.method:'auto',madhab:saved.madhab==='Hanafi'?'Hanafi':'Shafi',ishaOffset:Number.isFinite(saved.ishaOffset)?Math.max(-60,Math.min(120,saved.ishaOffset)):0};}catch{}
@@ -26,7 +28,7 @@ export function initPrayerTimes({location:locationSource,toast}){
   $('prayerQuestRows').replaceChildren();
   for(const label of Object.values(PRAYER_NAMES)){const row=document.createElement('div');row.className='prayer-quest-row';const name=document.createElement('span');name.className='prayer-quest-name';name.textContent=t(label);const time=document.createElement('time'),countdown=document.createElement('output');time.textContent=countdown.textContent='—';row.append(name,time,countdown);$('prayerQuestRows').append(row);}
  }
- function cities(){const current=$('prayerCity').value,region=typeof Intl.DisplayNames==='function'?new Intl.DisplayNames([document.documentElement.lang||'en'],{type:'region'}):{of:v=>v};$('prayerCity').replaceChildren(new Option(t('도시 선택'),''));for(const [i,c]of PRAYER_CITIES.entries())$('prayerCity').append(new Option(c[0]+' · '+region.of(c[1]),String(i)));$('prayerCity').value=current;}
+ function cities(){const current=$('prayerCity').value,region=typeof Intl.DisplayNames==='function'?new Intl.DisplayNames([document.documentElement.lang||'en'],{type:'region'}):{of:v=>v};$('prayerCity').replaceChildren(new Option(t('도시 선택'),''));for(const [i,c]of PRAYER_CITIES.entries())$('prayerCity').append(new Option(c[0]+' · '+region.of(c[1]),String(i+(i>=retiredCityId?1:0))));$('prayerCity').value=current;}
  for(const method of PRAYER_METHODS)$('prayerMethod').append(new Option(method,method));
  $('prayerZone').disabled=true;
  const zones=typeof Intl.supportedValuesOf==='function'?Intl.supportedValuesOf('timeZone'):['UTC',...PRAYER_CITIES.map(c=>c[4])];
@@ -74,7 +76,7 @@ export function initPrayerTimes({location:locationSource,toast}){
  $('prayerTimesButton').addEventListener('click',()=>{if(!$('prayerTimesDialog').open)$('prayerTimesDialog').showModal();tick();});
  $('prayerQuestSettings').addEventListener('click',()=>{if(!$('prayerTimesDialog').open)$('prayerTimesDialog').showModal();tick();});
  $('prayerLocationButton').addEventListener('click',()=>{locationSource.useLocation();$('prayerTimesStatus').textContent='현재 위치를 확인하고 있습니다…';});
- function chooseCity(index){const c=PRAYER_CITIES[Number(index)];if(index===''||!c)return;$('prayerCity').value=String(index);locationSource.setLocation(c[2],c[3],c[0]);setLocation({lat:c[2],lon:c[3],label:c[0]},c[4]);try{localStorage.setItem('noor-prayer-city',String(index));}catch{}}
+ function chooseCity(index){const id=Number(index),c=id===retiredCityId?null:PRAYER_CITIES[id-(id>retiredCityId?1:0)];if(index===''||!c){if(id===retiredCityId)try{localStorage.removeItem('noor-prayer-city');}catch{}return;}$('prayerCity').value=String(index);locationSource.setLocation(c[2],c[3],c[0]);setLocation({lat:c[2],lon:c[3],label:c[0]},c[4]);try{localStorage.setItem('noor-prayer-city',String(index));}catch{}}
  $('prayerCity').addEventListener('change',()=>chooseCity($('prayerCity').value));
  $('prayerCoordinatesButton').addEventListener('click',()=>{const a=$('prayerLatitude').value,b=$('prayerLongitude').value;if(!a.trim()||!b.trim()){toast('위도 -90~90, 경도 -180~180 범위의 좌표를 입력해주세요.');return;}locationSource.setLocation(Number(a),Number(b),'직접 입력한 위치');});
  $('prayerZone').addEventListener('change',()=>{if(!location||!validZone($('prayerZone').value))return;zoneOverride=location.zone=$('prayerZone').value;rebuild();});
