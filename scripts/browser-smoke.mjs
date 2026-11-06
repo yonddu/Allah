@@ -88,6 +88,12 @@ try{
   await page.screenshot({path:'artifacts/prayer-quest-mobile.png'});
   await page.locator('#prayerQuestSettings').click();assert.equal(await page.locator('#prayerTimesDialog').isVisible(),true);
   await page.locator('#prayerTimesDialog [data-close]').click();
+  await page.setViewportSize({width:390,height:640});
+  const shortQuest=await page.locator('#prayerQuest').boundingBox(),shortChat=await page.locator('#chatDock').boundingBox();
+  assert.ok(shortQuest.y+shortQuest.height<shortChat.y);
+  assert.equal(await page.locator('#prayerQuest').evaluate(el=>el.scrollHeight<=el.clientHeight+1),true);
+  await page.screenshot({path:'artifacts/prayer-quest-short-mobile.png'});
+  await page.setViewportSize({width:390,height:844});
   const before=await page.evaluate(()=>window.__noorScene.diagnostics().position);
   const stick=await page.locator('#joystick').boundingBox(),cx=stick.x+stick.width/2,cy=stick.y+stick.height/2;
   await page.mouse.move(cx,cy);await page.mouse.down();await page.mouse.move(cx+24,cy);await delay(400);await page.mouse.up();await delay(200);
