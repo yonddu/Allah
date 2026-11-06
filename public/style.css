@@ -129,3 +129,5 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 .chat-toolbar button{font-size:12px}.chat-toolbar>button{font-size:20px}
 .chat-dock .chat-message{font-size:12px}.chat-author{font-size:12px}
 @media(max-width:600px){.room-pill{font-size:11px}.chat-dock .chat-mode{font-size:11px}.chat-toolbar button{font-size:12px}.chat-toolbar>button{font-size:19px}.chat-dock .chat-message{font-size:12px}.actionbar .action-secondary,html:not([lang=ko]) .action-secondary{font-size:11px}.actionbar .prayer-button,html:not([lang=ko]) .prayer-button{font-size:11px}}
+
+.model-thumb{display:block;height:120px;background-size:contain;background-position:center;background-repeat:no-repeat;border-radius:6px;background-color:#dfd9c9;margin-bottom:5px}

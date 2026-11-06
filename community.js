@@ -45,7 +45,7 @@ export class Community {
     const url=new URL(request.url),path=url.pathname;
     if(url.hostname==='community.internal'){
       if(path==='/session'){const user=await this.user(request);return user?json(this.view(user)):json({error:'Session required'},401);}
-      if(path==='/access'){const ids=(url.searchParams.get('ids')||'').split(',').slice(0,32);return json(Object.fromEntries(ids.map(id=>[id,this.access(id)])));}
+      if(path==='/access'){const ids=(url.searchParams.get('ids')||'').split(',').slice(0,100);return json(Object.fromEntries(ids.map(id=>[id,this.access(id)])));}
       return json({error:'Not found'},404);
     }
     const mutating=request.method!=='GET';

@@ -1,3 +1,25 @@
+## Latest decision:50 visitors per production room · 2026-11-06
+
+User explicitly changed the production limit from32 to50, retaining the3–4GB Android /720–1080p /30fps target. wrangler.jsonc now pins NOOR_ROOM_CAPACITY=50; Worker default/API room capacity and offline UI fallback are50. The real local browser test fills50 slots and rejects51 with503.100 remains an isolated capacity override; do not imply100-person phone30fps. Unknown-memory mobile browsers default to the conservative low profile.50/100 rendering are included in the capacity report; real entry-level-device FPS is still unmeasured.
+
+## Capacity check and movement protocol · 2026-11-06
+
+Production remains32 visitors/room. A bounded server-only NOOR_ROOM_CAPACITY override accepts32/64/100 for isolated tests; the client cannot set it. scripts/capacity-smoke.mjs runs a separate local Worker with100, checks101st rejection,100 public-chat recipients,2 whisper recipients,2,000 moves and32/100 actual-model rendering. No production traffic or data are used.
+
+Baseline100-moving-client test:2,000 acknowledged moves,200,000 delivered frames,90,564,000 bytes,14,639ms to drain, ACKp95=11,184ms. Movement was repeatedly deserializing peers and individually broadcasting full profiles. Version2 negotiation now batches latest numeric movement deltas every75ms, encodes each batch once, avoids protected-host scans when no fence is active, and keeps profile/prayer updates immediate. Legacy clients still receive full state. Full profile state is retained client-side and merged with deltas; pending movement is invalidated before prayer/profile changes to prevent stale rollback. Tests cover both protocols and self reconciliation.
+
+After batching local100-client result:2,000 acknowledged moves,2,000 delivered frames,12,478,000 bytes,3,020ms elapsed; ACKp50=89ms/p95=100ms; public100/private2/capacity101 rejection passed. Those are local-emulator latencies, not Internet or phone measurements. The renderer displayed all100 supplied models:113draws/684,081triangles, versus32=42draws/225,498triangles in the same standing scene. Desktop software WebGL managed only~1–2fps and cannot establish physical Android FPS. Do not claim100-person entry-level-phone30fps. Production cap stays32 until real-device profiling and further crowd rendering work justify raising it.
+
+Current supplied assets: full geometry6,197–6,457triangles with1K maps; safe remote maps512. Aggressive geometry reduction was rejected by appearance QA for most variants (allfar retain original topology; only two near meshes pass~2.5k). Never claim800-triangle distant models. Deduplicated loading fetches only the chosen full model for self and low-texture geometry for others; shared geometry/materials, view-frustum culling, and12Hz distant skeletal updates limit CPU/GPU memory. Source faces/clothes are unchanged. Automatic weights were smoothed at shoulders; further manual garment rigging may improve deep bends.
+
+## Supplied GLB integration · 2026-11-06
+
+User provided the new /chracter Dropbox link. It contains10 actual Meshy GLBs (~6.2–6.5k triangles each), one material, embedded color textures, no skins/animations. Use these supplied files; do not substitute the experimental Blender-generated landmarks or old projected reference avatars. scripts/user-model-sources.json pins each original file by SHA256 and size. Build downloads the already-public supplied folder and prepares the assets; no binary model blobs need to be committed to GitHub. The authoring workflow for experimental landmarks remains manual-only and unused.
+
+The new model catalog contains7 male and3 female complete dressed-character presets; all3 female models cover hair. Faces and clothes are part of each supplied mesh, so the UI selects a complete character/outfit. Server validates model IDs against gender. Original topology/UV/materials remain in the full model, scaled to1.8m and turned to -Z. Attribute-aware LOD simplification preserves UV islands; native-resolution HTML labels and centred camera are retained. Source models are unrigged: runtime18-bone spatial weights drive existing walk/prayer IK. This automatic rig needs visual review of bows/prostration and is not a manually painted production garment rig.
+
+Final validation/deployment results will be recorded after the visual pass. Actual3–4GB phone FPS remains unmeasured.
+
 ## User-supplied models only · 2026-11-06
 
 The user explicitly stopped replacement model generation: “노노 내모델써라”. Do not deploy the newly authored Blender landmarks or replace characters with generated models. The original Dropbox /salah folder was inspected: eight PNG references, no GLB/FBX/OBJ or subfolders. User-provided3D assets are pending. The Blender authoring workflow is now manual-only; its generated files are not integrated into the app. Local experimental landmark merge was reverted before deployment.

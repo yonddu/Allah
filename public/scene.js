@@ -11,10 +11,11 @@ const GOLD=0xc4a36a;
 export class Sanctuary {
   constructor(container,profile,onError,mapId='mecca'){
     this.mapId=mapId;this.theme=MAPS[mapId]||MAPS.mecca;
-    this.container=container;this.profile=profile;this.remote=new Map();this.keys=new Set();this.direction=new Set();this.moving=false;this.joystickAxis={x:0,y:0};
+    this.onModelError=e=>onError(e.message);this.container=container;this.profile=profile;this.remote=new Map();this.keys=new Set();this.direction=new Set();this.moving=false;this.joystickAxis={x:0,y:0};
     this.position={...this.theme.spawn};this.yaw=Math.PI;this.praying=false;this.pose='standing';this.fencePreview=false;
     this.cameraAngle=this.theme.cameraAngle;this.cameraHeight=PLAY_CAMERA.height;this.cameraDistance=PLAY_CAMERA.distance;this.last=performance.now();
-    this.device={mobile:matchMedia('(max-width:900px)').matches||matchMedia('(pointer:coarse)').matches,memory:navigator.deviceMemory||8,cores:navigator.hardwareConcurrency||8};
+    const mobile=matchMedia('(max-width:900px)').matches||matchMedia('(pointer:coarse)').matches;
+    this.device={mobile,memory:navigator.deviceMemory||(mobile?4:8),cores:navigator.hardwareConcurrency||(mobile?4:8)};
     this.qualityMode='auto';this.qualityTier=chooseQuality('auto',this.device);this.resolutionScale=1;this.renderedAt=0;this.performanceWindow=performance.now();this.performanceFrames=0;
     this.loader=new GLTFLoader();this.hallGeneration=0;this.hallReady=false;
     this.cameraTarget=new THREE.Vector3();this.desiredCamera=new THREE.Vector3();
@@ -44,7 +45,7 @@ export class Sanctuary {
     this.fence=this.makeFence();this.scene.add(this.fence);this.fence.visible=false;
     const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=64;const sc=shadowCanvas.getContext('2d'),shade=sc.createRadialGradient(32,32,2,32,32,32);shade.addColorStop(0,'rgba(0,0,0,.24)');shade.addColorStop(1,'rgba(0,0,0,0)');sc.fillStyle=shade;sc.fillRect(0,0,64,64);
     const shadowTexture=new THREE.CanvasTexture(shadowCanvas),shadowMaterial=new THREE.MeshBasicMaterial({map:shadowTexture,transparent:true,depthWrite:false});
-    this.avatarShadows=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),shadowMaterial,32);this.avatarShadows.instanceMatrix.setUsage(THREE.DynamicDrawUsage);this.avatarShadows.frustumCulled=false;this.avatarShadows.count=0;this.scene.add(this.avatarShadows);this.shadowTransform=new THREE.Object3D();
+    this.avatarShadows=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),shadowMaterial,100);this.avatarShadows.instanceMatrix.setUsage(THREE.DynamicDrawUsage);this.avatarShadows.frustumCulled=false;this.avatarShadows.count=0;this.scene.add(this.avatarShadows);this.shadowTransform=new THREE.Object3D();
     this.raycaster=new THREE.Raycaster();
     this.bindControls();
     this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(container);
@@ -91,7 +92,8 @@ export class Sanctuary {
     this.ready=this.loadHall(mapId);return this.ready;
   }
   makeAvatar(profile,local=false){
-    const {root,hips,torso,arms,legs,head,materials,simple,human}=makeHumanAvatar(profile,this.qualityTier);
+    const {root,hips,torso,arms,legs,head,materials,simple,human}=makeHumanAvatar(profile,this.qualityTier,local);
+    human.ready.catch(e=>{console.error(e);if(local)this.onModelError?.(e);});
     const high=local&&this.qualityTier!=='low';
     const rugMat=new THREE.MeshStandardMaterial({map:rugTexture(profile.rug,profile.pattern,high),roughness:1,bumpMap:weaveTexture(),bumpScale:.013,side:THREE.DoubleSide});materials.push(rugMat);
     const rug=new THREE.Mesh(new THREE.PlaneGeometry(1.35,2.7),rugMat);rug.rotation.x=-Math.PI/2;rug.position.set(0,.055,-.45);rug.receiveShadow=true;root.add(rug);
@@ -108,7 +110,7 @@ export class Sanctuary {
   disposeAvatar(a){
     this.scene.remove(a.root);
     a.root.traverse(m=>{if(m.isMesh&&m.geometry&&!m.geometry.userData.shared&&!Object.values(this.geometry).includes(m.geometry))m.geometry.dispose();});
-    a.materials.forEach(m=>m.dispose());a.label.element.remove();a.human?.skeleton.dispose();
+    a.materials.forEach(m=>m.dispose());a.label.element.remove();a.human?.dispose();
   }
   updateProfile(profile){const old=this.local;this.local=this.makeAvatar(profile,true);this.scene.add(this.local.root);this.disposeAvatar(old);this.profile=profile;}
   makeFence(){
@@ -189,7 +191,7 @@ export class Sanctuary {
     this.labels.setSize(w,h);this.camera.aspect=w/Math.max(h,1);this.camera.updateProjectionMatrix();
   }
   diagnostics(){
-    return {tier:this.qualityTier,asset:this.hall?.name||null,ready:this.hallReady,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,textures:this.renderer.info.memory.textures,pixelRatio:this.renderer.getPixelRatio(),position:{...this.position},joystick:{...this.joystickAxis},remoteVisitors:this.remote.size};
+    return {tier:this.qualityTier,asset:this.hall?.name||null,ready:this.hallReady,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,textures:this.renderer.info.memory.textures,pixelRatio:this.renderer.getPixelRatio(),position:{...this.position},joystick:{...this.joystickAxis},remoteVisitors:this.remote.size,userModel:this.local.human.assetId,userModelReady:this.local.human.loaded,userModelsReady:[this.local,...this.remote.values()].filter(a=>a.human.loaded).length};
   }
   frame(){
     const now=performance.now(),budget=QUALITY_BUDGETS[this.qualityTier];
@@ -238,9 +240,9 @@ export class Sanctuary {
       // Preserve an occupied fence boundary while hiding this visitor's appearance.
       if(this.blockedIds?.has(a.accountId)){a.hips.visible=a.simple.visible=a.label.visible=a.rug.visible=a.fringe.visible=false;}
     }
-    let shadowIndex=0;for(const a of [this.local,...this.remote.values()]){if(shadowIndex>=32)break;if(a!==this.local&&this.blockedIds?.has(a.accountId))continue;this.shadowTransform.position.set(a.root.position.x,.035,a.root.position.z);this.shadowTransform.rotation.set(0,a.root.rotation.y,0);this.shadowTransform.scale.set(.85,1,.55);this.shadowTransform.updateMatrix();this.avatarShadows.setMatrixAt(shadowIndex++,this.shadowTransform.matrix);}this.avatarShadows.count=shadowIndex;this.avatarShadows.instanceMatrix.needsUpdate=true;
+    let shadowIndex=0;for(const a of [this.local,...this.remote.values()]){if(shadowIndex>=100)break;if(a!==this.local&&this.blockedIds?.has(a.accountId))continue;this.shadowTransform.position.set(a.root.position.x,.035,a.root.position.z);this.shadowTransform.rotation.set(0,a.root.rotation.y,0);this.shadowTransform.scale.set(.85,1,.55);this.shadowTransform.updateMatrix();this.avatarShadows.setMatrixAt(shadowIndex++,this.shadowTransform.matrix);}this.avatarShadows.count=shadowIndex;this.avatarShadows.instanceMatrix.needsUpdate=true;
     this.fence.visible=(this.fencePreview||this.protected)&&this.praying;this.fence.position.set(this.position.x,0,this.position.z);this.fence.rotation.y=this.yaw;
-    const focus=this.portraitMode?{height:.94,forward:0}:avatarFocus(this.pose,this.praying);
+    const focus=this.portraitMode&&!this.praying?{height:.94,forward:0}:avatarFocus(this.pose,this.praying);
     const target=this.cameraTarget.set(this.position.x-Math.sin(this.yaw)*focus.forward,focus.height,this.position.z-Math.cos(this.yaw)*focus.forward);
     const cam=this.desiredCamera.set(target.x+Math.sin(this.cameraAngle)*this.cameraDistance,this.cameraHeight,target.z+Math.cos(this.cameraAngle)*this.cameraDistance);
     this.camera.position.lerp(cam,1-Math.exp(-dt*4));this.camera.lookAt(target);
@@ -249,3 +251,4 @@ export class Sanctuary {
     this.renderer.render(this.scene,this.camera);this.labels.render(this.scene,this.camera);
   }
 }
+

@@ -3,6 +3,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {setTimeout as delay} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
+import {WebSocket as TestSocket} from 'ws';
 await mkdir('artifacts',{recursive:true});
 let log='';
 const server=spawn(process.execPath,['node_modules/wrangler/bin/wrangler.js','dev','--local','--ip','127.0.0.1','--port','8787'],{stdio:['ignore','pipe','pipe']});
@@ -28,10 +29,12 @@ try{
   assert.equal(await page.locator('#entryCharacterHost #customPanel').count(),1);
   assert.equal(await page.locator('#entryAvatarPreview #scene').count(),1);
   await page.locator('[data-field="gender"] [data-value="female"]').click();
-  assert.equal(await page.locator('#characterChoices button:visible').count(),1);
+  assert.equal(await page.locator('#characterChoices button:visible').count(),3);
   await page.locator('#tab-outfit').click();
-  assert.equal(await page.locator('#wardrobeChoices button:visible').count(),4);
-  await page.locator('#wardrobeChoices [data-value="look08"]').click();
+  assert.equal(await page.locator('#wardrobeChoices button:visible').count(),3);
+  await page.locator('#wardrobeChoices [data-value="model09"]').click();
+  await page.evaluate(()=>window.__noorScene.local.human.ready);
+  assert.equal(await page.evaluate(()=>window.__noorScene.diagnostics().userModel),'model09');
   await page.screenshot({path:'artifacts/female-character-setup.png'});
   assert.equal(await page.locator('[data-field="cover"] [data-value="none"]').isVisible(),false);
   assert.equal(await page.locator('[data-field="cover"] [data-value="hijab"]').getAttribute('aria-pressed'),'true');
@@ -122,14 +125,25 @@ try{
   for(const ctx of peerContexts)await ctx.close();
   await page.waitForFunction(()=>window.__noorScene.remote.size===0);
   await page.locator('#publicChatTab').click();
+  // Exercise the production50-connection admission boundary in the real local Worker.
+  const cookie=(await context.cookies()).filter(c=>c.name==='noor_session').map(c=>c.name+'='+c.value).join(';'),capacitySockets=[];
+  try{
+    for(let i=0;i<49;i++)await new Promise((resolve,reject)=>{
+      const ws=new TestSocket('ws://127.0.0.1:8787/api/room?room=mecca:1',{origin:'http://127.0.0.1:8787',headers:{Cookie:cookie}});capacitySockets.push(ws);ws.on('error',reject);ws.on('message',b=>{if(JSON.parse(b).type==='welcome')resolve();});
+    });
+    const room=await page.evaluate(async()=>{const r=await fetch('/api/rooms?map=mecca');return (await r.json()).rooms[0];});assert.equal(room.count,50);assert.equal(room.capacity,50);
+    const overflow=await new Promise((resolve,reject)=>{const ws=new TestSocket('ws://127.0.0.1:8787/api/room?room=mecca:1',{origin:'http://127.0.0.1:8787',headers:{Cookie:cookie}});ws.on('unexpected-response',(_,r)=>{resolve(r.statusCode);r.resume();});ws.on('open',()=>{ws.close();reject(new Error('51st connection admitted'));});ws.on('error',()=>{});});assert.equal(overflow,503);
+  }finally{for(const ws of capacitySockets)ws.close();}
+  await page.waitForFunction(()=>window.__noorScene.remote.size===0,null,{timeout:30000});
   // Render 32 total avatars locally; no test messages are sent to a public room.
   await page.evaluate(async()=>{
     const {sanitizeProfile}=await import('/core.js'),scene=window.__noorScene;scene.cameraAngle=0;scene.cameraDistance=11.6;scene.cameraHeight=4.1;scene.portraitMode=false;const origin={...scene.position};
     for(let n=0;n<31;n++)scene.syncPlayer({id:'benchmark-'+n,accountId:'qa-'+n,profile:sanitizeProfile({name:'Visitor '+n,color:n%6,skin:n%5,cover:n%2?'kufi':'hijab'}),x:origin.x+(n%7-3),z:origin.z-2-Math.floor(n/7)*1.5,pose:n%3?'standing':'sitting',praying:n%3===0,yaw:0,protected:false});
   });
+  await page.evaluate(()=>Promise.all([...window.__noorScene.remote.values()].map(a=>a.human.ready)));
   await delay(1000);
   const crowd=await page.evaluate(()=>window.__noorScene.diagnostics());
-  assert.equal(crowd.remoteVisitors,31);assert.ok(crowd.drawCalls>=60,'Crowd body meshes must be rendered: '+JSON.stringify(crowd));assert.ok(crowd.drawCalls<180,JSON.stringify(crowd));assert.ok(crowd.triangles<150000,JSON.stringify(crowd));
+  assert.equal(crowd.remoteVisitors,31);assert.equal(crowd.userModelsReady,32);assert.ok(crowd.drawCalls>=35,'Crowd body meshes must be rendered: '+JSON.stringify(crowd));assert.ok(crowd.drawCalls<180,JSON.stringify(crowd));assert.ok(crowd.triangles<300000,JSON.stringify(crowd));
   await page.screenshot({path:'artifacts/mobile-32-visitors.png'});
   const maps=[{map:'mecca',...crowd}];
   for(const map of ['taj']){
@@ -151,7 +165,7 @@ try{
   await page.locator('#qualitySelect').selectOption('high');
   await page.waitForFunction(()=>window.__noorScene.hallReady&&window.__noorScene.loadedAsset==='high',null,{timeout:30000});
   assert.equal(await page.evaluate(()=>window.__noorScene.renderer.shadowMap.autoUpdate),true);
-  await writeFile('artifacts/browser-report.json',JSON.stringify({note:'Desktop Chromium with software WebGL; these are rendering budgets, not real-phone FPS measurements.',maps,errors},null,2));
+  await writeFile('artifacts/browser-report.json',JSON.stringify({capacity50:true,note:'Desktop Chromium with software WebGL; these are rendering budgets, not real-phone FPS measurements.',maps,errors},null,2));
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({browser:'passed',maps:maps.map(m=>({map:m.map,drawCalls:m.drawCalls,triangles:m.triangles})),crowdDrawCalls:crowd.drawCalls}));
 }catch(error){

@@ -1,0 +1,85 @@
+{
+  "folderUrl": "https://www.dropbox.com/scl/fo/um68ccr51r5tfwosyrt78/AH_DnQjmZoehDydhtkmiYwo?rlkey=cvehic4mbk95ctz8dotlkngv0&dl=1",
+  "models": [
+    {
+      "file": "Meshy_AI_Open_Arms_in_White_Th_1106010633_texture.glb",
+      "sha256": "5afaafdf1c7110a6b2200b9b6514ad0390835edf59288b49d306ca2f7ef95705",
+      "bytes": 2876828,
+      "id": "model01",
+      "gender": "male",
+      "index": 0
+    },
+    {
+      "file": "Meshy_AI_Open_Armed_Omani_Welc_1106010641_texture.glb",
+      "sha256": "df5170625a789d8f0c934251de0d128d51bf27eb5916f05d56eeb460771e47b5",
+      "bytes": 3216588,
+      "id": "model02",
+      "gender": "male",
+      "index": 1
+    },
+    {
+      "file": "Meshy_AI_Man_in_Batik_Shirt_wi_1106010648_texture.glb",
+      "sha256": "9e37668ad30a9c64514f11ee61e628d937b82dae92e3d6d8814ef5687b1e0ebc",
+      "bytes": 3649356,
+      "id": "model03",
+      "gender": "male",
+      "index": 2
+    },
+    {
+      "file": "Meshy_AI_Open_Armed_Elder_1106010702_texture.glb",
+      "sha256": "b107d77423547a2a5b63fe14e40e53861153e43cbaa52f73062daad11aab116c",
+      "bytes": 3378620,
+      "id": "model04",
+      "gender": "male",
+      "index": 3
+    },
+    {
+      "file": "Meshy_AI_Blue_Ceremonial_Attir_1106010617_texture.glb",
+      "sha256": "680c07f31e6325ccb65900eab33c64ea0ff455b7ec289356de959ee5045a8b91",
+      "bytes": 3608444,
+      "id": "model05",
+      "gender": "male",
+      "index": 4
+    },
+    {
+      "file": "Meshy_AI_Outstretched_in_Blue__1106010719_texture.glb",
+      "sha256": "55f239b1ecc0c98d38e196a3dc6abc7d3e3cf3d35e905bdb8e79b0c7b19ce1b5",
+      "bytes": 3786680,
+      "id": "model06",
+      "gender": "male",
+      "index": 5
+    },
+    {
+      "file": "Meshy_AI_Open_Armed_Traditiona_1106010714_texture.glb",
+      "sha256": "53c4b52e348157b6dca0316a0afcb655ab42a3a9ab609f45c3625d9abae484bc",
+      "bytes": 3217144,
+      "id": "model07",
+      "gender": "male",
+      "index": 6
+    },
+    {
+      "file": "Meshy_AI_Open_Arms_Abaya_1106010707_texture.glb",
+      "sha256": "347756d3419c43ba7c0a8eb6c907b3e87b9d42b4123b0358204d6645fb52b81e",
+      "bytes": 3533596,
+      "id": "model08",
+      "gender": "female",
+      "index": 7
+    },
+    {
+      "file": "Meshy_AI_Open_Armed_Grace_1106010654_texture.glb",
+      "sha256": "ac561d9a1c6060ca8faf6f2a2241596c8eb46fde3a73ef51f5857618fe7203fd",
+      "bytes": 3112812,
+      "id": "model09",
+      "gender": "female",
+      "index": 8
+    },
+    {
+      "file": "Meshy_AI_Woman_in_Green_Embroi_1106010725_texture.glb",
+      "sha256": "b400f01acfdfd72b7b8728730ff2c28e46bcb3be74516a70d43f8dbd782c6b19",
+      "bytes": 3062972,
+      "id": "model10",
+      "gender": "female",
+      "index": 9
+    }
+  ]
+}

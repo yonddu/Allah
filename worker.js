@@ -1,5 +1,7 @@
 export {Community} from './community.js';
 import {sanitizeProfile,constrainedMove,publicPlayer,PRAYER_POSES,fenceAllows,parseRoom,MAPS,legalPosition,prayerYaw} from './public/core.js';
+// A server-only override permits isolated capacity tests; production defaults to50.
+export const roomCapacity=env=>[32,50,64,100].includes(Number(env?.NOOR_ROOM_CAPACITY))?Number(env.NOOR_ROOM_CAPACITY):50;
 
 export default {
   async fetch(request,env) {
@@ -10,7 +12,7 @@ export default {
       if(!map)return new Response('Unknown map',{status:400});
       const rooms=await Promise.all([1,2,3].map(async server=>{
         const key=map+':'+server,r=await env.ROOMS.get(env.ROOMS.idFromName(key)).fetch('https://room.internal/status'),status=await r.json();
-        return {key,server,count:status.count,capacity:32};
+        return {key,server,count:status.count,capacity:roomCapacity(env)};
       }));
       return Response.json({rooms},{headers:{'Cache-Control':'no-store'}});
     }
@@ -33,17 +35,36 @@ export default {
 };
 
 export class PrayerRoom {
-  constructor(ctx,env){this.ctx=ctx;this.env=env;}
+  constructor(ctx,env){
+    this.ctx=ctx;this.env=env;this.pendingMoves=new Map();this.flushTimer=null;this.batchClients=new Set();this.protectedSockets=new Set();
+    for(const ws of ctx.getWebSockets()){const state=ws.deserializeAttachment();if(state?.motionProtocol===2)this.batchClients.add(ws);if(state?.protected)this.protectedSockets.add(ws);}
+  }
   async access(ids){const r=await this.env.COMMUNITY.get(this.env.COMMUNITY.idFromName('community')).fetch('https://community.internal/access?ids='+ids.join(','));if(!r.ok)throw new Error('Access lookup failed');return r.json();}
   players(){return this.ctx.getWebSockets().map(ws=>({ws,state:ws.deserializeAttachment()})).filter(p=>p.state);}
   send(ws,message){try{ws.send(JSON.stringify(message));}catch{try{ws.close(1011,'Connection closed');}catch{}}}
-  broadcast(message,except){for(const {ws}of this.players())if(ws!==except)this.send(ws,message);}
+  broadcast(message,except){const raw=JSON.stringify(message);for(const ws of this.ctx.getWebSockets())if(ws!==except){try{ws.send(raw);}catch{try{ws.close(1011,'Connection closed');}catch{}}}}
+  queueMovement(player){
+    this.pendingMoves.set(player.id,player);if(this.flushTimer)return;
+    let done;const flushed=new Promise(resolve=>{done=resolve;});this.ctx.waitUntil?.(flushed);
+    this.flushTimer=setTimeout(()=>{try{this.flushMovement();}finally{done();}},75);
+  }
+  flushMovement(){
+    clearTimeout(this.flushTimer);this.flushTimer=null;
+    const players=[...this.pendingMoves.values()];this.pendingMoves.clear();if(!players.length)return;
+    const round=n=>Math.round(n*1000)/1000;
+    const batch=JSON.stringify({type:'motion',players:players.map(p=>[p.id,p.seq,round(p.x),round(p.z),round(p.yaw),PRAYER_POSES.indexOf(p.pose),(p.praying?1:0)|(p.protected?2:0)])});
+    let legacy;
+    for(const ws of this.ctx.getWebSockets()){
+      try{if(this.batchClients.has(ws))ws.send(batch);else{legacy??=players.map(player=>JSON.stringify({type:'state',player}));for(const message of legacy)ws.send(message);}}
+      catch{try{ws.close(1011,'Connection closed');}catch{}}
+    }
+  }
   async fetch(request){
     if(new URL(request.url).pathname==='/status')return Response.json({count:this.players().length});
     if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return new Response('WebSocket required',{status:426});
     const accountId=request.headers.get('X-Noor-Account');if(!accountId)return new Response('Session required',{status:401});
     const peers=this.players();
-    if(peers.length>=32)return new Response('기도원이 가득 찼습니다. 잠시 후 다시 입장해주세요.',{status:503});
+    if(peers.length>=roomCapacity(this.env))return new Response('기도원이 가득 찼습니다. 잠시 후 다시 입장해주세요.',{status:503});
     const pair=new WebSocketPair(),client=pair[0],server=pair[1];
     this.ctx.acceptWebSocket(server);
     // Pick an unoccupied spawn; reconnects never accept client-supplied identity/position.
@@ -96,13 +117,13 @@ export class PrayerRoom {
     }
     if(data.type==='profile'){
       if(now-state.profileAt<300){ws.serializeAttachment(state);return;}
-      state.profile=sanitizeProfile(data.profile);state.profileAt=now;
+      state.profile=sanitizeProfile(data.profile);state.profileAt=now;if(data.motionProtocol===2){state.motionProtocol=2;this.batchClients.add(ws);}
     }else if(data.type==='move'){
       if(Number.isSafeInteger(data.seq)&&data.seq>=0)state.seq=data.seq;
       if(!state.praying){
         const elapsed=Math.max(0,now-state.lastMove)/1000;
         const next=constrainedMove(state,data,elapsed,state.map);
-        const hosts=this.players().filter(p=>p.state.protected&&p.state.praying);
+        const hosts=this.protectedSockets.size?this.players().filter(p=>p.state.protected&&p.state.praying):[];
         const access=hosts.length?await this.access(hosts.map(p=>p.state.accountId)):{};
         const allowed=hosts.every(p=>!access[p.state.accountId]?.premium||fenceAllows(state,next,p.state,state.accountId,access[p.state.accountId].friends));
         if(allowed)Object.assign(state,next);
@@ -120,6 +141,7 @@ export class PrayerRoom {
         state.protected=!!rights?.premium&&clear&&Math.abs(state.x)<MAPS[state.map||'mecca'].bounds.x-3&&Math.abs(state.z)<MAPS[state.map||'mecca'].bounds.z-3;
         if(rights?.premium&&!state.protected)this.send(ws,{type:'notice',message:'펜스는 중앙 통로를 피해 다른 사람과 충분히 떨어진 곳에서 펼칠 수 있습니다.'});
       }
+      if(state.protected)this.protectedSockets.add(ws);else this.protectedSockets.delete(ws);
       state.lastMove=now;
     }else if(data.type==='protect'){
       // No client-controlled paid flag. A signed billing webhook + account auth is required before enabling.
@@ -127,10 +149,11 @@ export class PrayerRoom {
       ws.serializeAttachment(state);return;
     }else{ws.serializeAttachment(state);return;}
     ws.serializeAttachment(state);
-    this.broadcast({type:'state',player:publicPlayer(state)});
+    if(data.type==='move')this.queueMovement(publicPlayer(state));else{this.pendingMoves.delete(state.id);this.broadcast({type:'state',player:publicPlayer(state)});}
   }
   webSocketClose(ws,code){
-    const state=ws.deserializeAttachment();
+    this.batchClients.delete(ws);this.protectedSockets.delete(ws);
+    const state=ws.deserializeAttachment();if(state)this.pendingMoves.delete(state.id);
     try{ws.close(code===1006?1000:code,'Disconnected');}catch{}
     if(state)this.broadcast({type:'leave',id:state.id},ws);
   }

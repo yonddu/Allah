@@ -1,5 +1,6 @@
 import {mkdir,copyFile,readFile,writeFile,access} from 'node:fs/promises';
 import {bakeHalls} from './bake-halls.mjs';
+import {ensureUserModels} from './ensure-user-models.mjs';
 import {createRequire} from 'node:module';
 import {dirname,join} from 'node:path';
 const require=createRequire(import.meta.url);
@@ -28,3 +29,4 @@ try{
 }catch(e){console.warn('Local water sound unavailable; browser will use the public source URL. '+e.message);}
 
 await bakeHalls();
+await ensureUserModels();

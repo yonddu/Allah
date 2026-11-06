@@ -6,7 +6,7 @@ export const COLORS = Object.freeze({
   rug: ['#18554c','#843c46','#243e64','#a27d40','#443d65']
 });
 export const DEFAULT_PROFILE = Object.freeze({
-  name:'방문자', gender:'male', skin:0, face:'oval', beard:'none', outfit:'thobe',
+  model:'model01',name:'방문자', gender:'male', skin:0, face:'oval', beard:'none', outfit:'thobe',
   cover:'kufi', color:0, rug:0, pattern:'mihrab',character:'face01',wardrobe:'look01'
 });
 export const PRAYER_POSES = ['standing','bowing','prostrating','sitting'];

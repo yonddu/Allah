@@ -27,20 +27,20 @@
       <label class="name-label" for="displayName">나의 이름</label>
       <input id="displayName" maxlength="20" autocomplete="nickname" placeholder="이름을 입력하세요" value="방문자">
       <div class="tabs" role="tablist" aria-label="꾸미기 종류">
-        <button role="tab" id="tab-face" aria-controls="panel-face" aria-selected="true" data-tab="face">얼굴</button>
+        <button role="tab" id="tab-face" aria-controls="panel-face" aria-selected="true" data-tab="face">캐릭터 유형</button>
         <button role="tab" id="tab-outfit" aria-controls="panel-outfit" aria-selected="false" tabindex="-1" data-tab="outfit">기도 복장</button>
         <button role="tab" id="tab-rug" aria-controls="panel-rug" aria-selected="false" tabindex="-1" data-tab="rug">양탄자</button>
       </div>
       <div class="tab-panel" id="panel-face" role="tabpanel" aria-labelledby="tab-face">
-        <fieldset><legend>캐릭터 유형</legend><div class="choices" data-field="gender"><button data-value="male">남성</button><button data-value="female">여성</button></div></fieldset><fieldset><legend>얼굴</legend><div id="characterChoices" class="portrait-choices" data-field="character"></div></fieldset><fieldset hidden><legend>피부 톤</legend><div class="swatches" id="skinChoices"></div></fieldset>
+        <fieldset><legend>캐릭터 유형</legend><div class="choices" data-field="gender"><button data-value="male">남성</button><button data-value="female">여성</button></div></fieldset><fieldset><legend>캐릭터 유형</legend><div id="characterChoices" class="portrait-choices" data-field="model"></div></fieldset><fieldset hidden><legend>피부 톤</legend><div class="swatches" id="skinChoices"></div></fieldset>
         <fieldset hidden><legend>얼굴형</legend><div class="choices" data-field="face"><button data-value="oval">타원형</button><button data-value="round">둥근형</button><button data-value="square">각진형</button></div></fieldset>
         <fieldset hidden><legend>수염</legend><div class="choices" data-field="beard"><button data-value="none">없음</button><button data-value="short">짧게</button><button data-value="full">풍성하게</button></div></fieldset>
       </div>
       <div class="tab-panel" id="panel-outfit" role="tabpanel" aria-labelledby="tab-outfit" hidden>
-        <fieldset><legend>기도 복장</legend><div id="wardrobeChoices" class="wardrobe-choices" data-field="wardrobe"></div></fieldset><fieldset hidden><legend>기도 복장</legend><div class="choices" data-field="outfit"><button data-value="thobe">토브</button><button data-value="abaya">아바야</button><button data-value="tunic">튜닉</button></div></fieldset>
+        <fieldset><legend>기도 복장</legend><div id="wardrobeChoices" class="wardrobe-choices" data-field="model"></div></fieldset><fieldset hidden><legend>기도 복장</legend><div class="choices" data-field="outfit"><button data-value="thobe">토브</button><button data-value="abaya">아바야</button><button data-value="tunic">튜닉</button></div></fieldset>
         <fieldset hidden><legend>옷감 색상</legend><div class="swatches" id="robeChoices"></div></fieldset>
         <fieldset hidden><legend>머리 덮개</legend><div class="choices" data-field="cover"><button data-value="kufi">쿠피</button><button data-value="hijab">히잡</button><button data-value="none">없음</button></div></fieldset>
-        <p class="field-note" id="femaleCoverNote" hidden>여성 캐릭터는 머리를 가리는 복장만 선택할 수 있습니다.</p><p class="field-note">은은한 옷감 결, 자수와 금빛 테두리로 마무리했습니다.</p>
+        <p class="field-note" id="femaleCoverNote" hidden>여성 캐릭터는 머리를 가리는 복장만 선택할 수 있습니다.</p><p class="field-note">캐릭터와 복장을 함께 선택합니다.</p>
       </div>
       <div class="tab-panel" id="panel-rug" role="tabpanel" aria-labelledby="tab-rug" hidden>
         <fieldset><legend>양탄자 색상</legend><div class="swatches" id="rugChoices"></div></fieldset>

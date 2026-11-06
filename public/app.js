@@ -7,7 +7,7 @@ import {initQibla} from './qibla.js';
 import {RoomConnection} from './network.js';
 import {initCommunity} from './social.js';
 import {Soundscape} from './audio.js';
-import {CHARACTERS,WARDROBE} from './avatar-catalog.js';
+import {USER_MODELS} from './user-model-catalog.js';
 
 const $=id=>document.getElementById(id);
 let generatedName=false;
@@ -26,11 +26,9 @@ try{
   scene=new Sanctuary($('scene'),profile,fatal,parseRoom(currentRoom).map);
 }catch(e){console.error(e);fatal();throw e;}
 const sound=new Soundscape(toast);
-for(const [list,id,field,label]of [[CHARACTERS,'characterChoices','character','얼굴'],[WARDROBE,'wardrobeChoices','wardrobe','기도 복장']])for(const item of list){
+for(const [id,label]of [['characterChoices','캐릭터 유형'],['wardrobeChoices','기도 복장']])for(const item of USER_MODELS){
   const b=document.createElement('button');b.type='button';b.dataset.value=item.id;b.dataset.gender=item.gender;
-  const preview=document.createElement('span');preview.className=field==='character'?'portrait-thumb':'wardrobe-thumb';preview.setAttribute('aria-hidden','true');
-  if(field==='character')preview.style.backgroundImage='url(/reference-assets/'+item.id+'.webp)';
-  else preview.style.backgroundPosition=(item.index%5)*25+'% '+Math.floor(item.index/5)*50+'%';
+  const preview=document.createElement('span');preview.className='model-thumb';preview.style.backgroundImage='url(/user-models/'+item.id+'.png)';preview.setAttribute('aria-hidden','true');
   const text=document.createElement('span');text.textContent=t(label)+' '+(item.index+1);b.append(preview,text);b.setAttribute('aria-label',t(label)+' '+(item.index+1));$(id).append(b);
 }
 function updateChoices(){
@@ -141,7 +139,7 @@ function renderMaps(){
 }
 async function loadServers(){
   const version=++roomsVersion;$('serverChoices').replaceChildren();$('roomStatus').textContent='서버 상태를 확인하고 있습니다…';
-  let rooms=[1,2,3].map(server=>({server,count:null,capacity:32}));
+  let rooms=[1,2,3].map(server=>({server,count:null,capacity:50}));
   try{const r=await fetch('/api/rooms?map='+chosenMap);if(!r.ok)throw new Error('offline');rooms=(await r.json()).rooms;if(version!==roomsVersion)return;$('roomStatus').textContent='같은 모스크와 서버를 선택한 이용자끼리 만납니다.';}
   catch{if(version!==roomsVersion)return;$('roomStatus').textContent='서버 상태를 불러오지 못했습니다. 입장은 다시 시도할 수 있습니다.';}
   for(const room of rooms){
@@ -155,6 +153,7 @@ $('enterRoomButton').addEventListener('click',async()=>{
   $('enterRoomButton').disabled=true;
   try{
     sound.enable().then(()=>$('soundButton').querySelector('.utility-label').textContent='소리 설정').catch(()=>{});
+    await scene.local.human.ready;
     if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={...MAPS[chosenMap].spawn};scene.cameraDistance=PLAY_CAMERA.distance;scene.cameraHeight=PLAY_CAMERA.height;scene.cameraAngle=MAPS[chosenMap].cameraAngle;
     mapLabels();try{localStorage.setItem('noor-room',currentRoom);}catch{}
     await community.start();network.retry=0;network.connect(currentRoom);window.dispatchEvent(new Event('noor:entered'));$('mapDialog').close();
@@ -164,6 +163,7 @@ $('enterRoomButton').addEventListener('click',async()=>{
 const qibla=initQibla(toast);initPrayerTimes({qibla,toast});updateChoices();mapLabels();prayerUI();
 setInterval(()=>{if(!document.hidden)network.movement(scene.position,scene.yaw);},150);
 await scene.ready;
+await scene.local.human.ready;
 await scene.environmentReady;
 $('enterRoomButton').disabled=false;
 requestAnimationFrame(()=>{$('loading').hidden=true;});
@@ -174,7 +174,7 @@ window.addEventListener('pagehide',()=>{network.generation++;clearTimeout(networ
 
 setInterval(()=>{if(!document.hidden&&community.session)community.refresh().catch(()=>{});},30000);
 
-window.addEventListener('languagechange',()=>{for(const [list,id,label]of [[CHARACTERS,'characterChoices','얼굴'],[WARDROBE,'wardrobeChoices','기도 복장']])for(const item of list){const b=document.querySelector('#'+id+' [data-value="'+item.id+'"]');b.lastElementChild.textContent=t(label)+' '+(item.index+1);b.setAttribute('aria-label',t(label)+' '+(item.index+1));}mapLabels();if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;changedProfile();}});
+window.addEventListener('languagechange',()=>{for(const [list,id,label]of [[USER_MODELS,'characterChoices','캐릭터 유형'],[USER_MODELS,'wardrobeChoices','기도 복장']])for(const item of list){const b=document.querySelector('#'+id+' [data-value="'+item.id+'"]');b.lastElementChild.textContent=t(label)+' '+(item.index+1);b.setAttribute('aria-label',t(label)+' '+(item.index+1));}mapLabels();if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;changedProfile();}});
 
 window.addEventListener('noor:entry-character',e=>{scene.portraitMode=e.detail.active;scene.cameraAngle=e.detail.active?scene.yaw+Math.PI:MAPS[scene.mapId].cameraAngle;scene.cameraDistance=e.detail.active?2.65:PLAY_CAMERA.distance;scene.cameraHeight=e.detail.active?1.6:PLAY_CAMERA.height;});
 if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;scene.updateProfile(profile);}

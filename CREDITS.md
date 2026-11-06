@@ -38,3 +38,8 @@ The seven face presets and fifteen clothing designs in public/reference-assets a
 ## Offline prayer-time calculations
 
 Adhan JS4.4.6 (Batoul Apps, MIT) and @photostructure/tz-lookup11.7.0 (CC0) are included under public/lib with their licenses and immutable source references. Quran.com is linked as an external reading service; no claim of endorsement or content ownership is made.
+
+## 사용자 제공 캐릭터 모델
+- Dropbox `chracter` 폴더에 제공된 Meshy GLB10개를 사용합니다. 원본 파일명과 SHA256은 `scripts/user-model-sources.json`에 기록했습니다.
+- 원본 얼굴·복장·UV를 유지하며 크기와 방향을 통일하고 텍스처 크기를 조정했습니다. 간소화로 외형이 손상되는 모델은 원본 형상을 유지합니다.
+- 빌드 도구: glTF-Transform core4.2.1 (MIT), meshoptimizer0.25.0 (MIT). 두 라이브러리는 빌드 단계에서 사용됩니다.

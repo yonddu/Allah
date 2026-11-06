@@ -71,3 +71,12 @@ test('Outdoor maps allow long walks while keeping visitors out of the Kaaba, Taj
  assert.equal(legalPosition(10,30,'taj'),true);assert.equal(legalPosition(0,30,'taj'),false);assert.equal(legalPosition(0,-50,'taj'),false);
  assert.deepEqual(parseRoom('mecca:3'),{map:'mecca',server:3,key:'mecca:3'});assert.deepEqual(parseRoom('nabawi:1'),{map:'mecca',server:1,key:'mecca:1'});
 });
+
+
+test('User model choices cannot bypass gender and head-covering restrictions',()=>{
+ assert.equal(sanitizeProfile({gender:'female',model:'model01'}).model,'model08');
+ assert.equal(sanitizeProfile({gender:'male',model:'model09'}).model,'model01');
+ assert.equal(sanitizeProfile({gender:'female',model:'model10',cover:'none'}).cover,'hijab');
+ assert.equal(sanitizeProfile({gender:'female',model:'model10'}).model,'model10');
+ assert.equal(sanitizeProfile({model:'https://other.example/evil.glb'}).model,'model01');
+});

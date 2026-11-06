@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {LANGUAGES,t,chooseInitialLanguage} from '../public/i18n.js';
 test('Every supported language has all messages and preserves formatting variables',async()=>{
   const en=JSON.parse(await readFile(new URL('../public/locales/en.json',import.meta.url),'utf8'));
-  assert.equal(LANGUAGES.length,21);assert.equal(Object.keys(en).length,345);
+  assert.equal(LANGUAGES.length,21);assert.equal(Object.keys(en).length,346);
   const variables=s=>(s.match(/\{\w+\}/g)||[]).sort();
   for(const {code}of LANGUAGES){
     const dict=JSON.parse(await readFile(new URL('../public/locales/'+code+'.json',import.meta.url),'utf8'));
