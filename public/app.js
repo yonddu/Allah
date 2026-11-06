@@ -71,6 +71,7 @@ $('closeCustomize').addEventListener('click',()=>$('customPanel').classList.remo
 $('portraitButton').addEventListener('click',()=>{scene.portraitMode=true;scene.cameraAngle=scene.yaw+Math.PI;scene.cameraDistance=3;scene.cameraHeight=1.5;toast('화면을 드래그해 다른 각도도 볼 수 있습니다.');});
 $('helpButton').addEventListener('click',()=>openDialog('helpDialog'));
 $('settingsButton').addEventListener('click',()=>openDialog('settingsDialog'));
+$('settingsCharacterButton').addEventListener('click',()=>{$('settingsDialog').close();$('customPanel').classList.add('open');selectTab(document.querySelector('[data-tab="face"]'));scene.portraitMode=true;scene.cameraAngle=scene.yaw+Math.PI;scene.cameraDistance=3;scene.cameraHeight=1.5;});
 $('settingsLanguageButton').addEventListener('click',()=>{$('settingsDialog').close();openDialog('languageDialog');});
 $('qualitySelect').addEventListener('change',e=>{scene.quality(e.target.value);try{localStorage.setItem('noor-quality',e.target.value);}catch{}});
 try{const value=localStorage.getItem('noor-quality');if(['auto','high','low'].includes(value)){$('qualitySelect').value=value;scene.quality(value);}}catch{}
@@ -81,7 +82,7 @@ $('bgmVolume').addEventListener('input',e=>sound.setVolume(Number(e.target.value
 $('prayerVolume').addEventListener('input',e=>sound.setPrayerVolume(Number(e.target.value)/100));
 $('prayerSoundToggle').addEventListener('change',e=>{sound.prayerEnabled=e.target.checked;if(!e.target.checked)sound.recitation.pause();else if(scene.praying)sound.playRecitation();});
 $('prayerAudioFile').addEventListener('change',e=>sound.setFile(e.target.files[0]));
-const poses=['standing','bowing','prostrating','sitting'],poseLabels=['서기','숙이기','엎드리기','앉기'];
+const poses=['standing','bowing','sitting'],poseLabels=['서기','숙이기','앉기'];
 function prayerUI(){
   community?.setPrayerMode(scene.praying);partyUi?.setPrayer(scene.praying);
   document.body.classList.toggle('prayer-mode',scene.praying);
