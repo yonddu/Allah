@@ -32,18 +32,18 @@ function rig(c){
  for(const side of [-1,1]){const start=bones.length;add('fingerKnuckles',side<0?I.lh:I.rh,[side*.045,0,0]);add('fingerTips',start,[side*.033,0,0]);}
  return bones;
 }
-const qa=new THREE.Quaternion();
-function rotateToward(bone,rest,direction){const parent=bone.parent.getWorldQuaternion(qa).invert(),local=direction.clone().applyQuaternion(parent).normalize();bone.quaternion.setFromUnitVectors(rest,local);bone.updateWorldMatrix(false,true);}
-function armIK(bones,side,target,hint){
+function armIK(bones,side,target,hint,palmNormal){
  const shoulder=bones[side<0?I.la:I.ra],elbow=bones[side<0?I.le:I.re],a=shoulder.getWorldPosition(v()),dir=target.clone().sub(a),l1=elbow.position.length(),l2=bones[side<0?I.lh:I.rh].position.length(),distance=THREE.MathUtils.clamp(dir.length(),.025,l1+l2-.001);dir.normalize();
  const along=(l1*l1-l2*l2+distance**2)/(2*distance),height=Math.sqrt(Math.max(0,l1*l1-along**2));
  const bend=hint.clone().sub(a);bend.addScaledVector(dir,-bend.dot(dir));if(bend.lengthSq()<.0001)bend.set(side,-1,0);bend.normalize();
- const knee=a.clone().addScaledVector(dir,along).addScaledVector(bend,height),rest=v(side,0,0);
- rotateToward(shoulder,rest,knee.clone().sub(a));rotateToward(elbow,rest,target.clone().sub(knee));
+ const knee=a.clone().addScaledVector(dir,along).addScaledVector(bend,height);
+ // Carry the palm frame through the whole arm instead of correcting its roll only at the wrist.
+ palmFacing(shoulder,side,knee.clone().sub(a),palmNormal);palmFacing(elbow,side,target.clone().sub(knee),palmNormal);
 }
 export function makeHumanAvatar(profile,tier='low',local=false){
  const root=new THREE.Group(),hips=new THREE.Group(),simple=new THREE.Group(),bones=rig({armY:1.42,shoulder:.21,upper:.25,lower:.24});root.add(hips,simple);hips.add(bones[0]);
  let poseAt=-Infinity,poseState=null,armReach=.49,contacts={forehead:v(0,1.72,-.08),toes:{left:v(-.1,.025,-.14),right:v(.1,.025,-.14)}};
+ const armNormals={left:v(1,0,0),right:v(-1,0,0)};
  let skeleton=new THREE.Skeleton(bones),mesh=null,cover=null,coverage=null,sockMesh=null,sockAsset=null,stages=null,detailed=true,disposed=false,lastCovered=-Infinity,lastPrayer=-Infinity;
  const female=selectedModel(profile).gender==='female',active={value:0},sockActive={value:0},materialCopies=new Map();
  const materialFor=source=>{if(!materialCopies.has(source.material))materialCopies.set(source.material,coveredMaterial(source.material,active,coverage.color,sockActive,sockAsset?.color));return materialCopies.get(source.material);};
@@ -84,21 +84,19 @@ export function makeHumanAvatar(profile,tier='low',local=false){
     let target,hint;
     if(prostrating){target=v(side*.24,.085,-.40).applyMatrix4(root.matrixWorld);hint=v(side*.45,.23,-.18).applyMatrix4(root.matrixWorld);}
     else if(bowing){target=v(side*.115,.53,-.10).applyMatrix4(root.matrixWorld);hint=v(side*.31,.80,-.20).applyMatrix4(root.matrixWorld);}
-    else if(kneeling){target=v(side*.13,.43,-.34).applyMatrix4(root.matrixWorld);hint=v(side*.32,.64,-.12).applyMatrix4(root.matrixWorld);}
+    else if(kneeling){target=v(side*.13,.45,-.23).applyMatrix4(root.matrixWorld);hint=v(side*.25,.68,-.04).applyMatrix4(root.matrixWorld);}
     else if(praying){target=v(side*-.025,-.22,-.20).applyMatrix4(bones[I.chest].matrixWorld);hint=v(side*.32,-.30,-.06).applyMatrix4(bones[I.chest].matrixWorld);}
     else{
      target=v(side*.24,.045-armReach*.96,moving?Math.sin(time*8+side)*.10:0);
      if(side>0&&greetingWeight>0)target.lerp(v(-.045,-.04,-.22),greetingWeight);
-     target.applyMatrix4(bones[I.chest].matrixWorld);hint=v(side*.32,-armReach*.48,-.10).applyMatrix4(bones[I.chest].matrixWorld);
+     target.applyMatrix4(bones[I.chest].matrixWorld);hint=v(bones[side<0?I.la:I.ra].position.x,-armReach*.48,-.12).applyMatrix4(bones[I.chest].matrixWorld);
     }
-    armIK(bones,side,target,hint);const hand=bones[side<0?I.lh:I.rh];
     const rootRotation=root.getWorldQuaternion(new THREE.Quaternion());
-    if(prostrating)palmFacing(hand,side,v(0,0,-1).applyQuaternion(rootRotation),v(0,-1,0).applyQuaternion(rootRotation),s);
-    else if(!praying){
-     const elbow=bones[side<0?I.le:I.re],direction=hand.getWorldPosition(v()).sub(elbow.getWorldPosition(v()));
-     const normal=side>0&&greetingWeight>0?v(0,0,1):v(-side,0,0);
-     palmFacing(hand,side,direction,normal.applyQuaternion(rootRotation),s);
-    }else hand.quaternion.identity();
+    const normal=kneeling?v(0,-1,0):praying?v(0,0,1):side>0&&greetingWeight>0?v(0,0,1):v(-side,0,0);
+    const palm=armNormals[side<0?'left':'right'].lerp(normal,s).normalize().clone().applyQuaternion(rootRotation);
+    armIK(bones,side,target,hint,palm);const hand=bones[side<0?I.lh:I.rh],elbow=bones[side<0?I.le:I.re];
+    const direction=kneeling?v(0,0,-1).applyQuaternion(rootRotation):hand.getWorldPosition(v()).sub(elbow.getWorldPosition(v()));
+    palmFacing(hand,side,direction,palm,s);
     const curl=praying||greetingWeight>0?0:moving?.70:.48,knuckle=side<0?18:20;
     bones[knuckle].rotation.y=THREE.MathUtils.lerp(bones[knuckle].rotation.y,side*curl,s);
     bones[knuckle+1].rotation.y=THREE.MathUtils.lerp(bones[knuckle+1].rotation.y,side*curl*.75,s);
