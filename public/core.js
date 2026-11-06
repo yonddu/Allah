@@ -10,6 +10,35 @@ export const DEFAULT_PROFILE = Object.freeze({
   cover:'kufi', color:0, rug:0, pattern:'mihrab',character:'face01',wardrobe:'look01'
 });
 export const PRAYER_POSES = ['standing','bowing','prostrating','sitting'];
+export const GREETING_DURATION=2800;
+// Local -Z is forward. The invisible area includes the entire mat and its front.
+export const PRAYER_AREA=Object.freeze({halfWidth:1.02,back:1.25,front:2.45});
+function prayerLocal(point,host){const c=Math.cos(host.yaw||0),s=Math.sin(host.yaw||0),x=point.x-host.x,z=point.z-host.z;return {x:x*c-z*s,z:x*s+z*c};}
+export function inPrayerArea(point,host){const p=prayerLocal(point,host);return Math.abs(p.x)<PRAYER_AREA.halfWidth&&p.z>-PRAYER_AREA.front&&p.z<PRAYER_AREA.back;}
+export function prayerAreaAllows(from,to,host){
+ const a=prayerLocal(from,host),b=prayerLocal(to,host),w=PRAYER_AREA.halfWidth,f=PRAYER_AREA.front,r=PRAYER_AREA.back;
+ // A visitor caught inside an area by reconnection can leave without becoming trapped.
+ const depth=p=>Math.min(w-Math.abs(p.x),p.z+f,r-p.z);
+ if(depth(a)>0)return depth(b)<depth(a)-1e-7;
+ let enter=0,exit=1;
+ for(const [start,end,min,max]of [[a.x,b.x,-w,w],[a.z,b.z,-f,r]]){
+  const delta=end-start;if(Math.abs(delta)<1e-9){if(start<=min||start>=max)return true;continue;}
+  const lo=(min-start)/delta,hi=(max-start)/delta;enter=Math.max(enter,Math.min(lo,hi));exit=Math.min(exit,Math.max(lo,hi));if(enter>=exit)return true;
+ }
+ return exit<=0||enter>=1;
+}
+function prayerCorners(host){return [-1,1].flatMap(side=>[-PRAYER_AREA.front,PRAYER_AREA.back].map(z=>({x:host.x+side*PRAYER_AREA.halfWidth*Math.cos(host.yaw)+z*Math.sin(host.yaw),z:host.z-side*PRAYER_AREA.halfWidth*Math.sin(host.yaw)+z*Math.cos(host.yaw)})));}
+function areasOverlap(a,b){
+ const aa=prayerCorners(a),bb=prayerCorners(b);
+ for(const yaw of [a.yaw,b.yaw])for(const axis of [{x:Math.cos(yaw),z:-Math.sin(yaw)},{x:Math.sin(yaw),z:Math.cos(yaw)}]){
+  const pa=aa.map(p=>p.x*axis.x+p.z*axis.z),pb=bb.map(p=>p.x*axis.x+p.z*axis.z);
+  if(Math.max(...pa)<=Math.min(...pb)||Math.max(...pb)<=Math.min(...pa))return false;
+ }return true;
+}
+export function canBeginPrayer(actor,players,map='mecca'){
+ const host={...actor,yaw:prayerYaw(map,actor)};
+ return prayerCorners(host).every(p=>legalPosition(p.x,p.z,map))&&players.every(p=>p.id===actor.id||(!inPrayerArea(p,host)&&(!p.praying||!areasOverlap(host,p))));
+}
 export const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
 const option = (v,allowed,fallback)=>allowed.includes(v)?v:fallback;
 const index = (v,max,fallback)=>Number.isInteger(v)&&v>=0&&v<max?v:fallback;
@@ -62,7 +91,7 @@ export function constrainedMove(current,desired,seconds,mapId='mecca') {
   return {x:current.x,z:current.z};
 }
 export function publicPlayer(p) {
-  return {id:p.id,seq:p.seq||0,accountId:p.accountId,protected:!!p.protected,profile:sanitizeProfile(p.profile),x:p.x,z:p.z,yaw:p.yaw,praying:!!p.praying,pose:PRAYER_POSES.includes(p.pose)?p.pose:'standing'};
+  return {id:p.id,seq:p.seq||0,accountId:p.accountId,protected:!!p.praying,profile:sanitizeProfile(p.profile),x:p.x,z:p.z,yaw:p.yaw,praying:!!p.praying,pose:p.praying&&PRAYER_POSES.includes(p.pose)?p.pose:'standing'};
 }
 
 export function fenceAllows(from,to,host,actorId,friends=[]) {
@@ -84,7 +113,7 @@ export function validatePost(raw) {
 }
 
 export const MAPS = Object.freeze({
- mecca:{name:'메카 · 카바 광장',city:'메카 · 사우디아라비아',short:'MAKKAH',description:'카바 · 대리석 광장',stone:0xf0eee5,green:0x32544b,bounds:{x:74,z:84},cameraAngle:.34,spawn:{x:14,z:22},obstacles:[{kind:'box',x1:-6.5,x2:6.5,z1:-25,z2:-11},...[-72,72].flatMap(x=>[-82,82].map(z=>({kind:'circle',x,z,r:2.8})))]},
+ mecca:{name:'누르 대기도원',city:'하늘이 열린 기도 광장',short:'NOOR SANCTUARY',description:'대형 돔 · 아치 회랑 · 대리석 광장',stone:0xf0eee5,green:0x32544b,bounds:{x:74,z:84},cameraAngle:.08,spawn:{x:0,z:18},obstacles:[{kind:'box',x1:-43,x2:43,z1:-83,z2:-31.5},...[-52,52].flatMap(x=>[-76,-35].map(z=>({kind:'circle',x,z,r:3.2})))]},
  taj:{name:'타지마할 광장',city:'아그라 · 인도',short:'TAJ MAHAL',description:'돔 · 정원 · 반사 연못',stone:0xf3f0e6,green:0x3e744b,bounds:{x:74,z:84},cameraAngle:.13,spawn:{x:10,z:24},obstacles:[{kind:'box',x1:-38,x2:38,z1:-77,z2:-26},{kind:'box',x1:-6.2,x2:6.2,z1:-6.2,z2:66.2},...[-1,1].map(side=>({kind:'box',x1:side<0?-80:58,x2:side<0?-58:80,z1:-78,z2:-28})),...[-13,13,-46,46].flatMap(x=>Array.from({length:8},(_,i)=>({kind:'circle',x,z:i*10,r:.35})))]}
 });
 export function parseRoom(value){
@@ -92,7 +121,7 @@ export function parseRoom(value){
  if(!match)return null;const map=({zayed:'mecca',nabawi:'mecca',blue:'taj'})[match[1]]||match[1],server=Number(match[2]);return {map,server,key:map+':'+server};
 }
 export function prayerYaw(mapId,position){
- if(mapId==='mecca')return Math.atan2(position.x,position.z+18);
+ if(mapId==='mecca')return 0;
  return -(qibla(27.1751,78.0421).bearing||0)*Math.PI/180;
 }
 

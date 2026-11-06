@@ -15,10 +15,11 @@ export class RoomConnection {
         for(const player of msg.players){this.known.set(player.id,player);this.handlers.player(player);}this.send({type:'profile',motionProtocol:2,profile:this.handlers.profile()});
         this.handlers.count(msg.players.length+1);
       }else if(msg.type==='state'||msg.type==='join'){
-        this.receivePlayer(msg.player);this.handlers.recount();
+        this.receivePlayer(msg.player,true);this.handlers.recount();
       }else if(msg.type==='motion'){
         for(const m of msg.players){const previous=this.known.get(m[0]);if(previous)this.receivePlayer({...previous,id:m[0],seq:m[1],x:m[2],z:m[3],yaw:m[4],pose:PRAYER_POSES[m[5]]||'standing',praying:!!(m[6]&1),protected:!!(m[6]&2)});}this.handlers.recount();
       }else if(msg.type==='leave'){this.known.delete(msg.id);this.handlers.leave(msg.id);this.handlers.recount();}
+      else if(msg.type==='greeting')this.handlers.greeting?.(msg);
       else if(msg.type==='notice')this.handlers.notice(msg.message);
       else if(msg.type==='chat'||msg.type==='whisper')this.handlers.chat(msg);
     };
@@ -29,12 +30,12 @@ export class RoomConnection {
     };
     ws.onerror=()=>{};
   }
-  receivePlayer(player){
+  receivePlayer(player,authoritative=false){
     this.known.set(player.id,player);
     if(player.id===this.selfId){
       const sent=this.pending.get(player.seq),correction=sent?{x:player.x-sent.x,z:player.z-sent.z}:null;
       for(const seq of this.pending.keys())if(seq<=player.seq)this.pending.delete(seq);
-      this.handlers.self({...player,correction});
+      this.handlers.self({...player,correction,authoritative});
     }else this.handlers.player(player);
   }
   send(data){if(this.socket?.readyState!==WebSocket.OPEN)return false;this.socket.send(JSON.stringify(data));return true;}

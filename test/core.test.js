@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {qibla,KAABA,sanitizeProfile,DEFAULT_PROFILE,legalPosition,constrainedMove,fenceAllows,validatePost,parseRoom,joystickVector} from '../public/core.js';
+import {qibla,KAABA,sanitizeProfile,DEFAULT_PROFILE,legalPosition,constrainedMove,prayerAreaAllows,canBeginPrayer,validatePost,parseRoom,joystickVector} from '../public/core.js';
 test('Qibla uses a great-circle bearing in several hemispheres',()=>{
   const seoul=qibla(37.5665,126.978),newYork=qibla(40.7128,-74.006),jakarta=qibla(-6.2088,106.8456);
   assert.ok(seoul.bearing>280&&seoul.bearing<290);
@@ -20,16 +20,22 @@ test('Movement limits speed, courtyard edges and landmarks, invalid input and pa
   const next=constrainedMove({x:0,z:0},{x:10000,z:0},.1);assert.ok(next.x<=.420001);
   assert.deepEqual(constrainedMove({x:0,z:0},{x:NaN,z:0},1),{x:0,z:0});
   assert.deepEqual(constrainedMove({x:0,z:0},{x:10,z:0},0),{x:0,z:0});
-  assert.equal(legalPosition(0,-18),false);assert.equal(legalPosition(75,0),false);
+  assert.equal(legalPosition(0,-59),false);assert.equal(legalPosition(75,0),false);
   const wall=constrainedMove({x:73.9,z:3},{x:75,z:3},.1);assert.ok(wall.x<=74);
 });
-test('Protected fences reject outsiders, permit friends, and permit a revoked guest to exit',()=>{
-  const host={x:0,z:0,accountId:'host'};
-  assert.equal(fenceAllows({x:3,z:0},{x:1,z:0},host,'stranger'),false);
-  assert.equal(fenceAllows({x:3,z:0},{x:-3,z:0},host,'stranger'),false);
-  assert.equal(fenceAllows({x:3,z:0},{x:1,z:0},host,'friend',['friend']),true);
-  assert.equal(fenceAllows({x:3,z:0},{x:0,z:0},host,'host'),true);
-  assert.equal(fenceAllows({x:0,z:0},{x:3,z:0},host,'revoked'),true);
+test('Invisible prayer areas block mats/front in either direction and let trapped visitors leave',()=>{
+  const host={x:0,z:0,yaw:0};
+  assert.equal(prayerAreaAllows({x:2,z:-2},{x:-2,z:-2},host),false);
+  assert.equal(prayerAreaAllows({x:-2,z:-2},{x:2,z:-2},host),false);
+  assert.equal(prayerAreaAllows({x:2,z:0},{x:0,z:0},host),false);
+  assert.equal(prayerAreaAllows({x:2,z:2},{x:-2,z:2},host),true);
+  assert.equal(prayerAreaAllows({x:0,z:0},{x:2,z:0},host),true);
+  assert.equal(prayerAreaAllows({x:.8,z:0},{x:0,z:0},host),false);
+  const turned={x:10,z:10,yaw:Math.PI/2};
+  assert.equal(prayerAreaAllows({x:8,z:12},{x:8,z:8},turned),false);
+  assert.equal(canBeginPrayer({id:'self',x:0,z:0},[{id:'guest',x:0,z:-1}], 'mecca'),false);
+  assert.equal(canBeginPrayer({id:'self',x:0,z:0},[{id:'guest',x:8,z:0}], 'mecca'),true);
+  assert.equal(canBeginPrayer({id:'self',x:0,z:83},[], 'mecca'),false);
 });
 test('Board validation and room selection reject unsupported input',()=>{
   assert.throws(()=>validatePost({category:'admin',title:'a',body:'b'}));
@@ -66,8 +72,8 @@ test('Reference character and clothing combinations are normalized on the server
 });
 
 
-test('Outdoor maps allow long walks while keeping visitors out of the Kaaba, Taj Mahal and pool',()=>{
- assert.equal(legalPosition(50,60,'mecca'),true);assert.equal(legalPosition(0,-18,'mecca'),false);
+test('Outdoor maps allow long walks while keeping visitors out of the sanctuary, Taj Mahal and pool',()=>{
+ assert.equal(legalPosition(50,60,'mecca'),true);assert.equal(legalPosition(0,-59,'mecca'),false);assert.equal(legalPosition(0,-18,'mecca'),true);
  assert.equal(legalPosition(10,30,'taj'),true);assert.equal(legalPosition(0,30,'taj'),false);assert.equal(legalPosition(0,-50,'taj'),false);
  assert.deepEqual(parseRoom('mecca:3'),{map:'mecca',server:3,key:'mecca:3'});assert.deepEqual(parseRoom('nabawi:1'),{map:'mecca',server:1,key:'mecca:1'});
 });

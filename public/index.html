@@ -16,7 +16,7 @@
     <div class="vignette" aria-hidden="true"></div>
     <header class="topbar">
       <a class="brand" href="/" aria-label="Noor 홈"><span class="brand-mark" aria-hidden="true">✧</span><span>NOOR<small>A PLACE FOR YOUR PEACE</small></span></a>
-      <button class="room-pill" id="mapButton" aria-label="어디에서 머무를까요?"><span class="status-dot" id="statusDot"></span><span id="currentMapName">메카 · 카바 광장</span><span class="pill-divider"></span><span id="onlineCount">개인 미리보기</span><span aria-hidden="true">⌄</span></button>
+      <button class="room-pill" id="mapButton" aria-label="어디에서 머무를까요?"><span class="status-dot" id="statusDot"></span><span id="currentMapName">누르 대기도원</span><span class="pill-divider"></span><span id="onlineCount">개인 미리보기</span><span aria-hidden="true">⌄</span></button>
       <div class="top-actions"><button id="languageButton" class="icon-button" aria-label="언어 선택" title="Language">◎</button><button id="helpButton" class="icon-button" aria-label="조작 안내">?</button><button id="settingsButton" class="icon-button" aria-label="화면 품질 설정">⚙</button></div>
     </header>
 
@@ -50,19 +50,7 @@
       <div class="saved-line"><span>✓</span><span id="saveStatus" role="status">이 기기에 자동으로 저장됩니다</span><button id="portraitButton" class="text-button">앞모습 보기 ↗</button></div>
     </aside>
 
-    <aside class="glass qibla-card" id="qiblaCard">
-      <div class="qibla-heading"><div><p class="eyebrow">QIBLA · 실제 메카 방향</p><h2>카바를 향해서</h2></div><button id="qiblaExpandButton" class="qibla-expand" aria-expanded="false" aria-controls="qiblaDetails" aria-label="도시·좌표 직접 선택" title="도시·좌표 직접 선택">⌄</button></div>
-      <div class="compass-row">
-        <div class="compass" role="img" aria-label="북쪽 기준 메카 방향" id="compass"><span class="north">N</span><span class="east">E</span><span class="south">S</span><span class="west">W</span><div id="compassArrow" class="compass-arrow"></div><span id="kaabaMarker" class="kaaba-marker" hidden><img src="/kaaba.svg" alt="Kaaba" width="22" height="22"></span><span class="compass-center"></span></div>
-        <div class="bearing-info"><strong id="bearingValue">—<span>°</span></strong><p id="locationLabel">위치를 선택해주세요</p><small id="distanceValue">북쪽 기준 방위각</small></div>
-      </div>
-      <div class="button-pair"><button id="locationButton" class="small-primary">내 위치 사용</button><button id="sensorButton" class="small-secondary">나침반 켜기</button></div>
-      <div id="qiblaDetails" hidden>
-      <p id="qiblaStatus" class="field-note" role="status">현재 위치에서 메카로 향하는 방향을 안내합니다.</p>
-      <details class="manual-location"><summary>도시·좌표 직접 선택</summary><label for="citySelect">도시</label><select id="citySelect"><option value="">도시 선택</option><option value="37.5665,126.978">서울</option><option value="35.8714,128.6014">대구</option><option value="25.2048,55.2708">두바이</option><option value="-6.2088,106.8456">자카르타</option><option value="51.5074,-0.1278">런던</option><option value="40.7128,-74.006">뉴욕</option></select><div class="coordinate-inputs"><label>위도<input id="latitude" type="number" min="-90" max="90" step="any" placeholder="35.8714"></label><label>경도<input id="longitude" type="number" min="-180" max="180" step="any" placeholder="128.6014"></label></div><button id="coordinateButton" class="small-secondary full-width">좌표 적용</button></details>
-      <p class="privacy-note">위치 정보는 서버로 전송하지 않습니다.</p>
-      </div>
-    </aside>
+
 
     <div class="scene-caption"><span><span id="mapCaption">SHEIKH ZAYED · ABU DHABI</span></span><p>빛과 대리석, 그리고 고요함.</p></div>
     <div class="scene-label" id="prayerLabel">가상 공간 기도 방향 ↑</div>
@@ -70,7 +58,7 @@
       <button id="customizeButton" class="action-secondary"><span aria-hidden="true">✧</span>꾸미기</button><span class="action-divider"></span>
       <button id="prayerButton" class="prayer-button"><span aria-hidden="true">◇</span><span id="prayerButtonText">기도 시작</span></button>
       <button id="poseButton" class="action-secondary" hidden>다음 자세</button><span class="action-divider"></span>
-      <button id="fenceButton" class="action-secondary"><span aria-hidden="true">♧</span>펜스<span class="preview-tag" id="premiumTag">미리보기</span></button>
+      <button id="greetingButton" class="action-secondary" aria-label="인사"><span aria-hidden="true">♡</span><span>인사</span></button><a id="prayerQuranLink" class="action-secondary prayer-quran" href="https://quran.com/" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" aria-label="꾸란 읽기 · Quran.com" hidden><span aria-hidden="true">▤</span><span>꾸란 읽기 · Quran.com</span><span aria-hidden="true">↗</span></a>
     </nav>
 
     <section class="chat-dock glass" id="chatDock" aria-label="기도원 채팅">
@@ -85,9 +73,9 @@
   </main>
 
   <dialog id="languageDialog"><button class="dialog-close" id="closeLanguage" aria-label="닫기">×</button><p class="eyebrow" data-no-i18n>NOOR · 21 LANGUAGES</p><h2>언어 선택</h2><label class="setting-label" for="languageSelect">언어</label><select id="languageSelect" data-no-i18n></select><p class="field-note" id="languageStatus" role="status"></p></dialog>
-  <dialog id="helpDialog"><button class="dialog-close" data-close aria-label="닫기">×</button><p class="eyebrow">WELCOME TO NOOR</p><h2>천천히 둘러보세요.</h2><dl><dt>이동</dt><dd>WASD · 방향키 · 화면의 이동 패드</dd><dt>둘러보기</dt><dd>화면을 드래그하세요. 휠이나 두 손가락으로 확대·축소합니다.</dd><dt>기도</dt><dd>기도 시작 후 ‘다음 자세’로 자세를 선택합니다. 이동하려면 기도를 마쳐주세요.</dd><dt>메카 방향</dt><dd>‘내 위치 사용’으로 방위각을 확인합니다. 지원 휴대폰에서는 나침반을 켜면 실제 회전에 따라 화살표가 움직입니다. 실내에서는 센서 오차가 생길 수 있습니다.</dd><dt>함께하기</dt><dd>같은 주소를 연 이용자가 함께 보입니다. 연결되지 않으면 개인 미리보기로 이용할 수 있습니다.</dd></dl><p class="field-note">이름·꾸미기는 이 기기에 저장됩니다. 현재는 익명 접속 체험 버전입니다.</p></dialog>
-  <dialog id="settingsDialog"><button class="dialog-close" data-close aria-label="닫기">×</button><p class="eyebrow">THE DETAILS MATTER</p><h2>화면 설정</h2><label class="setting-label" for="qualitySelect">화면 품질</label><select id="qualitySelect"><option value="auto">자동 · 기기에 맞게</option><option value="high">높음 · 선명한 질감과 그림자</option><option value="low">절전 · 낮은 해상도</option></select><p class="field-note">고해상도 대리석·금속·직조 텍스처는 모두 포함됩니다. 품질 설정은 화면 해상도와 그림자를 조절합니다.</p><button id="reconnectButton" class="small-primary full-width">온라인 연결 다시 시도</button></dialog>
-  <dialog id="fenceDialog"><button class="dialog-close" data-close aria-label="닫기">×</button><p class="eyebrow">A LITTLE MORE SPACE</p><h2>온전히 나만의 시간.</h2><p>기도하는 동안 본인과 친구만 들어올 수 있는 개인 공간입니다. 유료 이용자의 채팅에는 친구 글만 표시됩니다.</p><div class="fence-preview" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div><p class="field-note">현재는 내 화면에서 디자인만 확인하는 미리보기입니다. 다른 이용자의 이동을 막지 않으며, 결제는 발생하지 않습니다.</p><button id="previewFenceButton" class="small-primary full-width">펜스 디자인 미리보기</button></dialog>
+  <dialog id="helpDialog"><button class="dialog-close" data-close aria-label="닫기">×</button><p class="eyebrow">WELCOME TO NOOR</p><h2>천천히 둘러보세요.</h2><dl><dt>이동</dt><dd>WASD · 방향키 · 화면의 이동 패드</dd><dt>둘러보기</dt><dd>화면을 드래그하세요. 휠이나 두 손가락으로 확대·축소합니다.</dd><dt>기도</dt><dd>기도 시작 후 ‘다음 자세’로 자세를 선택합니다. 이동하려면 기도를 마쳐주세요.</dd><dt>인사</dt><dd>오른손을 가슴에 얹고 살짝 고개를 숙이며 인사합니다.</dd><dt>기도 공간</dt><dd>기도 중에는 매트와 앞쪽의 통행이 제한되고, 채팅과 인사가 표시되지 않습니다.</dd><dt>함께하기</dt><dd>같은 주소를 연 이용자가 함께 보입니다. 연결되지 않으면 개인 미리보기로 이용할 수 있습니다.</dd></dl><p class="field-note">이름·꾸미기는 이 기기에 저장됩니다. 현재는 익명 접속 체험 버전입니다.</p></dialog>
+  <dialog id="settingsDialog"><button class="dialog-close" data-close aria-label="닫기">×</button><p class="eyebrow">THE DETAILS MATTER</p><h2>화면 설정</h2><button id="settingsLanguageButton" class="small-secondary full-width">언어 선택</button><label class="setting-label" for="qualitySelect">화면 품질</label><select id="qualitySelect"><option value="auto">자동 · 기기에 맞게</option><option value="high">높음 · 선명한 질감과 그림자</option><option value="low">절전 · 낮은 해상도</option></select><p class="field-note">고해상도 대리석·금속·직조 텍스처는 모두 포함됩니다. 품질 설정은 화면 해상도와 그림자를 조절합니다.</p><button id="reconnectButton" class="small-primary full-width">온라인 연결 다시 시도</button></dialog>
+
 
   <dialog id="mapDialog" class="wide-dialog entry-dialog">
     <button class="dialog-close" id="mapCloseButton" data-close aria-label="닫기">×</button>

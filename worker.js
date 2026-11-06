@@ -1,5 +1,5 @@
 export {Community} from './community.js';
-import {sanitizeProfile,constrainedMove,publicPlayer,PRAYER_POSES,fenceAllows,parseRoom,MAPS,legalPosition,prayerYaw} from './public/core.js';
+import {sanitizeProfile,constrainedMove,publicPlayer,PRAYER_POSES,prayerAreaAllows,canBeginPrayer,parseRoom,MAPS,legalPosition,prayerYaw} from './public/core.js';
 // A server-only override permits isolated capacity tests; production defaults to50.
 export const roomCapacity=env=>[32,50,64,100].includes(Number(env?.NOOR_ROOM_CAPACITY))?Number(env.NOOR_ROOM_CAPACITY):50;
 
@@ -37,7 +37,7 @@ export default {
 export class PrayerRoom {
   constructor(ctx,env){
     this.ctx=ctx;this.env=env;this.pendingMoves=new Map();this.flushTimer=null;this.batchClients=new Set();this.protectedSockets=new Set();
-    for(const ws of ctx.getWebSockets()){const state=ws.deserializeAttachment();if(state?.motionProtocol===2)this.batchClients.add(ws);if(state?.protected)this.protectedSockets.add(ws);}
+    for(const ws of ctx.getWebSockets()){const state=ws.deserializeAttachment();if(state?.motionProtocol===2)this.batchClients.add(ws);if(state?.praying)this.protectedSockets.add(ws);}
   }
   async access(ids){const r=await this.env.COMMUNITY.get(this.env.COMMUNITY.idFromName('community')).fetch('https://community.internal/access?ids='+ids.join(','));if(!r.ok)throw new Error('Access lookup failed');return r.json();}
   players(){return this.ctx.getWebSockets().map(ws=>({ws,state:ws.deserializeAttachment()})).filter(p=>p.state);}
@@ -71,7 +71,7 @@ export class PrayerRoom {
     const map=parseRoom(request.headers.get('X-Noor-Room'))?.map||'mecca',base=MAPS[map].spawn;let spawn={...base};
     for(let n=0;n<100;n++){
       const x=base.x+(n%10)*2.5,z=base.z+Math.floor(n/10)*3;
-      if(legalPosition(x,z,map)&&peers.every(p=>Math.hypot(x-p.state.x,z-p.state.z)>(p.state.protected?3.2:1.5))){spawn={x,z};break;}
+      if(legalPosition(x,z,map)&&peers.every(p=>Math.hypot(x-p.state.x,z-p.state.z)>(p.state.praying?4:1.5))){spawn={x,z};break;}
     }
     const now=Date.now(),state={id:crypto.randomUUID(),map,accountId,protected:false,profile:sanitizeProfile({name:decodeURIComponent(request.headers.get('X-Noor-Name')||'')}),...spawn,yaw:Math.PI,praying:false,pose:'standing',lastMove:now,rateAt:now,tokens:30,profileAt:0};
     server.serializeAttachment(state);
@@ -91,7 +91,16 @@ export class PrayerRoom {
     let data;
     try{data=JSON.parse(message);}catch{ws.serializeAttachment(state);return;}
     if(!data||typeof data!=='object'){ws.serializeAttachment(state);return;}
+    if(data.type==='greeting'){
+      if(state.praying||now-(state.greetingAt||0)<5000){ws.serializeAttachment(state);return;}
+      state.greetingAt=now;ws.serializeAttachment(state);
+      const peers=this.players(),access=await this.access(peers.map(p=>p.state.accountId));
+      const item={type:'greeting',id:state.id,accountId:state.accountId,at:now};
+      for(const peer of peers)if(!peer.state.praying&&!(access[peer.state.accountId]?.blocked||[]).includes(state.accountId)&&!(access[state.accountId]?.blocked||[]).includes(peer.state.accountId))this.send(peer.ws,item);
+      return;
+    }
     if(data.type==='chat'||data.type==='whisper'){
+      if(state.praying){ws.serializeAttachment(state);return;}
       const text=typeof data.text==='string'?data.text.trim().slice(0,280):'';
       if(!text||now-(state.chatAt||0)<1200){ws.serializeAttachment(state);return;}
       state.chatAt=now;ws.serializeAttachment(state);
@@ -101,17 +110,17 @@ export class PrayerRoom {
       const blocked=(a,id)=>(a?.blocked||[]).includes(id);
       if(data.type==='whisper'){
         const targetId=typeof data.to==='string'?data.to:'',recipient=access[targetId];
-        if(targetId===state.accountId||sender.whispers===false||!recipient||recipient.whispers===false||blocked(recipient,state.accountId)||blocked(sender,targetId)||!peers.some(p=>p.state.accountId===targetId)){fail();return;}
+        if(targetId===state.accountId||sender.whispers===false||!recipient||recipient.whispers===false||blocked(recipient,state.accountId)||blocked(sender,targetId)||!peers.some(p=>p.state.accountId===targetId&&!p.state.praying)){fail();return;}
         const item={type:'whisper',id:crypto.randomUUID(),accountId:state.accountId,name:state.profile.name,to:targetId,toName:recipient.name,text,at:now};
         // A private message is delivered to these two accounts only, including their other room tabs.
-        for(const peer of peers)if(peer.state.accountId===state.accountId||peer.state.accountId===targetId)this.send(peer.ws,item);
+        for(const peer of peers)if(!peer.state.praying&&(peer.state.accountId===state.accountId||peer.state.accountId===targetId))this.send(peer.ws,item);
         return;
       }
       if(sender.publicChat===false){fail();return;}
       const item={type:'chat',id:crypto.randomUUID(),accountId:state.accountId,name:state.profile.name,text,at:now};
       for(const peer of peers){
         const viewer=access[peer.state.accountId];
-        if(viewer&&viewer.publicChat!==false&&!blocked(viewer,state.accountId)&&!blocked(sender,peer.state.accountId)&&(!viewer.premium||peer.state.accountId===state.accountId||viewer.friends.includes(state.accountId)))this.send(peer.ws,item);
+        if(!peer.state.praying&&viewer&&viewer.publicChat!==false&&!blocked(viewer,state.accountId)&&!blocked(sender,peer.state.accountId)&&(!viewer.premium||peer.state.accountId===state.accountId||viewer.friends.includes(state.accountId)))this.send(peer.ws,item);
       }
       return;
     }
@@ -123,29 +132,28 @@ export class PrayerRoom {
       if(!state.praying){
         const elapsed=Math.max(0,now-state.lastMove)/1000;
         const next=constrainedMove(state,data,elapsed,state.map);
-        const hosts=this.protectedSockets.size?this.players().filter(p=>p.state.protected&&p.state.praying):[];
-        const access=hosts.length?await this.access(hosts.map(p=>p.state.accountId)):{};
-        const allowed=hosts.every(p=>!access[p.state.accountId]?.premium||fenceAllows(state,next,p.state,state.accountId,access[p.state.accountId].friends));
+        const hosts=this.protectedSockets.size?this.players().filter(p=>p.state.praying&&p.ws!==ws):[];
+        const allowed=hosts.every(p=>prayerAreaAllows(state,next,p.state));
         if(allowed)Object.assign(state,next);
         if(Number.isFinite(data.yaw))state.yaw=((data.yaw%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
       }
       state.lastMove=now;
     }else if(data.type==='prayer'){
+      if(data.active===true&&!state.praying&&!canBeginPrayer(state,this.players().map(p=>p.state),state.map||'mecca')){
+        ws.serializeAttachment(state);this.pendingMoves.delete(state.id);
+        this.send(ws,{type:'state',player:publicPlayer(state)});
+        this.send(ws,{type:'notice',message:'다른 이용자와 건물에서 조금 떨어진 곳에서 기도를 시작해주세요.'});return;
+      }
       state.praying=data.active===true;
       state.pose=state.praying&&PRAYER_POSES.includes(data.pose)?data.pose:'standing';
-      state.protected=false;
+      state.protected=state.praying;
       if(state.praying){
         state.yaw=prayerYaw(state.map||'mecca',state);
-        const rights=(await this.access([state.accountId]))[state.accountId];
-        const clear=this.players().every(p=>p.ws===ws||rights?.friends.includes(p.state.accountId)||Math.hypot(p.state.x-state.x,p.state.z-state.z)>3);
-        state.protected=!!rights?.premium&&clear&&Math.abs(state.x)<MAPS[state.map||'mecca'].bounds.x-3&&Math.abs(state.z)<MAPS[state.map||'mecca'].bounds.z-3;
-        if(rights?.premium&&!state.protected)this.send(ws,{type:'notice',message:'펜스는 중앙 통로를 피해 다른 사람과 충분히 떨어진 곳에서 펼칠 수 있습니다.'});
       }
       if(state.protected)this.protectedSockets.add(ws);else this.protectedSockets.delete(ws);
       state.lastMove=now;
     }else if(data.type==='protect'){
-      // No client-controlled paid flag. A signed billing webhook + account auth is required before enabling.
-      this.send(ws,{type:'notice',message:'펜스는 현재 개인 미리보기만 제공됩니다. 결제는 활성화되지 않았습니다.'});
+      // Old clients cannot opt out of another visitor's prayer boundary.
       ws.serializeAttachment(state);return;
     }else{ws.serializeAttachment(state);return;}
     ws.serializeAttachment(state);

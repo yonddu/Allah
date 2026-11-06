@@ -27,6 +27,7 @@ function rig(c){
  add('root',null,[0,0,0]);add('hips',0,[0,.92,0]);add('spine',1,[0,.20,0]);add('chest',2,[0,c.armY-.045-1.12,0]);add('neck',3,[0,1.52-(c.armY-.045),0]);add('head',4,[0,.15,0]);
  for(const side of [-1,1]){const start=bones.length;add(side<0?'leftShoulder':'rightShoulder',3,[side*c.shoulder,.045,0]);add('elbow',start,[side*c.upper,0,0]);add('wrist',start+1,[side*c.lower,0,0]);}
  for(const side of [-1,1]){const start=bones.length;add(side<0?'leftHip':'rightHip',1,[side*.10,-.01,0]);add('knee',start,[0,-.42,0]);add('ankle',start+1,[0,-.41,0]);}
+ for(const side of [-1,1]){const start=bones.length;add('fingerKnuckles',side<0?I.lh:I.rh,[side*.045,0,0]);add('fingerTips',start,[side*.033,0,0]);}
  return bones;
 }
 const qa=new THREE.Quaternion();
@@ -47,13 +48,16 @@ export function makeHumanAvatar(profile,tier='low',local=false){
   setQuality(){},
   setDetail(value){detailed=value;if(mesh&&stages){const source=stages[local?0:(detailed?1:2)];mesh.geometry=source.geometry;mesh.material=source.material;}},
   dispose(){disposed=true;skeleton.dispose();},
-  update(pose,praying,time,moving,dt){
-   const state=pose+praying+moving;if(!local&&!detailed&&state===poseState&&time-poseAt<1/12)return;
+  update(pose,praying,time,moving,dt,greeting=-1){
+   if(!praying)pose='standing';
+   const greetingWeight=greeting>=0?Math.min(1,greeting/.20,(1-greeting)/.24):0;
+   const state=pose+praying+moving+(greetingWeight>0);if(!local&&!detailed&&state===poseState&&time-poseAt<1/12)return;
    if(!local&&!detailed)dt=Math.min(.25,Math.max(dt,time-poseAt));poseAt=time;poseState=state;
    const kneeling=pose==='sitting'||pose==='prostrating',prostrating=pose==='prostrating',bowing=pose==='bowing',s=1-Math.exp(-dt*10),hip=prostrating?.54:kneeling?.39:.92;
    bones[I.hips].position.y=THREE.MathUtils.lerp(bones[I.hips].position.y,hip+(moving?Math.sin(time*10)*.016:0),s);
    bones[I.spine].position.y=THREE.MathUtils.lerp(bones[I.spine].position.y,prostrating?.045:.20,s);
    bones[I.spine].rotation.x=THREE.MathUtils.lerp(bones[I.spine].rotation.x,prostrating?-2.45:bowing?-1.04:0,s);
+   bones[I.head].rotation.x=THREE.MathUtils.lerp(bones[I.head].rotation.x,-.13*greetingWeight,s);
    for(const side of [-1,1]){
     const leg=bones[side<0?I.ll:I.rl],knee=bones[side<0?I.lk:I.rk];
     leg.rotation.x=THREE.MathUtils.lerp(leg.rotation.x,kneeling?(prostrating?.85:1.0):moving?Math.sin(time*8+side)*.30:0,s);
@@ -66,8 +70,17 @@ export function makeHumanAvatar(profile,tier='low',local=false){
     else if(bowing){target=v(side*.115,.53,-.10).applyMatrix4(root.matrixWorld);hint=v(side*.31,.80,-.20).applyMatrix4(root.matrixWorld);}
     else if(kneeling){target=v(side*.13,.43,-.34).applyMatrix4(root.matrixWorld);hint=v(side*.32,.64,-.12).applyMatrix4(root.matrixWorld);}
     else if(praying){target=v(side*-.025,-.22,-.20).applyMatrix4(bones[I.chest].matrixWorld);hint=v(side*.32,-.30,-.06).applyMatrix4(bones[I.chest].matrixWorld);}
-    else{target=v(side*.24,.045-armReach*.96,moving?Math.sin(time*8+side)*.10:0).applyMatrix4(bones[I.chest].matrixWorld);hint=v(side*.27,-armReach*.48,-.04).applyMatrix4(bones[I.chest].matrixWorld);}
-    armIK(bones,side,target,hint);const hand=bones[side<0?I.lh:I.rh];hand.rotation.x=prostrating?Math.PI/2:0;
+    else{
+     target=v(side*.24,.045-armReach*.96,moving?Math.sin(time*8+side)*.10:0);
+     if(side>0&&greetingWeight>0)target.lerp(v(-.045,-.04,-.22),greetingWeight);
+     target.applyMatrix4(bones[I.chest].matrixWorld);hint=v(side*.32,-armReach*.48,-.10).applyMatrix4(bones[I.chest].matrixWorld);
+    }
+    armIK(bones,side,target,hint);const hand=bones[side<0?I.lh:I.rh];
+    // Rotate relaxed palms toward the thighs instead of presenting them to the front.
+    hand.rotation.set(prostrating?Math.PI/2:praying?0:side*1.15*(1-greetingWeight),0,0);
+    const curl=praying||greetingWeight>0?0:moving?.86:.36,knuckle=side<0?18:20;
+    bones[knuckle].rotation.y=THREE.MathUtils.lerp(bones[knuckle].rotation.y,-side*curl,s);
+    bones[knuckle+1].rotation.y=THREE.MathUtils.lerp(bones[knuckle+1].rotation.y,-side*curl*.75,s);
    }
   }
  };

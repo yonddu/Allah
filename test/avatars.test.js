@@ -22,7 +22,7 @@ test('Supplied avatars retain embedded textures, stable LOD bounds and normalize
    for(let i=0;i<position.count;i++)for(let k=0;k<3;k++)array[i*3+k]=bin.readFloatLE(offset+i*stride+k*4);
    const geometry=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(array,3));config||=userRigConfig(geometry);skinUserGeometry(geometry,config);
    const weights=geometry.getAttribute('skinWeight').array,joints=geometry.getAttribute('skinIndex').array;
-   for(let i=0;i<position.count;i++){let sum=0;for(let k=0;k<4;k++){const w=weights[i*4+k];assert.ok(Number.isFinite(w)&&w>=0&&w<=1);assert.ok(joints[i*4+k]<18);sum+=w;}assert.ok(Math.abs(sum-1)<1e-5);}
+   for(let i=0;i<position.count;i++){let sum=0;for(let k=0;k<4;k++){const w=weights[i*4+k];assert.ok(Number.isFinite(w)&&w>=0&&w<=1);assert.ok(joints[i*4+k]<22);sum+=w;}assert.ok(Math.abs(sum-1)<1e-5);}
    geometry.dispose();
   }
  }

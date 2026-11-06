@@ -1,9 +1,9 @@
 import {t} from './i18n.js';
 import {PLAY_CAMERA} from './camera.js';
-import {DEFAULT_PROFILE,COLORS,sanitizeProfile,MAPS,parseRoom} from './core.js';
+import {DEFAULT_PROFILE,COLORS,sanitizeProfile,MAPS,parseRoom,canBeginPrayer} from './core.js';
 import {Sanctuary} from './scene.js';
 import {initPrayerTimes} from './prayer-times.js';
-import {initQibla} from './qibla.js';
+import {initLocation} from './location.js';
 import {RoomConnection} from './network.js';
 import {initCommunity} from './social.js';
 import {Soundscape} from './audio.js';
@@ -68,6 +68,7 @@ $('closeCustomize').addEventListener('click',()=>$('customPanel').classList.remo
 $('portraitButton').addEventListener('click',()=>{scene.portraitMode=true;scene.cameraAngle=scene.yaw+Math.PI;scene.cameraDistance=3;scene.cameraHeight=1.5;toast('화면을 드래그해 다른 각도도 볼 수 있습니다.');});
 $('helpButton').addEventListener('click',()=>openDialog('helpDialog'));
 $('settingsButton').addEventListener('click',()=>openDialog('settingsDialog'));
+$('settingsLanguageButton').addEventListener('click',()=>{$('settingsDialog').close();openDialog('languageDialog');});
 $('qualitySelect').addEventListener('change',e=>{scene.quality(e.target.value);try{localStorage.setItem('noor-quality',e.target.value);}catch{}});
 try{const value=localStorage.getItem('noor-quality');if(['auto','high','low'].includes(value)){$('qualitySelect').value=value;scene.quality(value);}}catch{}
 $('soundButton').addEventListener('click',()=>openDialog('soundDialog'));
@@ -79,13 +80,18 @@ $('prayerSoundToggle').addEventListener('change',e=>{sound.prayerEnabled=e.targe
 $('prayerAudioFile').addEventListener('change',e=>sound.setFile(e.target.files[0]));
 const poses=['standing','bowing','prostrating','sitting'],poseLabels=['서기','숙이기','엎드리기','앉기'];
 function prayerUI(){
+  community?.setPrayerMode(scene.praying);
+  document.body.classList.toggle('prayer-mode',scene.praying);
+  $('prayerQuranLink').hidden=!scene.praying;$('greetingButton').hidden=scene.praying;
   $('joystickThumb').setAttribute('aria-disabled',String(scene.praying));
   $('prayerButtonText').textContent=scene.praying?'기도 마치기':'기도 시작';
   $('poseButton').hidden=!scene.praying;$('poseButton').textContent='다음 자세 · '+poseLabels[poses.indexOf(scene.pose)];
   $('prayerLabel').textContent=scene.praying?'기도 중 · '+poseLabels[poses.indexOf(scene.pose)]:'가상 공간 기도 방향 ↑';
 }
 function setPrayer(active){
-  scene.praying=active;scene.pose='standing';scene.protected=false;scene.keys.clear();scene.direction.clear();scene.resetJoystick?.();
+  if(active&&!canBeginPrayer({id:network?.selfId,...scene.position},[...scene.remote].map(([id,a])=>({id,x:a.target.x,z:a.target.z,yaw:a.targetYaw,praying:a.praying})),scene.mapId)){toast('다른 이용자와 건물에서 조금 떨어진 곳에서 기도를 시작해주세요.');return;}
+  if(active){scene.cancelGreeting();$('toast').classList.remove('visible');}
+  scene.praying=active;scene.pose='standing';scene.protected=active;scene.keys.clear();scene.direction.clear();scene.resetJoystick?.();
   network?.send({type:'prayer',active,pose:scene.pose});
   if(active){sound.startPrayer();$('soundButton').querySelector('.utility-label').textContent='소리 설정';toast('기도 방향으로 정렬했습니다. 다음 자세 버튼으로 자세를 바꿀 수 있습니다.');}
   else sound.stopPrayer();
@@ -93,11 +99,13 @@ function setPrayer(active){
 }
 $('prayerButton').addEventListener('click',()=>setPrayer(!scene.praying));
 $('poseButton').addEventListener('click',()=>{scene.pose=poses[(poses.indexOf(scene.pose)+1)%poses.length];network.send({type:'prayer',active:true,pose:scene.pose});prayerUI();});
-$('fenceButton').addEventListener('click',()=>{
-  if(community?.session?.premium){toast('기도를 시작하면 본인과 친구만 들어오는 펜스가 펼쳐집니다. 중앙 통로와 다른 이용자를 피해 자리를 잡아주세요.');return;}
-  openDialog('fenceDialog');
+let greetingTimer;
+$('greetingButton').addEventListener('click',()=>{
+  if(scene.praying)return;
+  $('greetingButton').disabled=true;
+  if(!network?.send({type:'greeting'}))scene.playGreeting();
+  clearTimeout(greetingTimer);greetingTimer=setTimeout(()=>{$('greetingButton').disabled=false;},5000);
 });
-$('previewFenceButton').addEventListener('click',()=>{scene.fencePreview=!scene.fencePreview;$('fenceDialog').close();if(scene.fencePreview&&!scene.praying)setPrayer(true);toast(scene.fencePreview?'내 화면에서 펜스 디자인을 미리봅니다. 온라인 진입 제한은 적용되지 않습니다.':'펜스 미리보기를 껐습니다.');});
 network=new RoomConnection({
   profile:()=>profile,
   status:state=>{
@@ -109,11 +117,11 @@ network=new RoomConnection({
     scene.position={x:self.x,z:self.z};scene.yaw=self.yaw;scene.protected=self.protected;
     if(scene.praying)network.send({type:'prayer',active:true,pose:scene.pose});
   },
-  self:p=>{if(p.correction&&Math.hypot(p.correction.x,p.correction.z)>.08)scene.position={x:scene.position.x+p.correction.x,z:scene.position.z+p.correction.z};scene.protected=p.protected;},
+  self:p=>{if(p.correction&&Math.hypot(p.correction.x,p.correction.z)>.08)scene.position={x:scene.position.x+p.correction.x,z:scene.position.z+p.correction.z};scene.protected=p.protected;if(p.authoritative&&scene.praying!==p.praying){scene.praying=p.praying;scene.pose=p.pose;if(scene.praying){scene.cancelGreeting();sound.startPrayer();}else sound.stopPrayer();prayerUI();}},
   player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.clearPlayers();community?.clear();},
   count:n=>$('onlineCount').textContent=n+'명 접속',
   recount:()=>$('onlineCount').textContent=(scene.remote.size+1)+'명 접속',
-  notice:toast,chat:message=>community?.chat(message)
+  notice:toast,chat:message=>community?.chat(message),greeting:message=>{if(!scene.praying&&!scene.blockedIds?.has(message.accountId))scene.playGreeting(message.id===network.selfId?null:message.id);}
 });
 community=initCommunity({
   getName:()=>profile.name,toast,onSession:session=>{scene.accountId=session.id;scene.blockedIds=new Set(session.blocked.map(p=>p.id));scene.friendIds=session.friends.map(p=>p.id).filter(id=>!scene.blockedIds.has(id));},
@@ -160,7 +168,7 @@ $('enterRoomButton').addEventListener('click',async()=>{
   }catch(e){$('roomStatus').textContent=e.message;}
   finally{$('enterRoomButton').disabled=false;}
 });
-const qibla=initQibla(toast);initPrayerTimes({qibla,toast});updateChoices();mapLabels();prayerUI();
+const locationService=initLocation(toast);initPrayerTimes({location:locationService,toast});updateChoices();mapLabels();prayerUI();
 setInterval(()=>{if(!document.hidden)network.movement(scene.position,scene.yaw);},150);
 await scene.ready;
 await scene.local.human.ready;

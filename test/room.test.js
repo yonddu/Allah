@@ -18,7 +18,7 @@ test('The room rejects teleporting and ignores forged paid protection',async()=>
   const {room,socket}=setup(),ws=socket('one','u1');
   await room.webSocketMessage(ws,JSON.stringify({type:'move',x:999,z:0,yaw:1}));assert.ok(ws.deserializeAttachment().x<=1.05);
   await room.webSocketMessage(ws,JSON.stringify({type:'protect',premium:true}));assert.equal(ws.deserializeAttachment().protected,undefined);
-  await room.webSocketMessage(ws,JSON.stringify({type:'prayer',active:true,pose:'prostrating',premium:true}));const state=ws.deserializeAttachment();assert.equal(state.protected,false);assert.equal(state.yaw,prayerYaw('mecca',state));
+  await room.webSocketMessage(ws,JSON.stringify({type:'prayer',active:true,pose:'prostrating',premium:true}));const state=ws.deserializeAttachment();assert.equal(state.protected,true);assert.equal(state.yaw,prayerYaw('mecca',state));
   await room.webSocketMessage(ws,JSON.stringify({type:'move',x:2,z:0}));assert.equal(ws.deserializeAttachment().x,state.x);
 });
 test('Chat filtering is enforced for premium viewers on the server',async()=>{
@@ -64,7 +64,7 @@ test('Room capacity remains50 by default and only accepts bounded server-side ov
 });
 
 test('Movement is coalesced for modern clients while legacy clients keep full state and prayer cannot be overwritten',async()=>{
- const {room,socket}=setup(),a=socket('a','u1'),b=socket('b','u2');
+ const {room,socket}=setup(),a=socket('a','u1'),b=socket('b','u2',{x:5});
  await room.webSocketMessage(a,JSON.stringify({type:'profile',motionProtocol:2,profile:{name:'a'}}));a.messages.length=b.messages.length=0;
  await room.webSocketMessage(a,JSON.stringify({type:'move',x:.1,z:0,yaw:0,seq:1}));
  await room.webSocketMessage(a,JSON.stringify({type:'move',x:.2,z:0,yaw:0,seq:2}));
@@ -73,4 +73,34 @@ test('Movement is coalesced for modern clients while legacy clients keep full st
  assert.equal(b.messages[0].type,'state');assert.equal(b.messages[0].player.profile.name,'a');
  await room.webSocketMessage(a,JSON.stringify({type:'move',x:.2,z:0,seq:3}));
  await room.webSocketMessage(a,JSON.stringify({type:'prayer',active:true,pose:'bowing'}));assert.equal(room.pendingMoves.size,0);assert.equal(a.messages.at(-1).player.praying,true);
+});
+
+test('Every prayer area is protected without payment or friend exceptions; prayer stops release it',async()=>{
+ const {room,socket,access}=setup(),host=socket('host','u1'),guest=socket('guest','u2',{x:1.5,z:-1,lastMove:Date.now()-250});
+ access.u1.friends=['u2'];await room.webSocketMessage(host,JSON.stringify({type:'prayer',active:true}));assert.equal(host.deserializeAttachment().protected,true);
+ await room.webSocketMessage(guest,JSON.stringify({type:'move',x:.6,z:-1}));assert.equal(guest.deserializeAttachment().x,1.5);
+ await room.webSocketMessage(host,JSON.stringify({type:'prayer',active:false}));
+ const state=guest.deserializeAttachment();state.lastMove=Date.now()-250;guest.serializeAttachment(state);
+ await room.webSocketMessage(guest,JSON.stringify({type:'move',x:.6,z:-1}));assert.ok(guest.deserializeAttachment().x<1.5);
+ room.flushMovement();
+});
+test('Prayer blocks public chat, whispers and greetings in both directions and preserves chat preferences',async()=>{
+ const {room,socket,access}=setup(),a=socket('a','u1'),b=socket('b','u2',{x:5}),c=socket('c','u3',{x:10});
+ await room.webSocketMessage(a,JSON.stringify({type:'prayer',active:true}));for(const ws of [a,b,c])ws.messages.length=0;
+ await room.webSocketMessage(b,JSON.stringify({type:'chat',text:'quiet'}));assert.equal(a.messages.length,0);assert.equal(c.messages.filter(m=>m.type==='chat').length,1);
+ const bs=b.deserializeAttachment();bs.chatAt=0;b.serializeAttachment(bs);
+ await room.webSocketMessage(b,JSON.stringify({type:'whisper',to:'u1',text:'quiet'}));assert.equal(a.messages.length,0);
+ await room.webSocketMessage(a,JSON.stringify({type:'chat',text:'forged'}));assert.equal(c.messages.some(m=>m.text==='forged'),false);
+ await room.webSocketMessage(b,JSON.stringify({type:'greeting'}));assert.equal(a.messages.length,0);assert.equal(c.messages.filter(m=>m.type==='greeting').length,1);
+ await room.webSocketMessage(a,JSON.stringify({type:'greeting'}));assert.equal(c.messages.filter(m=>m.type==='greeting').length,1);
+ await room.webSocketMessage(a,JSON.stringify({type:'prayer',active:false}));
+ const bs2=b.deserializeAttachment();bs2.chatAt=0;b.serializeAttachment(bs2);
+ await room.webSocketMessage(b,JSON.stringify({type:'chat',text:'resumed'}));assert.ok(a.messages.some(m=>m.text==='resumed'));assert.equal(access.u1.publicChat,undefined);
+});
+test('Prayer entry rejects occupied mats; gestures are bounded, private from blocked visitors, and rate limited',async()=>{
+ const {room,socket,access}=setup(),a=socket('a','u1'),b=socket('b','u2',{x:0,z:-1}),c=socket('c','u3',{x:6});
+ await room.webSocketMessage(a,JSON.stringify({type:'prayer',active:true,pose:'dancing'}));assert.equal(a.deserializeAttachment().praying,false);assert.ok(a.messages.some(m=>m.type==='notice'));
+ access.u3.blocked=['u1'];await room.webSocketMessage(a,JSON.stringify({type:'greeting',text:'forged',accountId:'u3'}));
+ const greeting=b.messages.find(m=>m.type==='greeting');assert.equal(greeting.accountId,'u1');assert.equal(greeting.text,undefined);assert.equal(c.messages.some(m=>m.type==='greeting'),false);
+ await room.webSocketMessage(a,JSON.stringify({type:'greeting'}));assert.equal(b.messages.filter(m=>m.type==='greeting').length,1);
 });

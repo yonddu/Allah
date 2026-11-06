@@ -4,7 +4,7 @@ import {PLAY_CAMERA,avatarFocus} from './camera.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './utils/BufferGeometryUtils.js';
 import {QUALITY_BUDGETS,chooseQuality,pixelRatioFor,nextResolutionScale} from './performance.js';
-import {COLORS,constrainedMove,MAPS,fenceAllows,joystickVector,prayerYaw} from './core.js';
+import {COLORS,constrainedMove,MAPS,prayerAreaAllows,joystickVector,prayerYaw,GREETING_DURATION} from './core.js';
 import {makeHumanAvatar} from './avatars.js';
 import {setAnisotropy,weaveTexture,metalTexture,rugTexture,robeTexture} from './textures.js';
 const GOLD=0xc4a36a;
@@ -12,7 +12,7 @@ export class Sanctuary {
   constructor(container,profile,onError,mapId='mecca'){
     this.mapId=mapId;this.theme=MAPS[mapId]||MAPS.mecca;
     this.onModelError=e=>onError(e.message);this.container=container;this.profile=profile;this.remote=new Map();this.keys=new Set();this.direction=new Set();this.moving=false;this.joystickAxis={x:0,y:0};
-    this.position={...this.theme.spawn};this.yaw=Math.PI;this.praying=false;this.pose='standing';this.fencePreview=false;
+    this.position={...this.theme.spawn};this.yaw=Math.PI;this.praying=false;this.pose='standing';
     this.cameraAngle=this.theme.cameraAngle;this.cameraHeight=PLAY_CAMERA.height;this.cameraDistance=PLAY_CAMERA.distance;this.last=performance.now();
     const mobile=matchMedia('(max-width:900px)').matches||matchMedia('(pointer:coarse)').matches;
     this.device={mobile,memory:navigator.deviceMemory||(mobile?4:8),cores:navigator.hardwareConcurrency||(mobile?4:8)};
@@ -42,7 +42,6 @@ export class Sanctuary {
     this.geometry={box:new THREE.BoxGeometry(1,1,1),sphere:new THREE.SphereGeometry(1,20,14),cylinder:new THREE.CylinderGeometry(1,1,1,24),torus:new THREE.TorusGeometry(1,.04,8,48)};
     this.setupLights();this.ready=this.loadHall(mapId);
     this.local=this.makeAvatar(profile,true);this.scene.add(this.local.root);
-    this.fence=this.makeFence();this.scene.add(this.fence);this.fence.visible=false;
     const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=64;const sc=shadowCanvas.getContext('2d'),shade=sc.createRadialGradient(32,32,2,32,32,32);shade.addColorStop(0,'rgba(0,0,0,.24)');shade.addColorStop(1,'rgba(0,0,0,0)');sc.fillStyle=shade;sc.fillRect(0,0,64,64);
     const shadowTexture=new THREE.CanvasTexture(shadowCanvas),shadowMaterial=new THREE.MeshBasicMaterial({map:shadowTexture,transparent:true,depthWrite:false});
     this.avatarShadows=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),shadowMaterial,100);this.avatarShadows.instanceMatrix.setUsage(THREE.DynamicDrawUsage);this.avatarShadows.frustumCulled=false;this.avatarShadows.count=0;this.scene.add(this.avatarShadows);this.shadowTransform=new THREE.Object3D();
@@ -103,26 +102,23 @@ export class Sanctuary {
     const nameElement=document.createElement('div');nameElement.className='avatar-name';nameElement.textContent=profile.name;nameElement.dir='auto';nameElement.dataset.noI18n='';
     const label=new CSS2DObject(nameElement);label.position.y=1.96;label.center.set(.5,1);root.add(label);
     const avatar={root,hips,torso,arms,legs,head,rug,fringe,profile,materials,label,labelAnchor:new THREE.Vector3(),simple,human,pose:'standing',praying:false};
-    avatar.protection=this.makeFence();avatar.protection.visible=false;root.add(avatar.protection);
+    const greetingElement=document.createElement('div');greetingElement.className='avatar-greeting';greetingElement.textContent='السلام عليكم';greetingElement.lang='ar';greetingElement.dir='rtl';greetingElement.dataset.noI18n='';
+    const greetingLabel=new CSS2DObject(greetingElement);greetingLabel.position.y=2.17;greetingLabel.visible=false;root.add(greetingLabel);avatar.greetingLabel=greetingLabel;avatar.greetingUntil=0;
     avatar.target=new THREE.Vector3();
     return avatar;
   }
   disposeAvatar(a){
     this.scene.remove(a.root);
     a.root.traverse(m=>{if(m.isMesh&&m.geometry&&!m.geometry.userData.shared&&!Object.values(this.geometry).includes(m.geometry))m.geometry.dispose();});
-    a.materials.forEach(m=>m.dispose());a.label.element.remove();a.human?.dispose();
+    a.materials.forEach(m=>m.dispose());a.label.element.remove();a.greetingLabel.element.remove();a.human?.dispose();
   }
   updateProfile(profile){const old=this.local;this.local=this.makeAvatar(profile,true);this.scene.add(this.local.root);this.disposeAvatar(old);this.profile=profile;}
-  makeFence(){
-    const group=new THREE.Group(),gold=this.materials.gold,d=new THREE.Object3D();
-    const poles=new THREE.InstancedMesh(new THREE.CylinderGeometry(.025,.04,.65,10),gold,18);
-    const beads=new THREE.InstancedMesh(new THREE.SphereGeometry(.065,10,8),gold,18);
-    const points=[];
-    for(let n=0;n<18;n++){const a=n*Math.PI*2/18;points.push(new THREE.Vector3(Math.cos(a)*1.55,.52,Math.sin(a)*2.05-.35));d.position.copy(points[n]);d.position.y=.38;d.updateMatrix();poles.setMatrixAt(n,d.matrix);d.position.y=.74;d.updateMatrix();beads.setMatrixAt(n,d.matrix);}
-    group.add(poles,beads);
-    for(const y of [.3,.58]){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(p.x,y,p.z)),true);group.add(new THREE.Mesh(new THREE.TubeGeometry(curve,72,.017,6,true),gold));}
-    return group;
+  playGreeting(id=null){
+    if(this.praying)return;
+    const avatar=id?this.remote.get(id):this.local;if(!avatar||avatar.praying||this.blockedIds?.has(avatar.accountId))return;
+    avatar.greetingStart=performance.now();avatar.greetingUntil=avatar.greetingStart+GREETING_DURATION;
   }
+  cancelGreeting(){for(const avatar of [this.local,...this.remote.values()]){avatar.greetingUntil=0;avatar.greetingLabel.visible=false;}}
   syncPlayer(p){
     if(!this.remote.has(p.id)){const a=this.makeAvatar(p.profile);a.root.position.set(p.x,0,p.z);a.root.rotation.y=p.yaw;this.remote.set(p.id,a);this.scene.add(a.root);}
     let a=this.remote.get(p.id);
@@ -134,7 +130,9 @@ export class Sanctuary {
   removePlayer(id){const a=this.remote.get(id);if(a)this.disposeAvatar(a);this.remote.delete(id);}
   clearPlayers(){for(const id of [...this.remote.keys()])this.removePlayer(id);}
   applyPose(a,pose,praying,time,moving,dt){
-    a.human.update(pose,praying,time,moving,dt);a.rug.visible=a.fringe.visible=praying;
+    const greeting=!this.praying&&!praying&&!moving&&time*1000<a.greetingUntil?Math.max(0,(time*1000-a.greetingStart)/GREETING_DURATION):-1;
+    a.greetingLabel.visible=greeting>=0&&!this.blockedIds?.has(a.accountId);
+    a.human.update(praying?pose:'standing',praying,time,moving,dt,greeting);a.rug.visible=a.fringe.visible=praying;
     a.human.bones[5].getWorldPosition(a.labelAnchor);a.root.worldToLocal(a.labelAnchor);a.label.position.copy(a.labelAnchor);a.label.position.y+=.23;
   }
 
@@ -225,9 +223,9 @@ export class Sanctuary {
       const l=Math.hypot(x,z);x/=l;z/=l;
       const dx=x*Math.cos(this.cameraAngle)+z*Math.sin(this.cameraAngle),dz=-x*Math.sin(this.cameraAngle)+z*Math.cos(this.cameraAngle);
       const next=constrainedMove(this.position,{x:this.position.x+dx*4*dt*strength,z:this.position.z+dz*4*dt*strength},dt,this.mapId);
-      const allowed=[...this.remote.values()].every(a=>!a.protected||fenceAllows(this.position,next,{x:a.target.x,z:a.target.z,yaw:a.targetYaw,accountId:a.accountId},this.accountId,(this.friendIds||[]).includes(a.accountId)?[this.accountId]:[]));
+      const allowed=[...this.remote.values()].every(a=>!a.praying||prayerAreaAllows(this.position,next,{x:a.target.x,z:a.target.z,yaw:a.targetYaw}));
       if(allowed)this.position=next;
-      this.yaw=Math.atan2(-dx,-dz);
+      this.local.greetingUntil=0;this.yaw=Math.atan2(-dx,-dz);
     }
     if(this.praying)this.yaw=prayerYaw(this.mapId,this.position);
     this.local.root.position.set(this.position.x,0,this.position.z);
@@ -242,12 +240,10 @@ export class Sanctuary {
       const delta=Math.atan2(Math.sin(a.targetYaw-a.root.rotation.y),Math.cos(a.targetYaw-a.root.rotation.y));a.root.rotation.y+=delta*(1-Math.exp(-dt*12));
       this.applyPose(a,a.pose,a.praying,time,moving,dt);
       a.rug.visible=a.praying&&a.target.distanceToSquared(this.local.root.position)<225;a.fringe.visible=a.praying&&detailed;
-      a.protection.visible=!!a.protected&&a.praying;
-      // Preserve an occupied fence boundary while hiding this visitor's appearance.
-      if(this.blockedIds?.has(a.accountId)){a.hips.visible=a.simple.visible=a.label.visible=a.rug.visible=a.fringe.visible=false;}
+      // Blocking an appearance never removes an occupied invisible prayer boundary.
+      if(this.blockedIds?.has(a.accountId)){a.hips.visible=a.simple.visible=a.label.visible=a.rug.visible=a.fringe.visible=a.greetingLabel.visible=false;}
     }
     let shadowIndex=0;for(const a of [this.local,...this.remote.values()]){if(shadowIndex>=100)break;if(a!==this.local&&this.blockedIds?.has(a.accountId))continue;this.shadowTransform.position.set(a.root.position.x,.035,a.root.position.z);this.shadowTransform.rotation.set(0,a.root.rotation.y,0);this.shadowTransform.scale.set(.85,1,.55);this.shadowTransform.updateMatrix();this.avatarShadows.setMatrixAt(shadowIndex++,this.shadowTransform.matrix);}this.avatarShadows.count=shadowIndex;this.avatarShadows.instanceMatrix.needsUpdate=true;
-    this.fence.visible=(this.fencePreview||this.protected)&&this.praying;this.fence.position.set(this.position.x,0,this.position.z);this.fence.rotation.y=this.yaw;
     const focus=this.portraitMode&&!this.praying?{height:.94,forward:0}:avatarFocus(this.pose,this.praying);
     const target=this.cameraTarget.set(this.position.x-Math.sin(this.yaw)*focus.forward,focus.height,this.position.z-Math.cos(this.yaw)*focus.forward);
     const cam=this.desiredCamera.set(target.x+Math.sin(this.cameraAngle)*this.cameraDistance,this.cameraHeight,target.z+Math.cos(this.cameraAngle)*this.cameraDistance);

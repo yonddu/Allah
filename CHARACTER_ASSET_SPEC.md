@@ -10,3 +10,5 @@ For this project's 3–4GB Android /30fps /32-person room target, provide a dres
 - Future dressed-character source target12k triangles. The ten currently supplied Meshy models have6,197–6,457 triangles each. Their UV topology develops cracks or texture streaks under aggressive simplification; retain original geometry whenever appearance QA rejects the reduced version. Only two nearby variants currently pass at~2.5k. Remote textures use512px; local full models use1K. Frustum culling, shared geometry/materials, deduplicated downloads and12Hz distant-pose updates control cost. Do not claim a sub2k distant geometry budget or measured phone FPS for these assets.
 
 Background reference budgets: Kaaba main landmark about8–12k triangles; Taj Mahal main body/dome about30–50k; a reusable column/arch piece about500–1,500. Courtyard tiles and rugs need very little geometry. These are scene-specific budgets, not generic Three.js limits.
+
+Prayer-space asset rule: supplied characters are barefoot. Do not add embedded shoes to avatars that enter prayer mats. Future removable shoes must be separate meshes and removed before entry.

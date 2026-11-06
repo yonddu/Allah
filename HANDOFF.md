@@ -1,3 +1,17 @@
+## Respectful prayer interactions and courtyard refresh · 2026-11-06 (Asia/Seoul)
+
+Current user requests supersede the older paid-fence/Qibla/Kaaba plans below.
+
+- Removed visible fence geometry, preview/sales UI and friend exemptions. Every praying avatar now has a rotated invisible mat/front collision area, checked on server and client, even for blocked avatars. Prayer entry rejects occupied/overlapping areas and landmark boundaries. Visitors caught inside on reconnect may walk outward. Prayer exit/disconnect releases the area. No jumping control exists. All ten supplied meshes were visually checked to be barefoot; retain this constraint for future assets.
+- Prayer mode hides/clears chat locally and suppresses public chat, whispers and greeting events at the server in both directions. Saved public/whisper preferences are unchanged, and messages suppressed during prayer are not replayed. Personal Quran recitation remains personal; there is no voice-chat subsystem.
+- A prayer-only Quran.com link appears on the bottom actionbar and opens a new tab. Existing top link remains available outside prayer.
+- Greeting action is right hand to chest plus a slight head nod (not a prayer bow), with an Arabic السلام عليكم bubble. Server authenticates sender, enforces cooldown, honors blocks and skips praying recipients. Walking rotates palms inward and softly curls the supplied finger geometry using four added knuckle bones (22 bones total). Prayer poses keep open hands and remain restricted to prayer mode.
+- Removed the compass/Qibla card and all direction-sensor use from the application path. New location.js requests coordinates only on the prayer-time location button, using one-shot low-power GPS. Prayer times/city/manual coordinates remain. No coordinates are sent to our server.
+- Main mecca-compatible room IDs now open an original Noor Grand Sanctuary courtyard. No Kaaba structure remains. Large turquoise ribbed dome, layered tiled entrance arch, four minarets and side arcades are baked into material-merged GLBs. Low: 7 draws, 23,593 triangles, 962,048-byte GLB; high: 7 draws, 38,481 triangles, 1,513,232 bytes. Taj courtyard remains selectable. Generic sanctuary prayer faces the virtual front; this is not a physical Qibla compass.
+- Settings now contains the language chooser; changes apply during play and persist. All 21 locale catalogs include new labels/help/notices.
+- Preserve user-supplied character models, feminine hair covering, native-resolution labels, centered camera and 50-person production cap. No Allah/Prophet figurative depictions or prayer-as-game emotes.
+- Local 37 Node tests, syntax checks and Worker dry-run pass. Managed local browser preview could not launch with the current Wrangler/preview CLI; remote CI browser screenshots/integration results and deployment result are recorded after completion. Actual entry-level-phone FPS is still unmeasured.
+
 ## Deployment completed · 2026-11-06 (Asia/Seoul)
 
 - Deployed application commit:9339585a933d4e063db36ea9a636d643122b6bee.

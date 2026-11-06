@@ -131,3 +131,18 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 @media(max-width:600px){.room-pill{font-size:11px}.chat-dock .chat-mode{font-size:11px}.chat-toolbar button{font-size:12px}.chat-toolbar>button{font-size:19px}.chat-dock .chat-message{font-size:12px}.actionbar .action-secondary,html:not([lang=ko]) .action-secondary{font-size:11px}.actionbar .prayer-button,html:not([lang=ko]) .prayer-button{font-size:11px}}
 
 .model-thumb{display:block;height:120px;background-size:contain;background-position:center;background-repeat:no-repeat;border-radius:6px;background-color:#dfd9c9;margin-bottom:5px}
+
+/* Calm prayer mode and compact, reachable controls. */
+.topbar,html[dir=rtl] .topbar{padding-left:12px}
+.actionbar{gap:5px;flex-wrap:wrap;justify-content:center;white-space:normal}
+.actionbar .action-secondary{min-height:36px;text-align:center}
+.prayer-quran{color:var(--gold);text-decoration:none;border:1px solid #d6b57b66;border-radius:8px;font-weight:600}
+.prayer-mode #customizeButton,.prayer-mode .action-divider,.prayer-mode #chatDock,.prayer-mode #joystick,.prayer-mode #boardButton,.prayer-mode #friendsButton{display:none}
+.prayer-mode #poseButton{max-width:125px;white-space:normal;font-size:11px}
+.prayer-mode .actionbar{max-width:calc(100% - 16px);width:max-content}
+.prayer-mode .prayer-quran{flex-basis:100%;justify-content:center}
+.avatar-greeting{padding:7px 12px;border:1px solid #d6b57b99;border-radius:12px;background:#143e34f5;color:#f7dfac;font:500 20px/1.45 sans-serif;white-space:nowrap;pointer-events:none}
+#settingsLanguageButton{margin-top:8px}
+.map-art.mecca{background:linear-gradient(#84bddb,#e4e7db)}
+.map-art.mecca:before{inset:48px 15px 3px;background:#eee8d6;box-shadow:none;transform:none;border:0;border-radius:4px}
+.map-art.mecca:after{content:'';width:60px;height:40px;left:calc(50% - 30px);top:18px;background:#216d6c;border:2px solid #c5a76e;border-radius:55% 55% 10% 10%;box-shadow:-48px 18px 0 -8px #e9e2ce,48px 18px 0 -8px #e9e2ce}

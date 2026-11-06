@@ -49,15 +49,8 @@ try{
   await page.waitForFunction(()=>document.getElementById('statusDot').classList.contains('connected'),null,{timeout:20000});
   assert.equal(await page.locator('#app > #scene').count(),1);
   assert.equal(await page.locator('.welcome-copy').count(),0);
-  const card=await page.locator('#qiblaCard').boundingBox();
-  assert.ok(card.x<35&&card.y<125&&card.width<=190);
-  await page.locator('#qiblaExpandButton').click();
-  await page.locator('.manual-location summary').click();
-  await page.locator('#citySelect').selectOption('35.8714,128.6014');
-  assert.equal(await page.locator('#kaabaMarker').isVisible(),true);
-  const marker=await page.locator('#kaabaMarker').evaluate(el=>({left:parseFloat(el.style.left),top:parseFloat(el.style.top)}));
-  assert.ok(marker.left<50&&marker.top<50);
-  await page.locator('#qiblaExpandButton').click();
+  assert.equal(await page.locator('#qiblaCard').count(),0);
+  assert.equal(await page.locator('#fenceButton').count(),0);
   assert.equal(await page.locator('#quranLink').getAttribute('href'),'https://quran.com/');
   await page.locator('#prayerTimesButton').click();
   await page.locator('#prayerCity').selectOption('0');
@@ -77,9 +70,18 @@ try{
   assert.deepEqual(after.joystick,{x:0,y:0});assert.equal(after.tier,'low');
   await page.evaluate(()=>{const s=window.__noorScene;s.portraitMode=true;s.cameraAngle=s.yaw+Math.PI;s.cameraHeight=1.6;s.cameraDistance=3.2;});
   await delay(800);await page.screenshot({path:'artifacts/avatar-front.png'});
+  await page.locator('#greetingButton').click();
+  await page.waitForFunction(()=>window.__noorScene.local.greetingLabel.visible);
+  await page.screenshot({path:'artifacts/greeting.png'});
   await page.locator('#prayerButton').click();
+  assert.equal(await page.locator('#prayerQuranLink').isVisible(),true);
+  assert.equal(await page.locator('#prayerQuranLink').getAttribute('href'),'https://quran.com/');
+  assert.equal(await page.locator('#chatDock').isVisible(),false);
+  assert.equal(await page.locator('#greetingButton').isVisible(),false);
   for(let n=0;n<4;n++){await delay(500);await page.screenshot({path:'artifacts/prayer-pose-'+n+'.png'});await page.locator('#poseButton').click();}
   await page.locator('#prayerButton').click();
+  assert.equal(await page.locator('#prayerQuranLink').isVisible(),false);
+  assert.equal(await page.locator('#chatDock').isVisible(),true);
   await page.evaluate(()=>{const s=window.__noorScene;s.portraitMode=false;s.cameraAngle=.42;s.cameraHeight=1.6;s.cameraDistance=5.2;});
   await delay(700);
   const framing=await page.evaluate(()=>{const s=window.__noorScene,p=s.camera.position.clone().set(s.position.x,.94,s.position.z).project(s.camera),label=s.local.label.element;return {x:p.x,y:p.y,labelText:label.textContent,labelFont:parseFloat(getComputedStyle(label).fontSize),htmlLabel:label.tagName,pixelRatio:s.renderer.getPixelRatio()};});
@@ -160,10 +162,10 @@ try{
     maps.push({map,...await page.evaluate(()=>window.__noorScene.diagnostics())});
     await page.screenshot({path:'artifacts/mobile-'+map+'.png'});
   }
-  await page.locator('#languageButton').click();await page.locator('#languageSelect').selectOption('ar');
+  await page.locator('#settingsButton').click();await page.locator('#settingsLanguageButton').click();await page.locator('#languageSelect').selectOption('ar');
   await page.waitForFunction(()=>document.documentElement.dir==='rtl');
   await page.locator('#closeLanguage').click();
-  const rtlCard=await page.locator('#qiblaCard').boundingBox();assert.ok(rtlCard.x<35);
+  assert.equal(await page.locator('#qiblaCard').count(),0);
   await page.locator('#settingsButton').click();
   await page.locator('#qualitySelect').selectOption('high');
   await page.waitForFunction(()=>window.__noorScene.hallReady&&window.__noorScene.loadedAsset==='high',null,{timeout:30000});

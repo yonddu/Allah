@@ -2,7 +2,7 @@ import {t} from './i18n.js';
 export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
   const $=id=>document.getElementById(id);
   let session=null,category='suggestion',page=0,currentPost=null,requestVersion=0,startPromise=null;
-  let channel='chat',messages=[],collapsed=false,unread=0;const players=new Map();
+  let channel='chat',messages=[],collapsed=false,unread=0,prayerMode=false;const players=new Map();
   const open=id=>$(id).showModal();
   const date=value=>new Intl.DateTimeFormat(document.documentElement.lang||'en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(value));
   const element=(tag,className,text)=>Object.assign(document.createElement(tag),{className:className||'',textContent:text||''});
@@ -15,14 +15,13 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
   function sessionUpdated(data){
     session=data;session.blocked??=[];onSession(data);
     $('myFriendCode').textContent=data.code;$('friendBadge').textContent=data.incoming.length?'('+data.incoming.length+')':'';
-    $('premiumTag').textContent=data.premium?'이용 중':'미리보기';
     $('publicChatOff').checked=data.publicChat===false;$('whispersOff').checked=data.whispers===false;
     // Purge disabled or newly blocked content immediately, including old whispers.
     messages=messages.filter(visibleMessage);renderChat();renderPeople();
   }
   const isBlocked=id=>session?.blocked.some(p=>p.id===id);
   function visibleMessage(message){
-    if(!session||isBlocked(message.accountId)||isBlocked(message.to))return false;
+    if(prayerMode||!session||isBlocked(message.accountId)||isBlocked(message.to))return false;
     if(message.type==='whisper')return session.whispers!==false;
     return session.publicChat!==false&&(!session.premium||message.accountId===session.id||session.friends.some(p=>p.id===message.accountId));
   }
@@ -94,6 +93,8 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
     renderChat();
   }
   function renderChat(){
+    $('chatDock').hidden=prayerMode;$('chatButton').disabled=prayerMode;
+    if(prayerMode){$('chatMessages').replaceChildren();$('whisperUnread').textContent='';return;}
     const disabled=channel==='chat'?session?.publicChat===false:session?.whispers===false;
     $('publicChatTab').setAttribute('aria-selected',String(channel==='chat'));
     $('whisperChatTab').setAttribute('aria-selected',String(channel==='whisper'));
@@ -144,7 +145,7 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
     finally{$('publicChatOff').disabled=$('whispersOff').disabled=false;}
   });
   handler('chatForm','submit',e=>{
-    e.preventDefault();const text=$('chatInput').value.trim();if(!text)return;
+    e.preventDefault();if(prayerMode)return;const text=$('chatInput').value.trim();if(!text)return;
     if(channel==='chat'?session?.publicChat===false:session?.whispers===false)return;
     const to=channel==='whisper'?$('whisperTarget').value:null;
     if(channel==='whisper'&&!to){toast('귓속말 상대를 선택해주세요.');return;}
@@ -160,5 +161,6 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect}){
   function leave(id){players.delete(id);renderPeople();}
   function clear(){players.clear();messages=[];unread=0;renderChat();renderPeople();}
   window.addEventListener('languagechange',()=>{if($('boardDialog').open)loadPosts();if($('friendsDialog').open)renderFriends();renderChat();renderPeople();});
-  return {start,chat,player,leave,clear,refresh:refreshFriends,get session(){return session;},updateName:async()=>{if(session)sessionUpdated(await api('/api/session','POST',{name:getName()}));}};
+  function setPrayerMode(active){if(prayerMode===active)return;prayerMode=active;if(active){messages=[];unread=0;$('chatInput').blur();$('chatInput').value='';}renderChat();}
+  return {start,chat,setPrayerMode,player,leave,clear,refresh:refreshFriends,get session(){return session;},updateName:async()=>{if(session)sessionUpdated(await api('/api/session','POST',{name:getName()}));}};
 }

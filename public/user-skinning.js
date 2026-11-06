@@ -28,6 +28,11 @@ export function skinUserGeometry(geometry,c){
    const upper=left?6:9,lower=upper+1,hand=upper+2;
    const arm=a<c.elbow-.07?[[upper,1]]:a<c.elbow+.07?blend(upper,lower,(a-c.elbow+.07)/.14):a<c.wrist-.045?[[lower,1]]:blend(lower,hand,(a-c.wrist+.045)/.09);
    w=[...w.map(([id,v])=>[id,v*(1-armFactor)]),...arm.map(([id,v])=>[id,v*armFactor])].filter(([,v])=>v>0);
+   // Two shared knuckle rows softly curl the supplied fingers; keep thumb web/palm stable.
+   if(a>c.wrist+.045&&Math.abs(y-c.armY)<.085&&y<c.armY+.018){
+    const knuckle=left?18:20,t=clamp((a-c.wrist-.045)/.025,0,1),tip=clamp((a-c.wrist-.078)/.028,0,1);
+    w=[[hand,1-t],[knuckle,t*(1-tip)],[knuckle+1,t*tip]];
+   }
   }
   for(let k=0;k<w.length;k++){joints[i*4+k]=w[k][0];weights[i*4+k]=w[k][1];}
  }
