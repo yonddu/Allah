@@ -6,6 +6,7 @@ import {mergeGeometries} from './utils/BufferGeometryUtils.js';
 import {QUALITY_BUDGETS,chooseQuality,pixelRatioFor,nextResolutionScale} from './performance.js';
 import {COLORS,constrainedMove,MAPS,prayerAreaAllows,joystickVector,prayerYaw,GREETING_DURATION} from './core.js';
 import {makeHumanAvatar} from './avatars.js';
+import {VenueSky} from './sky.js';
 import {setAnisotropy,weaveTexture,metalTexture,rugTexture,robeTexture} from './textures.js';
 const GOLD=0xc4a36a;
 export class Sanctuary {
@@ -30,7 +31,7 @@ export class Sanctuary {
     setAnisotropy(this.renderer.capabilities.getMaxAnisotropy());
     // A small, pre-authored reflection map avoids rendering a temporary 3D room at startup.
     this.environmentReady=new THREE.TextureLoader().loadAsync('/assets/textures/low/environment.png').then(texture=>{
-      texture.mapping=THREE.EquirectangularReflectionMapping;texture.colorSpace=THREE.SRGBColorSpace;this.scene.environment=texture;this.scene.background=texture;this.environment=texture;
+      texture.mapping=THREE.EquirectangularReflectionMapping;texture.colorSpace=THREE.SRGBColorSpace;this.scene.environment=texture;this.environment=texture;
     }).catch(()=>{});
     this.materials={
       stone:new THREE.MeshStandardMaterial({color:this.theme.stone,roughness:.38,metalness:.06}),
@@ -40,7 +41,7 @@ export class Sanctuary {
       light:new THREE.MeshBasicMaterial({color:0xffe3a6}),
     };
     this.geometry={box:new THREE.BoxGeometry(1,1,1),sphere:new THREE.SphereGeometry(1,20,14),cylinder:new THREE.CylinderGeometry(1,1,1,24),torus:new THREE.TorusGeometry(1,.04,8,48)};
-    this.setupLights();this.ready=this.loadHall(mapId);
+    this.setupLights();this.sky=new VenueSky(this);this.ready=this.loadHall(mapId);
     this.prayerRugBatches=new Map();this.prayerRugMatrix=new THREE.Matrix4();
     this.local=this.makeAvatar(profile,true);this.scene.add(this.local.root);
     const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=64;const sc=shadowCanvas.getContext('2d'),shade=sc.createRadialGradient(32,32,2,32,32,32);shade.addColorStop(0,'rgba(0,0,0,.24)');shade.addColorStop(1,'rgba(0,0,0,0)');sc.fillStyle=shade;sc.fillRect(0,0,64,64);
@@ -62,7 +63,7 @@ export class Sanctuary {
   }
   box(mat,parent,pos,scale){return this.mesh(this.geometry.box,mat,parent,pos,scale);}
   setupLights(){
-    this.scene.add(new THREE.HemisphereLight(0xe1ece5,0x77705c,.85));
+    this.hemi=new THREE.HemisphereLight(0xe1ece5,0x77705c,.85);this.scene.add(this.hemi);
     this.scene.add(new THREE.AmbientLight(0xb0a68b,.08));
     this.sun=new THREE.DirectionalLight(0xffe6be,2.2);this.sun.position.set(-12,18,-10);this.sun.castShadow=true;
     this.sun.shadow.mapSize.set(1024,1024);Object.assign(this.sun.shadow.camera,{left:-18,right:18,top:18,bottom:-18,near:1,far:60});
@@ -299,7 +300,7 @@ export class Sanctuary {
     this.camera.position.lerp(cam,1-Math.exp(-dt*4));this.camera.lookAt(target);
 
     const fov=this.portraitMode?56:80;if(this.camera.fov!==fov){this.camera.fov=fov;this.camera.updateProjectionMatrix();}
-    this.renderer.render(this.scene,this.camera);this.labels.render(this.scene,this.camera);
+    this.sky.update(this.camera,time);this.renderer.render(this.scene,this.camera);this.labels.render(this.scene,this.camera);
   }
 }
 

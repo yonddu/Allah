@@ -26,7 +26,7 @@ export function prayerSchedule({lat,lon,zone,method='auto',madhab='Shafi',ishaOf
  const entries=Object.keys(PRAYER_NAMES).map(id=>({id,time:today[id]}));
  const next=entries.find(p=>Number.isFinite(p.time.getTime())&&p.time>now)||(tomorrow.isValid&&tomorrow.fajr>now?{id:'fajr',time:tomorrow.fajr,tomorrow:true}:null);
  const tomorrowEntries=Object.keys(PRAYER_NAMES).map(id=>({id,time:tomorrow[id]}));
- return {civil,entries,tomorrowEntries,next,method:actualMethod,zone,valid:today.isValid,highLatitude:Math.abs(lat)>55};
+ return {civil,entries,tomorrowEntries,next,sunrise:today.sunrise,method:actualMethod,zone,valid:today.isValid,highLatitude:Math.abs(lat)>55};
 }
 export function prayerCountdowns(schedule,now=new Date()){
  return schedule.entries.map(entry=>{
