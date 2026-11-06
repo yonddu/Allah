@@ -11,7 +11,7 @@ export function initPrayerTimes({location:locationSource,toast}){
  function renderHud(now){
   const f=timeFormat();clockFormat=new Intl.DateTimeFormat(document.documentElement.lang||'en',{timeZone:location.zone,hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
   $('prayerQuestLocation').textContent=location.label;$('prayerQuestLocation').title=location.zone;
-  $('prayerQuestEmpty').hidden=true;$('prayerQuestBody').hidden=false;
+  $('prayerQuestEmpty').hidden=true;$('prayerQuestMeta').hidden=false;
   $('prayerQuestRows').replaceChildren();hudRows.clear();
   for(const entry of prayerCountdowns(schedule,now)){
    const row=document.createElement('div');row.className='prayer-quest-row';row.dataset.prayer=entry.id;
@@ -21,6 +21,10 @@ export function initPrayerTimes({location:locationSource,toast}){
    const countdown=document.createElement('output');countdown.setAttribute('aria-label','Time remaining');countdown.textContent=formatPrayerCountdown(entry.remainingSeconds);
    row.append(name,time,countdown);$('prayerQuestRows').append(row);hudRows.set(entry.id,{row,countdown});
   }
+ }
+ function emptyHud(){
+  $('prayerQuestRows').replaceChildren();
+  for(const label of Object.values(PRAYER_NAMES)){const row=document.createElement('div');row.className='prayer-quest-row';const name=document.createElement('span');name.className='prayer-quest-name';name.textContent=t(label);const time=document.createElement('time'),countdown=document.createElement('output');time.textContent=countdown.textContent='—';row.append(name,time,countdown);$('prayerQuestRows').append(row);}
  }
  function cities(){const current=$('prayerCity').value,region=typeof Intl.DisplayNames==='function'?new Intl.DisplayNames([document.documentElement.lang||'en'],{type:'region'}):{of:v=>v};$('prayerCity').replaceChildren(new Option(t('도시 선택'),''));for(const [i,c]of PRAYER_CITIES.entries())$('prayerCity').append(new Option(c[0]+' · '+region.of(c[1]),String(i)));$('prayerCity').value=current;}
  for(const method of PRAYER_METHODS)$('prayerMethod').append(new Option(method,method));
@@ -59,6 +63,7 @@ export function initPrayerTimes({location:locationSource,toast}){
   }else{$('prayerCountdown').textContent='—';$('prayerHudText').textContent=t('기도 시간');}
  }
  function setLocation(detail,knownZone){
+  try{localStorage.removeItem('noor-prayer-city');}catch{}
   const same=location&&Math.abs(location.lat-detail.lat)<.001&&Math.abs(location.lon-detail.lon)<.001;
   if(!same)zoneOverride=null;
   location={...detail,zone:knownZone||zoneOverride||zoneAt(detail.lat,detail.lon)};chooseZone(location.zone);$('prayerZone').disabled=false;
@@ -69,9 +74,11 @@ export function initPrayerTimes({location:locationSource,toast}){
  $('prayerTimesButton').addEventListener('click',()=>{if(!$('prayerTimesDialog').open)$('prayerTimesDialog').showModal();tick();});
  $('prayerQuestSettings').addEventListener('click',()=>{if(!$('prayerTimesDialog').open)$('prayerTimesDialog').showModal();tick();});
  $('prayerLocationButton').addEventListener('click',()=>{locationSource.useLocation();$('prayerTimesStatus').textContent='현재 위치를 확인하고 있습니다…';});
- $('prayerCity').addEventListener('change',()=>{const c=PRAYER_CITIES[Number($('prayerCity').value)];if($('prayerCity').value===''||!c)return;locationSource.setLocation(c[2],c[3],c[0]);setLocation({lat:c[2],lon:c[3],label:c[0]},c[4]);});
+ function chooseCity(index){const c=PRAYER_CITIES[Number(index)];if(index===''||!c)return;$('prayerCity').value=String(index);locationSource.setLocation(c[2],c[3],c[0]);setLocation({lat:c[2],lon:c[3],label:c[0]},c[4]);try{localStorage.setItem('noor-prayer-city',String(index));}catch{}}
+ $('prayerCity').addEventListener('change',()=>chooseCity($('prayerCity').value));
  $('prayerCoordinatesButton').addEventListener('click',()=>{const a=$('prayerLatitude').value,b=$('prayerLongitude').value;if(!a.trim()||!b.trim()){toast('위도 -90~90, 경도 -180~180 범위의 좌표를 입력해주세요.');return;}locationSource.setLocation(Number(a),Number(b),'직접 입력한 위치');});
  $('prayerZone').addEventListener('change',()=>{if(!location||!validZone($('prayerZone').value))return;zoneOverride=location.zone=$('prayerZone').value;rebuild();});
  for(const id of ['prayerMethod','prayerMadhab','prayerIshaOffset'])$(id).addEventListener('change',()=>{settings={method:$('prayerMethod').value,madhab:$('prayerMadhab').value,ishaOffset:Math.max(-60,Math.min(120,Math.round(Number($('prayerIshaOffset').value)||0)))};$('prayerIshaOffset').value=settings.ishaOffset;try{localStorage.setItem('noor-prayer-settings',JSON.stringify(settings));}catch{}rebuild();});
- window.addEventListener('languagechange',()=>{cities();rebuild();});document.addEventListener('visibilitychange',tick);setInterval(tick,1000);cities();
+ window.addEventListener('languagechange',()=>{cities();if(location)rebuild();else emptyHud();});document.addEventListener('visibilitychange',tick);setInterval(tick,1000);cities();emptyHud();
+ try{const city=localStorage.getItem('noor-prayer-city');if(city!==null&&/^\d+$/.test(city))chooseCity(city);}catch{}
 }

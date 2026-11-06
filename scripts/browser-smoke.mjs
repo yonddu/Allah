@@ -51,6 +51,8 @@ try{
   await page.waitForFunction(()=>!document.getElementById('mapDialog').open);
   await page.waitForFunction(()=>document.getElementById('statusDot').classList.contains('connected'),null,{timeout:20000});
   assert.equal(await page.locator('#app > #scene').count(),1);
+  assert.equal(await page.locator('#prayerQuestRows .prayer-quest-row').count(),5);
+  assert.equal(await page.locator('#prayerQuest details').count(),0);
   await page.locator('#settingsButton').click();await page.locator('#settingsLanguageButton').click();
   await page.locator('#languageSelect').selectOption('ko');
   await page.waitForFunction(()=>document.documentElement.lang==='ko');
@@ -83,8 +85,9 @@ try{
   assert.notEqual(await page.locator('#prayerQuestRows output').first().textContent(),questCountdown);
   const questBox=await page.locator('#prayerQuest').boundingBox(),chatBox=await page.locator('#chatDock').boundingBox();
   assert.ok(questBox.x>=0&&questBox.x+questBox.width<=390);assert.ok(questBox.y+questBox.height<chatBox.y);
-  await page.locator('#prayerQuest summary').click();assert.equal(await page.locator('#prayerQuestRows').isVisible(),false);
-  await page.locator('#prayerQuest summary').click();
+  assert.equal(await page.locator('#prayerQuest').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
+  assert.ok(questBox.height<180);assert.ok((await page.locator('#chatDock').boundingBox()).height<=116);
+  assert.ok((await page.locator('.actionbar').boundingBox()).height<=40);
   await page.screenshot({path:'artifacts/prayer-quest-mobile.png'});
   await page.locator('#prayerQuestSettings').click();assert.equal(await page.locator('#prayerTimesDialog').isVisible(),true);
   await page.locator('#prayerTimesDialog [data-close]').click();
@@ -93,6 +96,13 @@ try{
   assert.ok(shortQuest.y+shortQuest.height<shortChat.y);
   assert.equal(await page.locator('#prayerQuest').evaluate(el=>el.scrollHeight<=el.clientHeight+1),true);
   await page.screenshot({path:'artifacts/prayer-quest-short-mobile.png'});
+  await page.setViewportSize({width:320,height:568});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  for(const selector of ['#prayerQuest','#chatDock','.actionbar','#joystick','.utilitybar']){
+    const box=await page.locator(selector).boundingBox();assert.ok(box.x>=0&&box.x+box.width<=320.5&&box.y>=0&&box.y+box.height<=568.5,selector+' fits the small phone');
+  }
+  assert.equal(await page.locator('.actionbar').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
+  await page.screenshot({path:'artifacts/compact-320-mobile.png'});
   await page.setViewportSize({width:390,height:844});
   const before=await page.evaluate(()=>window.__noorScene.diagnostics().position);
   const stick=await page.locator('#joystick').boundingBox(),cx=stick.x+stick.width/2,cy=stick.y+stick.height/2;
@@ -257,6 +267,7 @@ try{
     await page.waitForFunction(()=>window.__noorScene?.hallReady,null,{timeout:60000});await page.locator('#mapDialog').waitFor({state:'visible'});
     assert.equal(await page.evaluate(()=>!!window.__noorScene.selfId),false);assert.equal(await page.locator('#statusDot').getAttribute('class'),'status-dot');
     assert.equal(await page.evaluate(()=>localStorage.getItem('noor-profile')),retained.profile);assert.equal(await countRoom(),1);
+    assert.equal(await page.locator('#prayerQuestRows .prayer-quest-row').count(),5);assert.equal(await page.locator('#prayerQuestLocation').textContent(),'New York');
   };
   const enterAgain=async()=>{await page.locator('#enterRoomButton').click();await page.waitForFunction(()=>document.getElementById('statusDot').classList.contains('connected'));assert.equal(await page.evaluate(()=>window.__noorScene.accountId),retained.account);await waitUntil(async()=>await countRoom()===2);};
   try{

@@ -33,7 +33,7 @@ const sound=new Soundscape(toast);
 for(const [id,label]of [['characterChoices','캐릭터 유형'],['wardrobeChoices','기도 복장']])for(const item of USER_MODELS){
   const b=document.createElement('button');b.type='button';b.dataset.value=item.id;b.dataset.gender=item.gender;
   const preview=document.createElement('span');preview.className='model-thumb';preview.style.backgroundImage='url(/user-models/'+item.id+'.png)';preview.setAttribute('aria-hidden','true');
-  const text=document.createElement('span');text.textContent=t(label)+' '+(item.index+1);b.append(preview,text);b.setAttribute('aria-label',t(label)+' '+(item.index+1));$(id).append(b);
+  const text=document.createElement('span');text.textContent=String(item.index+1);b.append(preview,text);b.setAttribute('aria-label',t(label)+' '+(item.index+1));b.title=t(label)+' '+(item.index+1);$(id).append(b);
 }
 function updateChoices(){
   for(const b of document.querySelectorAll('[data-gender]'))b.hidden=b.dataset.gender!==profile.gender;
@@ -213,7 +213,7 @@ renderMaps();openDialog('mapDialog');loadServers();
 
 setInterval(()=>{if(!document.hidden&&community.session)community.refresh().catch(()=>{});},30000);
 
-window.addEventListener('languagechange',()=>{for(const [list,id,label]of [[USER_MODELS,'characterChoices','캐릭터 유형'],[USER_MODELS,'wardrobeChoices','기도 복장']])for(const item of list){const b=document.querySelector('#'+id+' [data-value="'+item.id+'"]');b.lastElementChild.textContent=t(label)+' '+(item.index+1);b.setAttribute('aria-label',t(label)+' '+(item.index+1));}mapLabels();if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;changedProfile();}});
+window.addEventListener('languagechange',()=>{for(const [list,id,label]of [[USER_MODELS,'characterChoices','캐릭터 유형'],[USER_MODELS,'wardrobeChoices','기도 복장']])for(const item of list){const b=document.querySelector('#'+id+' [data-value="'+item.id+'"]');b.lastElementChild.textContent=String(item.index+1);b.setAttribute('aria-label',t(label)+' '+(item.index+1));b.title=t(label)+' '+(item.index+1);}mapLabels();if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;changedProfile();}});
 
 window.addEventListener('noor:entry-character',e=>{scene.portraitMode=e.detail.active;scene.cameraAngle=e.detail.active?scene.yaw+Math.PI:MAPS[scene.mapId].cameraAngle;scene.cameraDistance=e.detail.active?2.65:PLAY_CAMERA.distance;scene.cameraHeight=e.detail.active?1.6:PLAY_CAMERA.height;});
 if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;scene.updateProfile(profile);}
