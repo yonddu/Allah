@@ -78,7 +78,7 @@ try{
   await delay(700);
   const framing=await page.evaluate(()=>{const s=window.__noorScene,p=s.camera.position.clone().set(s.position.x,.94,s.position.z).project(s.camera),label=s.local.label.element;return {x:p.x,y:p.y,labelText:label.textContent,labelFont:parseFloat(getComputedStyle(label).fontSize),htmlLabel:label.tagName,pixelRatio:s.renderer.getPixelRatio()};});
   assert.ok(Math.abs(framing.x)<.08&&Math.abs(framing.y)<.08,'Avatar body must be in the screen centre: '+JSON.stringify(framing));assert.equal(framing.htmlLabel,'DIV');assert.ok(framing.labelFont>=12);assert.equal(framing.labelText,'QA visitor');assert.ok(framing.pixelRatio>=1);
-  assert.ok(await page.locator('#chatDock .chat-mode').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=11));
+  assert.ok(await page.locator('#chatMode').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=11));
   assert.ok(await page.locator('#publicChatTab').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=12));
   await page.screenshot({path:'artifacts/centred-readable-mobile.png'});
   // The play HUD leaves the middle open; chat and movement occupy separate bottom corners.

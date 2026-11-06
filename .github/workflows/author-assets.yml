@@ -1,10 +1,6 @@
 name: Author Blender landmarks
 on:
-  push:
-    branches: [main]
-    paths:
-      - scripts/blender-landmarks.py
-      - .github/workflows/author-assets.yml
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:

@@ -1,3 +1,9 @@
+## User-supplied models only · 2026-11-06
+
+The user explicitly stopped replacement model generation: “노노 내모델써라”. Do not deploy the newly authored Blender landmarks or replace characters with generated models. The original Dropbox /salah folder was inspected: eight PNG references, no GLB/FBX/OBJ or subfolders. User-provided3D assets are pending. The Blender authoring workflow is now manual-only; its generated files are not integrated into the app. Local experimental landmark merge was reverted before deployment.
+
+Continue the authorized camera and readability repair: centred body framing, native-resolution HTML labels, larger mobile chat text, sharper bounded low-quality rendering, lighter draw count through HTML labels and instanced contact shadows. The dressed-character authoring target remains12,000 exported triangles total, GLB/T-pose,1K maps. Do not claim actual3–4GB phone FPS without device measurements.
+
 ## Graphics/readability repair in progress · 2026-11-06
 
 User rejected the low-detail appearance and requested a centred avatar, readable labels and Blender-authored background models; the user will provide character models. CHARACTER_ASSET_SPEC.md sets a12k-triangle dressed-character target.
