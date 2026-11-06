@@ -158,3 +158,12 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 .player-menu button{display:block;width:100%;min-height:42px;text-align:start;padding:9px 12px;font-size:13px;background:transparent}
 .player-menu button:hover,.player-menu button:focus-visible{background:#d6b57b22;color:var(--gold)}
 .player-menu button:disabled{opacity:.4;cursor:default}
+
+/* Four compact bottom actions leave the middle of the 3D view open. */
+.actionbar,html:not([lang=ko]) .actionbar{width:max-content;max-width:calc(100% - 16px)}
+.actionbar .action-secondary,html:not([lang=ko]) .actionbar .action-secondary{min-width:0;max-height:42px;min-height:38px;padding:5px 6px;white-space:normal;line-height:14px}
+.donate-button{color:var(--gold)}.donate-button>span:last-child{max-width:86px;overflow-wrap:anywhere}.donate-button>span:first-child{font-size:16px!important}
+.donation-dialog{text-align:center}.donation-link{display:block;text-decoration:none;margin:20px 0 16px}.donation-dialog img{display:block;max-width:100%;height:auto;width:296px;margin:0 auto;border-radius:8px;background:#fff}.donation-url{font-size:12px!important;color:var(--gold)!important;direction:ltr}
+#partyBadge{font-size:10px;color:var(--gold)}.utilitybar #partyButton{position:relative}
+.party-dialog{max-width:480px}.party-actions{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.party-member{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}.party-member>span{flex:1;min-width:80px;overflow-wrap:anywhere;font-size:13px}.party-member>small{font-size:10px;color:var(--muted);max-width:130px}.party-member>button{font-size:10px;padding:8px}.party-invite-form{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin-top:16px}.party-invite-form label{font-size:12px}.party-voice-panel{border-top:1px solid var(--line);margin-top:18px;padding-top:10px}.party-voice-panel p{font-size:12px;color:var(--muted)}.party-voice-panel .setting-label{margin:15px 0 8px}
+@media(max-width:600px){#partyBadge{position:absolute;right:1px;top:1px;font-size:9px}.actionbar .prayer-button{min-width:88px;padding:9px}.actionbar .action-secondary{font-size:10px!important}.actionbar{padding:4px!important;gap:2px!important}.actionbar .action-divider{margin:0}}

@@ -19,6 +19,7 @@ export class RoomConnection {
       }else if(msg.type==='motion'){
         for(const m of msg.players){const previous=this.known.get(m[0]);if(previous)this.receivePlayer({...previous,id:m[0],seq:m[1],x:m[2],z:m[3],yaw:m[4],pose:PRAYER_POSES[m[5]]||'standing',praying:!!(m[6]&1),protected:!!(m[6]&2)});}this.handlers.recount();
       }else if(msg.type==='leave'){this.known.delete(msg.id);this.handlers.leave(msg.id);this.handlers.recount();}
+      else if(typeof msg.type==='string'&&(msg.type.startsWith('party-')||msg.type==='voice-signal'))this.handlers.party?.(msg);
       else if(msg.type==='greeting')this.handlers.greeting?.(msg);
       else if(msg.type==='notice')this.handlers.notice(msg.message);
       else if(msg.type==='chat'||msg.type==='whisper')this.handlers.chat(msg);

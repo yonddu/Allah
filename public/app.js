@@ -6,6 +6,8 @@ import {initPrayerTimes} from './prayer-times.js';
 import {initLocation} from './location.js';
 import {RoomConnection} from './network.js';
 import {initPlayerMenu} from './player-menu.js';
+import {initParty} from './party.js';
+import {applyFeatureLabels} from './feature-labels.js';
 import {initCommunity} from './social.js';
 import {Soundscape} from './audio.js';
 import {USER_MODELS} from './user-model-catalog.js';
@@ -14,7 +16,7 @@ const $=id=>document.getElementById(id);
 let generatedName=false;
 let toastTimer,profile=loadProfile(),savedRoom;
 try{savedRoom=localStorage.getItem('noor-room');}catch{}
-let currentRoom=parseRoom(savedRoom)?.key||'mecca:1',scene,network,community,playerMenu;
+let currentRoom=parseRoom(savedRoom)?.key||'mecca:1',scene,network,community,playerMenu,partyUi;
 function toast(message){
   $('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),4500);
 }
@@ -81,7 +83,7 @@ $('prayerSoundToggle').addEventListener('change',e=>{sound.prayerEnabled=e.targe
 $('prayerAudioFile').addEventListener('change',e=>sound.setFile(e.target.files[0]));
 const poses=['standing','bowing','prostrating','sitting'],poseLabels=['서기','숙이기','엎드리기','앉기'];
 function prayerUI(){
-  community?.setPrayerMode(scene.praying);
+  community?.setPrayerMode(scene.praying);partyUi?.setPrayer(scene.praying);
   document.body.classList.toggle('prayer-mode',scene.praying);
   $('prayerQuranLink').hidden=!scene.praying;$('greetingButton').hidden=scene.praying;
   $('joystickThumb').setAttribute('aria-disabled',String(scene.praying));
@@ -116,25 +118,27 @@ network=new RoomConnection({
     if(state==='offline'){scene.protected=false;$('roomStatus').textContent='온라인 연결이 끊어져 재연결 중입니다. 개인 미리보기는 계속 이용할 수 있습니다.';}
   },
   welcome:self=>{
-    scene.selfId=self.id;scene.position={x:self.x,z:self.z};scene.yaw=self.yaw;scene.protected=self.protected;
+    partyUi?.setSelf(self.id);scene.selfId=self.id;scene.position={x:self.x,z:self.z};scene.yaw=self.yaw;scene.protected=self.protected;
     if(scene.praying)network.send({type:'prayer',active:true,pose:scene.pose});
   },
   self:p=>{if(p.correction&&Math.hypot(p.correction.x,p.correction.z)>.08)scene.position={x:scene.position.x+p.correction.x,z:scene.position.z+p.correction.z};scene.protected=p.protected;if(p.authoritative&&(p.praying||scene.praying!==p.praying))scene.position={x:p.x,z:p.z};if(p.authoritative&&scene.praying!==p.praying){scene.praying=p.praying;scene.pose=p.pose;if(scene.praying){scene.cancelGreeting();sound.startPrayer();}else sound.stopPrayer();prayerUI();}},
-  player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.clearPlayers();community?.clear();},
+  player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.clearPlayers();community?.clear();partyUi?.reset();},
   count:n=>$('onlineCount').textContent=n+'명 접속',
   recount:()=>$('onlineCount').textContent=(scene.remote.size+1)+'명 접속',
-  notice:toast,chat:message=>community?.chat(message),greeting:message=>{if(!scene.praying&&!scene.blockedIds?.has(message.accountId))scene.playGreeting(message.id===network.selfId?null:message.id,message.targetPlayerId||null);}
+  notice:toast,party:message=>partyUi?.message(message),chat:message=>community?.chat(message),greeting:message=>{if(!scene.praying&&!scene.blockedIds?.has(message.accountId))scene.playGreeting(message.id===network.selfId?null:message.id,message.targetPlayerId||null);}
 });
 community=initCommunity({
-  getName:()=>profile.name,toast,onSession:session=>{scene.accountId=session.id;scene.blockedIds=new Set(session.blocked.map(p=>p.id));scene.friendIds=session.friends.map(p=>p.id).filter(id=>!scene.blockedIds.has(id));},
+  getName:()=>profile.name,toast,onSession:session=>{scene.accountId=session.id;scene.blockedIds=new Set(session.blocked.map(p=>p.id));scene.friendIds=session.friends.map(p=>p.id).filter(id=>!scene.blockedIds.has(id));partyUi?.privacyChanged();},
   sendChat:(text,to)=>network.send(to?{type:'whisper',text,to}:{type:'chat',text}),reconnect:()=>network.connect(currentRoom)
 });
+partyUi=initParty({send:data=>network.send(data),getSelfId:()=>network.selfId,getRoom:()=>currentRoom,getPlayers:()=>[...network.known.values()],getBlocked:()=>scene.blockedIds||new Set(),toast});
+applyFeatureLabels();$('donateButton').addEventListener('click',()=>openDialog('donationDialog'));
 playerMenu=initPlayerMenu({
   canWhisper:()=>community?.session?.whispers!==false,
   onAction:(action,person)=>{
     const avatar=scene.remote.get(person.id);
     if(scene.praying||!avatar||avatar.praying||scene.blockedIds?.has(avatar.accountId))return;
-    if(action==='greeting')greetPlayer(avatar.accountId);else community.beginWhisper(avatar.accountId);
+    if(action==='greeting')greetPlayer(avatar.accountId);else if(action==='party')partyUi.invite(avatar.id);else community.beginWhisper(avatar.accountId);
   }
 });
 scene.onPlayerMenu=(id,x,y)=>{
@@ -190,7 +194,7 @@ await scene.local.human.ready;
 await scene.environmentReady;
 $('enterRoomButton').disabled=false;
 requestAnimationFrame(()=>{$('loading').hidden=true;});
-if(new URLSearchParams(location.search).has('qa'))window.__noorScene=scene;
+if(new URLSearchParams(location.search).has('qa')){window.__noorScene=scene;window.__noorParty=partyUi;}
 community.start().then(()=>{if(parseRoom(savedRoom))network.connect(currentRoom);}).catch(()=>toast('온라인 연결을 준비하지 못했습니다. 설정에서 다시 연결할 수 있습니다.'));
 if(!parseRoom(savedRoom)||$('mapDialog').open){renderMaps();openDialog('mapDialog');loadServers();}
 window.addEventListener('pagehide',()=>{network.generation++;clearTimeout(network.timer);network.socket?.close();});

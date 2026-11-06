@@ -1,4 +1,5 @@
 export {Community} from './community.js';
+import {RoomParties} from './party-room.js';
 import {sanitizeProfile,constrainedMove,publicPlayer,PRAYER_POSES,prayerAreaAllows,canBeginPrayer,parseRoom,MAPS,legalPosition,prayerYaw} from './public/core.js';
 // A server-only override permits isolated capacity tests; production defaults to50.
 export const roomCapacity=env=>[32,50,64,100].includes(Number(env?.NOOR_ROOM_CAPACITY))?Number(env.NOOR_ROOM_CAPACITY):50;
@@ -7,6 +8,21 @@ export default {
   async fetch(request,env) {
     const url=new URL(request.url);
     if(url.pathname==='/api/health')return Response.json({ok:true,mode:'anonymous-prototype',payments:false});
+    if(url.pathname==='/api/voice/ice'&&request.method==='GET'){
+      if(request.headers.get('Origin')&&request.headers.get('Origin')!==url.origin)return new Response('Origin not allowed',{status:403});
+      const room=parseRoom(url.searchParams.get('room'))?.key,player=url.searchParams.get('player');if(!room||!player)return new Response('Invalid room',{status:400});
+      const identity=await env.COMMUNITY.get(env.COMMUNITY.idFromName('community')).fetch(new Request('https://community.internal/session',{headers:{Cookie:request.headers.get('Cookie')||''}}));
+      if(!identity.ok)return new Response('Session required',{status:401});const user=await identity.json();
+      const allowed=await env.ROOMS.get(env.ROOMS.idFromName(room)).fetch(new Request('https://room.internal/voice-authorize?player='+encodeURIComponent(player),{headers:{'X-Noor-Account':user.id}}));
+      if(!allowed.ok)return new Response('Voice membership required',{status:403});
+      if(env.NOOR_VOICE_TEST_MODE==='1')return Response.json({iceServers:[],relayOnly:false,expiresAt:Date.now()+3600000},{headers:{'Cache-Control':'no-store'}});
+      if(!env.NOOR_TURN_KEY_ID||!env.NOOR_TURN_API_TOKEN)return new Response('Voice relay unavailable',{status:503});
+      try{
+        const response=await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/'+env.NOOR_TURN_KEY_ID+'/credentials/generate-ice-servers',{method:'POST',headers:{Authorization:'Bearer '+env.NOOR_TURN_API_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({ttl:3600}),signal:AbortSignal.timeout(10000)});
+        if(!response.ok)throw new Error('Relay unavailable');const data=await response.json();
+        return Response.json({iceServers:data.iceServers,relayOnly:true,expiresAt:Date.now()+3500000},{headers:{'Cache-Control':'no-store'}});
+      }catch{return new Response('Voice relay unavailable',{status:503});}
+    }
     if(url.pathname==='/api/rooms'&&request.method==='GET'){
       const requested=url.searchParams.get('map')||'mecca',map=parseRoom(requested+':1')?.map;
       if(!map)return new Response('Unknown map',{status:400});
@@ -36,7 +52,7 @@ export default {
 
 export class PrayerRoom {
   constructor(ctx,env){
-    this.ctx=ctx;this.env=env;this.pendingMoves=new Map();this.flushTimer=null;this.batchClients=new Set();this.protectedSockets=new Set();
+    this.ctx=ctx;this.env=env;this.parties=new RoomParties(this);this.pendingMoves=new Map();this.flushTimer=null;this.batchClients=new Set();this.protectedSockets=new Set();
     for(const ws of ctx.getWebSockets()){const state=ws.deserializeAttachment();if(state?.motionProtocol===2)this.batchClients.add(ws);if(state?.praying)this.protectedSockets.add(ws);}
   }
   async access(ids){const r=await this.env.COMMUNITY.get(this.env.COMMUNITY.idFromName('community')).fetch('https://community.internal/access?ids='+ids.join(','));if(!r.ok)throw new Error('Access lookup failed');return r.json();}
@@ -60,6 +76,7 @@ export class PrayerRoom {
     }
   }
   async fetch(request){
+    if(new URL(request.url).pathname==='/voice-authorize')return new Response(null,{status:this.parties.authorize(request.headers.get('X-Noor-Account'),new URL(request.url).searchParams.get('player'))?204:403});
     if(new URL(request.url).pathname==='/status')return Response.json({count:this.players().length});
     if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return new Response('WebSocket required',{status:426});
     const accountId=request.headers.get('X-Noor-Account');if(!accountId)return new Response('Session required',{status:401});
@@ -81,7 +98,7 @@ export class PrayerRoom {
   }
   async webSocketMessage(ws,message){return this.ctx.blockConcurrencyWhile(()=>this.handleMessage(ws,message));}
   async handleMessage(ws,message){
-    if(typeof message!=='string'||message.length>2048){ws.close(1009,'Message too large');return;}
+    if(typeof message!=='string'||message.length>16384){ws.close(1009,'Message too large');return;}
     const state=ws.deserializeAttachment();if(!state)return;
     const now=Date.now();
     state.tokens=Math.min(30,state.tokens+Math.max(0,now-state.rateAt)*0.025);
@@ -91,6 +108,8 @@ export class PrayerRoom {
     let data;
     try{data=JSON.parse(message);}catch{ws.serializeAttachment(state);return;}
     if(!data||typeof data!=='object'){ws.serializeAttachment(state);return;}
+    if(typeof data.type==='string'&&data.type.startsWith('party-')||data.type==='voice-signal'){await this.parties.handle(ws,state,data);return;}
+    if(message.length>2048){ws.close(1009,'Message too large');return;}
     if(data.type==='greeting'){
       if(state.praying||now-(state.greetingAt||0)<5000){ws.serializeAttachment(state);return;}
       const peers=this.players(),access=await this.access(peers.map(p=>p.state.accountId));
@@ -153,6 +172,7 @@ export class PrayerRoom {
       state.protected=state.praying;
       if(state.praying){
         state.yaw=prayerYaw(state.map||'mecca',state);
+        this.parties.silence(ws,state);
       }
       if(state.protected)this.protectedSockets.add(ws);else this.protectedSockets.delete(ws);
       state.lastMove=now;
@@ -165,7 +185,7 @@ export class PrayerRoom {
   }
   webSocketClose(ws,code){
     this.batchClients.delete(ws);this.protectedSockets.delete(ws);
-    const state=ws.deserializeAttachment();if(state)this.pendingMoves.delete(state.id);
+    const state=ws.deserializeAttachment();this.parties.closed(ws,state);if(state)this.pendingMoves.delete(state.id);
     try{ws.close(code===1006?1000:code,'Disconnected');}catch{}
     if(state)this.broadcast({type:'leave',id:state.id},ws);
   }

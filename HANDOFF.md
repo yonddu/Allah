@@ -1,3 +1,13 @@
+## In progress: donation, private party voice, noorrealm.com · 2026-11-06
+
+- Added central bottom Support button and modal with https://ko-fi.com/solh130919 and a lossless SVG QR. The 29x29 supplied QR pattern matches version 3/M/mask 2; independent jsQR decoding confirms the exact destination. The SVG adds a four-module quiet zone. No payment request or transfer is performed by the app.
+- Same-room parties of up to six: create, consent-based invite/accept/decline, leave, leader-only removal, automatic leader change, disconnect cleanup and hibernation-safe membership in socket attachments. A third avatar-menu action invites to party. Party state and WebRTC descriptions/candidates go only to eligible party members.
+- Voice is explicit opt-in, mono Opus capped at 32kbps per sender. Microphone acquisition, mute, disconnect, volume and autoplay recovery are exposed. Prayer mode immediately stops capture and closes send/receive connections; ending prayer does not resume the microphone. Blocks and membership/epoch changes remove peers. ICE/SDP is server-authorized and never room-broadcast. Production uses relay-only short-lived Cloudflare TURN credentials; real browser tests use a server-only local test mode.
+- noorrealm.com is an active Cloudflare zone (ecfdbba3a956535ef60bc6979ecc181d) with active Universal SSL. ICN management endpoints for Workers domains/secrets returned 503. The source declares the custom domain, and the build deploy stage configures runtime TURN secrets using build-secret values, then deploys and verifies HTTPS health from the remote build environment. No secret is committed or printed. An attempted cleanup of an unused TURN key was automatically rejected; no deletion was performed. Additive provisioning was used instead, leaving earlier unused keys intact.
+- Voice deployment uses Cloudflare build trigger c28274b5-3494-46ac-860e-3cd248ddb8e2; deploy command: node scripts/configure-voice.mjs && npx wrangler deploy && node scripts/verify-domain.mjs . Secrets are configured on that build trigger and injected into the Worker by configure-voice.mjs. Keep these server-side.
+- New UI labels cover all 21 languages through feature-labels.js. The existing language catalogs remain unchanged.
+- Validation and final deployment results are recorded after CI. The execution environment remains unavailable; code is edited through GitHub and tested on its existing runner.
+
 ## Completed prayer/contact and avatar-menu repair · 2026-11-06 (Asia/Seoul)
 
 - Deployed application commit: f74dd40e78c6e185ca94821871f3f82b584ef982.
