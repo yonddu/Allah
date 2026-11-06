@@ -41,6 +41,7 @@ export class Sanctuary {
     };
     this.geometry={box:new THREE.BoxGeometry(1,1,1),sphere:new THREE.SphereGeometry(1,20,14),cylinder:new THREE.CylinderGeometry(1,1,1,24),torus:new THREE.TorusGeometry(1,.04,8,48)};
     this.setupLights();this.ready=this.loadHall(mapId);
+    this.prayerRugBatches=new Map();this.prayerRugMatrix=new THREE.Matrix4();
     this.local=this.makeAvatar(profile,true);this.scene.add(this.local.root);
     const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=64;const sc=shadowCanvas.getContext('2d'),shade=sc.createRadialGradient(32,32,2,32,32,32);shade.addColorStop(0,'rgba(0,0,0,.24)');shade.addColorStop(1,'rgba(0,0,0,0)');sc.fillStyle=shade;sc.fillRect(0,0,64,64);
     const shadowTexture=new THREE.CanvasTexture(shadowCanvas),shadowMaterial=new THREE.MeshBasicMaterial({map:shadowTexture,transparent:true,depthWrite:false});
@@ -139,7 +140,7 @@ export class Sanctuary {
     if(JSON.stringify(a.profile)!==JSON.stringify(p.profile)){
       const old=a;a=this.makeAvatar(p.profile);a.root.position.copy(old.root.position);a.root.rotation.y=old.root.rotation.y;this.disposeAvatar(old);this.remote.set(p.id,a);this.scene.add(a.root);
     }
-    a.id=p.id;a.target.set(p.x,0,p.z);a.targetYaw=p.yaw;a.praying=p.praying;a.pose=p.pose;a.protected=p.protected;a.accountId=p.accountId;
+    a.id=p.id;a.target.set(p.x,0,p.z);a.targetYaw=p.yaw;a.praying=p.praying;a.pose=p.pose;a.protected=p.protected;a.accountId=p.accountId;a.congregationId=p.congregationId||null;
   }
   pickPlayer(clientX,clientY){
     const rect=this.renderer.domElement.getBoundingClientRect();if(!rect.width||!rect.height)return null;
@@ -149,7 +150,14 @@ export class Sanctuary {
     const hit=this.raycaster.intersectObjects(meshes,false)[0];return hit?owners.get(hit.object):null;
   }
   removePlayer(id){this.onPlayerMenuClose?.();const a=this.remote.get(id);if(a)this.disposeAvatar(a);this.remote.delete(id);}
-  clearPlayers(){for(const id of [...this.remote.keys()])this.removePlayer(id);}
+  clearPlayers(){for(const id of [...this.remote.keys()])this.removePlayer(id);for(const batch of this.prayerRugBatches.values()){batch.count=0;batch.visible=false;}}
+  batchPrayerRug(avatar){
+    // Shared textures keep the low-tier batch cache bounded to the fifteen rug styles.
+    const key=avatar.rug.material.map.uuid;let batch=this.prayerRugBatches.get(key);
+    if(!batch){batch=new THREE.InstancedMesh(avatar.rug.geometry.clone(),avatar.rug.material.clone(),100);batch.count=0;batch.receiveShadow=true;batch.frustumCulled=false;batch.instanceMatrix.setUsage(THREE.DynamicDrawUsage);this.scene.add(batch);this.prayerRugBatches.set(key,batch);}
+    if(batch.count>=100)return;
+    avatar.root.updateWorldMatrix(true,false);avatar.rug.updateMatrix();this.prayerRugMatrix.multiplyMatrices(avatar.root.matrixWorld,avatar.rug.matrix);batch.setMatrixAt(batch.count++,this.prayerRugMatrix);avatar.rug.visible=false;
+  }
   applyPose(a,pose,praying,time,moving,dt){
     const greeting=!this.praying&&!praying&&!moving&&time*1000<a.greetingUntil?Math.max(0,(time*1000-a.greetingStart)/GREETING_DURATION):-1;
     a.greetingLabel.visible=greeting>=0&&!this.blockedIds?.has(a.accountId);
@@ -231,12 +239,13 @@ export class Sanctuary {
     this.camera.position.set(target.x+Math.sin(this.cameraAngle)*this.cameraDistance,this.cameraHeight,target.z+Math.cos(this.cameraAngle)*this.cameraDistance);this.camera.lookAt(target);this.camera.updateMatrixWorld();
   }
   diagnostics(){
-    return {tier:this.qualityTier,asset:this.hall?.name||null,ready:this.hallReady,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,textures:this.renderer.info.memory.textures,pixelRatio:this.renderer.getPixelRatio(),position:{...this.position},joystick:{...this.joystickAxis},remoteVisitors:this.remote.size,userModel:this.local.human.assetId,userModelReady:this.local.human.loaded,userModelsReady:[this.local,...this.remote.values()].filter(a=>a.human.loaded).length};
+    return {tier:this.qualityTier,asset:this.hall?.name||null,ready:this.hallReady,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,textures:this.renderer.info.memory.textures,pixelRatio:this.renderer.getPixelRatio(),position:{...this.position},joystick:{...this.joystickAxis},remoteVisitors:this.remote.size,userModel:this.local.human.assetId,userModelReady:this.local.human.loaded,userModelsReady:[this.local,...this.remote.values()].filter(a=>a.human.loaded).length,batchedPrayerRugs:[...this.prayerRugBatches.values()].reduce((n,b)=>n+b.count,0)};
   }
   frame(){
     const now=performance.now(),budget=QUALITY_BUDGETS[this.qualityTier];
     if(now-this.renderedAt<1000/budget.fps-.8)return;
     const dt=Math.min((now-this.last)/1000,.05),time=now/1000;this.last=now;this.renderedAt=now;
+    this.updateCongregation?.(dt,time);
     if(this.qualityMode==='auto'&&this.hallReady){
       this.performanceFrames++;
       if(now-this.performanceWindow>4000){
@@ -247,11 +256,11 @@ export class Sanctuary {
       }
     }
     let x=0,z=0;
-    if(!this.praying&&!document.querySelector('dialog[open]')){
+    if(!this.praying&&!this.congregationJoined&&!document.querySelector('dialog[open]')){
       x=(this.keys.has('d')||this.keys.has('arrowright')||this.direction.has('right')?1:0)-(this.keys.has('a')||this.keys.has('arrowleft')||this.direction.has('left')?1:0);
       z=(this.keys.has('s')||this.keys.has('arrowdown')||this.direction.has('down')?1:0)-(this.keys.has('w')||this.keys.has('arrowup')||this.direction.has('up')?1:0);
     }
-    if(!this.praying&&!document.querySelector('dialog[open]')&&!x&&!z){x=this.joystickAxis.x;z=this.joystickAxis.y;}
+    if(!this.praying&&!this.congregationJoined&&!document.querySelector('dialog[open]')&&!x&&!z){x=this.joystickAxis.x;z=this.joystickAxis.y;}
     const strength=Math.min(1,Math.hypot(x,z));
     this.moving=strength>.001;
     if(this.moving){
@@ -259,7 +268,7 @@ export class Sanctuary {
       const l=Math.hypot(x,z);x/=l;z/=l;
       const dx=x*Math.cos(this.cameraAngle)+z*Math.sin(this.cameraAngle),dz=-x*Math.sin(this.cameraAngle)+z*Math.cos(this.cameraAngle);
       const next=constrainedMove(this.position,{x:this.position.x+dx*4*dt*strength,z:this.position.z+dz*4*dt*strength},dt,this.mapId);
-      const allowed=[...this.remote.values()].every(a=>!a.praying||prayerAreaAllows(this.position,next,{x:a.target.x,z:a.target.z,yaw:a.targetYaw}));
+      const allowed=[...this.remote.values()].every(a=>!a.praying||prayerAreaAllows(this.position,next,{x:a.target.x,z:a.target.z,yaw:a.targetYaw}))&&(!this.congregationAllows||this.congregationAllows(this.position,next));
       if(allowed)this.position=next;
       this.local.greetingUntil=0;this.yaw=Math.atan2(-dx,-dz);
     }
@@ -268,17 +277,21 @@ export class Sanctuary {
     this.local.root.rotation.y=this.yaw;
     this.applyPose(this.local,this.pose,this.praying,time,this.moving,dt);
     const nearby=[...this.remote.values()].filter(a=>!this.blockedIds?.has(a.accountId)).sort((a,b)=>a.target.distanceToSquared(this.local.root.position)-b.target.distanceToSquared(this.local.root.position)).slice(0,this.visitorDetailLimit||budget.detailedVisitors);
+    for(const batch of this.prayerRugBatches.values())batch.count=0;
     for(const a of this.remote.values()){
       const detailed=nearby.includes(a)&&a.target.distanceToSquared(this.local.root.position)<144;
       a.human.setDetail(detailed);a.hips.visible=true;a.simple.visible=false;a.label.visible=(detailed||this.friendIds?.includes(a.accountId))&&a.target.distanceToSquared(this.local.root.position)<144;
       const moving=a.root.position.distanceTo(a.target)>.03;
       a.root.position.lerp(a.target,1-Math.exp(-dt*12));
       const delta=Math.atan2(Math.sin(a.targetYaw-a.root.rotation.y),Math.cos(a.targetYaw-a.root.rotation.y));a.root.rotation.y+=delta*(1-Math.exp(-dt*12));
-      this.applyPose(a,a.pose,a.praying,time,moving,dt);
-      a.rug.visible=a.praying&&a.target.distanceToSquared(this.local.root.position)<225;a.fringe.visible=a.praying&&detailed;
+      const groupPhase=this.congregationPose?.(a),praying=groupPhase?groupPhase.rakah>0&&groupPhase.key!=='complete':a.praying;
+      this.applyPose(a,groupPhase?.pose||a.pose,praying,time,moving,dt);
+      a.rug.visible=praying&&a.target.distanceToSquared(this.local.root.position)<225;a.fringe.visible=praying&&detailed;
       // Blocking an appearance never removes an occupied invisible prayer boundary.
       if(this.blockedIds?.has(a.accountId)){a.hips.visible=a.simple.visible=a.label.visible=a.rug.visible=a.fringe.visible=a.greetingLabel.visible=false;}
+      if(this.qualityTier==='low'&&a.rug.visible&&a.root.visible)this.batchPrayerRug(a);
     }
+    for(const batch of this.prayerRugBatches.values()){batch.visible=batch.count>0;if(batch.count)batch.instanceMatrix.needsUpdate=true;}
     let shadowIndex=0;for(const a of [this.local,...this.remote.values()]){if(shadowIndex>=100)break;if(a!==this.local&&this.blockedIds?.has(a.accountId))continue;this.shadowTransform.position.set(a.root.position.x,.035,a.root.position.z);this.shadowTransform.rotation.set(0,a.root.rotation.y,0);this.shadowTransform.scale.set(.85,1,.55);this.shadowTransform.updateMatrix();this.avatarShadows.setMatrixAt(shadowIndex++,this.shadowTransform.matrix);}this.avatarShadows.count=shadowIndex;this.avatarShadows.instanceMatrix.needsUpdate=true;
     const focus=this.portraitMode&&!this.praying?{height:.94,forward:0}:avatarFocus(this.pose,this.praying);
     const target=this.cameraTarget.set(this.position.x-Math.sin(this.yaw)*focus.forward,focus.height,this.position.z-Math.cos(this.yaw)*focus.forward);

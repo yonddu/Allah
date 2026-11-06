@@ -15,6 +15,7 @@ export class RoomConnection {
         this.retry=0;this.selfId=msg.id;this.handlers.status('connected');this.handlers.welcome(msg.self);this.known.set(msg.self.id,msg.self);
         for(const player of msg.players){this.known.set(player.id,player);this.handlers.player(player);}this.send({type:'profile',motionProtocol:2,profile:this.handlers.profile()});
         this.handlers.count(msg.players.length+1);
+        if(msg.congregation)this.handlers.congregation?.(msg.congregation);
       }else if(msg.type==='state'||msg.type==='join'){
         this.receivePlayer(msg.player,true);this.handlers.recount();
       }else if(msg.type==='motion'){
@@ -24,6 +25,7 @@ export class RoomConnection {
       else if(msg.type==='greeting')this.handlers.greeting?.(msg);
       else if(msg.type==='notice')this.handlers.notice(msg.message);
       else if(msg.type==='chat'||msg.type==='whisper')this.handlers.chat(msg);
+      else if(msg.type==='congregation-state'||msg.type==='congregation-error')this.handlers.congregation?.(msg);
     };
     ws.onclose=()=>{
       if(generation!==this.generation)return;

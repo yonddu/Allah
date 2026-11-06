@@ -12,12 +12,14 @@ import {recommendedRoom,visibleRooms,consolidationTarget} from './room-allocatio
 import {initCommunity} from './social.js';
 import {Soundscape} from './audio.js';
 import {USER_MODELS} from './user-model-catalog.js';
+import {CongregationUI} from './congregation.js';
+import {congregationText as groupText} from './congregation-i18n.js';
 
 const $=id=>document.getElementById(id);
 let generatedName=false;
 let toastTimer,profile=loadProfile(),savedRoom;
 try{savedRoom=localStorage.getItem('noor-room');}catch{}
-let currentRoom=parseRoom(savedRoom)?.key||'mecca:1',scene,network,community,playerMenu,partyUi;
+let currentRoom=parseRoom(savedRoom)?.key||'mecca:1',scene,network,community,playerMenu,partyUi,congregationUi;
 let pageGeneration=0,pageLeaving=false;
 let presence=null,presenceRequest=null,roomCount=0,entryBusy=false,preferBusyMap=!parseRoom(savedRoom);
 const number=n=>new Intl.NumberFormat(document.documentElement.lang||'en').format(n);
@@ -38,7 +40,7 @@ async function refreshPresence({gather=false}={}){
  try{
   presenceRequest??=fetch('/api/presence').then(r=>{if(!r.ok)throw new Error('Presence unavailable');return r.json();}).finally(()=>{presenceRequest=null;});
   const snapshot=await presenceRequest;if(pageLeaving||generation!==pageGeneration)return null;presence=snapshot;renderPresence();
-  if(gather&&network?.selfId&&!entryBusy&&!scene.praying&&!scene.moving&&!partyUi?.diagnostics().partyId&&!$('customPanel').classList.contains('open')&&!document.querySelector('dialog[open]')&&!document.activeElement?.matches('input,textarea,[contenteditable=true]')){
+  if(gather&&network?.selfId&&!entryBusy&&!scene.praying&&!scene.congregationJoined&&!scene.moving&&!partyUi?.diagnostics().partyId&&!$('customPanel').classList.contains('open')&&!document.querySelector('dialog[open]')&&!document.activeElement?.matches('input,textarea,[contenteditable=true]')){
    const room=parseRoom(currentRoom),target=consolidationTarget(presence.maps[room.map]?.rooms||[],room.server);
    if(target){
     removePresenceSelf();roomCount=0;
@@ -109,7 +111,7 @@ $('settingsLanguageButton').addEventListener('click',()=>{$('settingsDialog').cl
 $('qualitySelect').addEventListener('change',e=>{scene.quality(e.target.value);try{localStorage.setItem('noor-quality',e.target.value);}catch{}});
 try{const value=localStorage.getItem('noor-quality');if(['auto','high','low'].includes(value)){$('qualitySelect').value=value;scene.quality(value);}}catch{}
 $('soundButton').addEventListener('click',()=>openDialog('soundDialog'));
-$('enableSoundButton').addEventListener('click',async()=>{try{await sound.enable();$('soundButton').querySelector('.utility-label').textContent='소리 설정';toast('소리를 켰습니다. 크기는 아래에서 조절할 수 있습니다.');}catch{toast('오디오를 시작하지 못했습니다. 다시 눌러주세요.');}});
+$('enableSoundButton').addEventListener('click',async()=>{void congregationUi?.enableSound();try{await sound.enable();$('soundButton').querySelector('.utility-label').textContent='소리 설정';toast('소리를 켰습니다. 크기는 아래에서 조절할 수 있습니다.');}catch{toast('오디오를 시작하지 못했습니다. 다시 눌러주세요.');}});
 $('bgmToggle').addEventListener('change',e=>{sound.bgmEnabled=e.target.checked;sound.applyMix();});
 $('bgmVolume').addEventListener('input',e=>sound.setVolume(Number(e.target.value)/100));
 $('prayerVolume').addEventListener('input',e=>sound.setPrayerVolume(Number(e.target.value)/100));
@@ -120,21 +122,21 @@ function prayerUI(){
   community?.setPrayerMode(scene.praying);partyUi?.setPrayer(scene.praying);if(scene.praying)scene.clearSpeech();
   document.body.classList.toggle('prayer-mode',scene.praying);
   $('prayerQuranLink').hidden=!scene.praying;$('greetingButton').hidden=scene.praying;
-  $('joystickThumb').setAttribute('aria-disabled',String(scene.praying));
-  $('prayerButtonText').textContent=t(scene.praying?'기도 마치기':'기도 시작');
-  $('poseButton').hidden=!scene.praying;$('poseButton').textContent=t('다음 자세 · {pose}',{pose:t(poseLabels[poses.indexOf(scene.pose)])});
-  $('prayerLabel').textContent=scene.praying?t('기도 중 · {pose}',{pose:t(poseLabels[poses.indexOf(scene.pose)])}):t('가상 공간 기도 방향 ↑');
+  $('joystickThumb').setAttribute('aria-disabled',String(scene.praying||scene.congregationJoined));
+  $('prayerButtonText').textContent=scene.congregationJoined?groupText('leave'):t(scene.praying?'기도 마치기':'기도 시작');
+  $('poseButton').hidden=!scene.praying||scene.congregationJoined;$('poseButton').textContent=t('다음 자세 · {pose}',{pose:t(poseLabels[poses.indexOf(scene.pose)]||'서기')});
+  $('prayerLabel').textContent=scene.congregationJoined?groupText('title'):scene.praying?t('기도 중 · {pose}',{pose:t(poseLabels[poses.indexOf(scene.pose)]||'서기')}):t('가상 공간 기도 방향 ↑');
 }
 function setPrayer(active){
   if(active&&!canBeginPrayer({id:network?.selfId,...scene.position},[...scene.remote].map(([id,a])=>({id,x:a.target.x,z:a.target.z,yaw:a.targetYaw,praying:a.praying})),scene.mapId)){toast('다른 이용자와 건물에서 조금 떨어진 곳에서 기도를 시작해주세요.');return;}
-  if(active){scene.cancelGreeting();$('toast').classList.remove('visible');}
+  if(active){congregationUi?.adhan.stop();scene.cancelGreeting();$('toast').classList.remove('visible');}
   scene.praying=active;scene.pose='standing';scene.protected=active;scene.keys.clear();scene.direction.clear();scene.resetJoystick?.();
   network?.send({type:'prayer',active,pose:scene.pose});
   if(active){sound.startPrayer();$('soundButton').querySelector('.utility-label').textContent='소리 설정';toast('기도 방향으로 정렬했습니다. 다음 자세 버튼으로 자세를 바꿀 수 있습니다.');}
   else sound.stopPrayer();
   prayerUI();
 }
-$('prayerButton').addEventListener('click',()=>setPrayer(!scene.praying));
+$('prayerButton').addEventListener('click',()=>{if(scene.congregationJoined)congregationUi.leave();else setPrayer(!scene.praying);});
 $('poseButton').addEventListener('click',()=>{scene.pose=poses[(poses.indexOf(scene.pose)+1)%poses.length];network.send({type:'prayer',active:true,pose:scene.pose});prayerUI();});
 let greetingTimer;
 function greetPlayer(to=null){
@@ -153,10 +155,11 @@ network=new RoomConnection({
   },
   welcome:self=>{
     partyUi?.setSelf(self.id);scene.selfId=self.id;scene.position={x:self.x,z:self.z};scene.yaw=self.yaw;scene.protected=self.protected;
-    if(scene.praying)network.send({type:'prayer',active:true,pose:scene.pose});
+    congregationUi?.self(self);if(scene.praying&&!scene.congregationJoined)network.send({type:'prayer',active:true,pose:scene.pose});
   },
-  self:p=>{if(p.correction&&Math.hypot(p.correction.x,p.correction.z)>.08)scene.position={x:scene.position.x+p.correction.x,z:scene.position.z+p.correction.z};scene.protected=p.protected;if(p.authoritative&&(p.praying||scene.praying!==p.praying))scene.position={x:p.x,z:p.z};if(p.authoritative&&scene.praying!==p.praying){scene.praying=p.praying;scene.pose=p.pose;if(scene.praying){scene.cancelGreeting();sound.startPrayer();}else sound.stopPrayer();prayerUI();}},
-  player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.selfId=null;scene.clearSpeech();scene.clearPlayers();community?.clear();partyUi?.reset();},
+  self:p=>{if(congregationUi?.self(p))return;if(p.correction&&Math.hypot(p.correction.x,p.correction.z)>.08)scene.position={x:scene.position.x+p.correction.x,z:scene.position.z+p.correction.z};scene.protected=p.protected;if(p.authoritative&&(p.praying||scene.praying!==p.praying))scene.position={x:p.x,z:p.z};if(p.authoritative&&scene.praying!==p.praying){scene.praying=p.praying;scene.pose=p.pose;if(scene.praying){scene.cancelGreeting();sound.startPrayer();}else sound.stopPrayer();prayerUI();}},
+  player:p=>{scene.syncPlayer(p);community?.player(p);},leave:id=>{scene.removePlayer(id);community?.leave(id);},clear:()=>{scene.selfId=null;scene.clearSpeech();scene.clearPlayers();community?.clear();partyUi?.reset();congregationUi?.reset();},
+  congregation:message=>congregationUi?.message(message),
   count:setRoomCount,
   recount:()=>setRoomCount(scene.remote.size+1),
   notice:toast,party:message=>partyUi?.message(message),chat:message=>community?.chat(message),greeting:message=>{if(!scene.praying&&!scene.blockedIds?.has(message.accountId))scene.playGreeting(message.id===network.selfId?null:message.id,message.targetPlayerId||null);}
@@ -167,6 +170,7 @@ community=initCommunity({
   sendChat:(text,to)=>network.send(to?{type:'whisper',text,to}:{type:'chat',text}),reconnect:()=>network.connect(currentRoom)
 });
 partyUi=initParty({send:data=>network.send(data),getSelfId:()=>network.selfId,getRoom:()=>currentRoom,getPlayers:()=>[...network.known.values()],getBlocked:()=>scene.blockedIds||new Set(),toast});
+congregationUi=new CongregationUI({scene,network,sound,toast,onModeChange:active=>{if(active)sound.startPrayer({group:true});else sound.stopPrayer();prayerUI();}});
 applyFeatureLabels();$('donateButton').addEventListener('click',()=>openDialog('donationDialog'));
 playerMenu=initPlayerMenu({
   canWhisper:()=>community?.session?.whispers!==false,
@@ -261,7 +265,7 @@ await scene.local.human.ready;
 await scene.environmentReady;
 $('enterRoomButton').disabled=false;
 requestAnimationFrame(()=>{$('loading').hidden=true;});
-if(new URLSearchParams(location.search).has('qa')){window.__noorScene=scene;window.__noorParty=partyUi;}
+if(new URLSearchParams(location.search).has('qa')){window.__noorScene=scene;window.__noorParty=partyUi;window.__noorCongregation=congregationUi;window.__noorGroupTest=()=>network.send({type:'congregation-test-start'});}
 void enterRoom({automatic:true});
 
 setInterval(()=>{if(!document.hidden&&community.session)community.refresh().catch(()=>{});},30000);

@@ -39,7 +39,7 @@ export class Soundscape {
     this.applyMix();if(this.praying&&this.prayerEnabled)this.playRecitation();
   }
   applyMix(){
-    const audible=this.enabled&&this.bgmEnabled&&!this.praying;
+    const audible=this.enabled&&this.bgmEnabled&&!this.praying&&!this.adhanPlaying;
     if(this.master)this.master.gain.setTargetAtTime(audible?this.volume:0,this.ctx.currentTime,.4);
     this.water.volume=audible?this.volume:0;
     if(audible)this.water.play().catch(()=>{});else this.water.pause();
@@ -47,15 +47,16 @@ export class Soundscape {
   setVolume(value){this.volume=value;this.applyMix();}
   setPrayerVolume(value){this.prayerVolume=value;this.recitation.volume=value;}
   playRecitation(){
-    if(!this.enabled)return;this.recitation.volume=this.prayerVolume;
+    if(!this.enabled||this.groupPraying)return;this.recitation.volume=this.prayerVolume;
     this.recitation.play().catch(()=>this.toast('낭송 재생을 위해 소리 켜기를 눌러주세요.'));
   }
-  startPrayer(){
-    this.praying=true;this.applyMix();
+  startPrayer({group=false}={}){
+    this.praying=true;this.groupPraying=group;this.applyMix();
+    if(group){this.recitation.pause();return;}
     if(this.prayerEnabled){if(!this.enabled)this.enabled=true;this.recitation.volume=this.prayerVolume;this.playRecitation();}
   }
   stopPrayer(){
-    this.praying=false;this.recitation.pause();this.applyMix();
+    this.praying=false;this.groupPraying=false;this.recitation.pause();this.applyMix();
     // Keep the listener's position. The next prayer continues instead of restarting a 145-minute recording.
   }
   setFile(file){

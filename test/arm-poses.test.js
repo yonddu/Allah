@@ -21,14 +21,14 @@ test('All supplied arms carry palm orientation through the sleeves without twist
    await a.human.ready;if(!local)a.human.setDetail(false);
    let mesh;a.root.traverse(node=>{if(node.isSkinnedMesh&&node.userData.userModel)mesh=node;});
    let time=0;
-   for(const yaw of [0,.83])for(const pose of ['idle','walking','standing','bowing','sitting','prostrating','greeting']){
-    a.root.rotation.y=yaw;const praying=!['idle','walking','greeting'].includes(pose),kneeling=['sitting','prostrating'].includes(pose);
+   for(const yaw of [0,.83])for(const pose of ['idle','walking','standing','bowing','sitting','qaadah','rising','prostrating','greeting']){
+    a.root.rotation.y=yaw;const praying=!['idle','walking','greeting'].includes(pose),kneeling=['sitting','qaadah','prostrating'].includes(pose);
     for(let frame=0;frame<180;frame++)a.human.update(praying?pose:'standing',praying,time+=1/60,pose==='walking',1/60,pose==='greeting'?.5:-1);
     a.root.updateMatrixWorld(true);a.human.skeleton.update();const rotation=a.root.getWorldQuaternion(new THREE.Quaternion());
     for(const [side,upperId,elbowId,handId]of [[-1,6,7,8],[1,9,10,11]]){
      const upper=a.human.bones[upperId],elbow=a.human.bones[elbowId],hand=a.human.bones[handId],label=id+' '+local+' '+yaw+' '+pose+' '+side;
      const palm=v(0,0,-1).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion()));
-     const normal=(pose==='sitting'?v(0,.34,.94).normalize():kneeling?v(0,-1,0):praying||pose==='greeting'&&side>0?v(0,0,1):v(-side,0,0)).applyQuaternion(rotation);
+     const normal=(pose==='sitting'?v(0,.34,.94).normalize():kneeling?v(0,-1,0):praying&&pose!=='rising'||pose==='greeting'&&side>0?v(0,0,1):v(-side,0,0)).applyQuaternion(rotation);
      assert.ok(palm.dot(normal)>(pose==='standing'?.85:.90),label+' palm faces the correct surface');
      if(!kneeling){
       assert.ok(hand.quaternion.angleTo(new THREE.Quaternion())<.005,label+' wrist does not absorb arm roll');

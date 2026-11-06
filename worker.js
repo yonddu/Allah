@@ -1,5 +1,6 @@
 export {Community} from './community.js';
 import {RoomParties} from './party-room.js';
+import {RoomCongregation} from './congregation-room.js';
 import {recommendedRoom} from './public/room-allocation.js';
 import {sanitizeProfile,constrainedMove,publicPlayer,PRAYER_POSES,prayerAreaAllows,canBeginPrayer,parseRoom,MAPS,legalPosition,prayerYaw} from './public/core.js';
 // A server-only override permits isolated capacity tests; production defaults to50.
@@ -79,6 +80,7 @@ export class PrayerRoom {
   constructor(ctx,env){
     this.ctx=ctx;this.env=env;this.parties=new RoomParties(this);this.pendingMoves=new Map();this.flushTimer=null;this.batchClients=new Set();this.protectedSockets=new Set();
     for(const ws of ctx.getWebSockets()){const state=ws.deserializeAttachment();if(state?.motionProtocol===2)this.batchClients.add(ws);if(state?.praying)this.protectedSockets.add(ws);}
+    this.congregation=new RoomCongregation(this);
   }
   async access(ids){const r=await this.env.COMMUNITY.get(this.env.COMMUNITY.idFromName('community')).fetch('https://community.internal/access?ids='+ids.join(','));if(!r.ok)throw new Error('Access lookup failed');return r.json();}
   players(){return this.ctx.getWebSockets().map(ws=>({ws,state:ws.deserializeAttachment()})).filter(p=>p.state);}
@@ -110,26 +112,28 @@ export class PrayerRoom {
     if(new URL(request.url).pathname==='/status')return Response.json({count:this.players().length});
     if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return new Response('WebSocket required',{status:426});
     const accountId=request.headers.get('X-Noor-Account');if(!accountId)return new Response('Session required',{status:401});
+    const map=parseRoom(request.headers.get('X-Noor-Room'))?.map||'mecca';
+    try{await this.congregation.ensure(map);}catch(error){console.error('Congregation schedule unavailable',error.message);}
     const peers=this.players();
     if(peers.length>=roomCapacity(this.env))return new Response('기도원이 가득 찼습니다. 잠시 후 다시 입장해주세요.',{status:503});
     const pair=new WebSocketPair(),client=pair[0],server=pair[1];
     this.ctx.acceptWebSocket(server);
     // Pick an unoccupied spawn; reconnects never accept client-supplied identity/position.
-    const map=parseRoom(request.headers.get('X-Noor-Room'))?.map||'mecca',base=MAPS[map].spawn;let spawn={...base};
+    const base=MAPS[map].spawn;let spawn={...base};
     for(let n=0;n<100;n++){
       const x=base.x+(n%10)*2.5,z=base.z+Math.floor(n/10)*3;
       if(legalPosition(x,z,map)&&peers.every(p=>Math.hypot(x-p.state.x,z-p.state.z)>(p.state.praying?4:1.5))){spawn={x,z};break;}
     }
     const now=Date.now(),state={id:crypto.randomUUID(),map,accountId,protected:false,profile:sanitizeProfile({name:decodeURIComponent(request.headers.get('X-Noor-Name')||'')}),...spawn,yaw:Math.PI,praying:false,pose:'standing',lastMove:now,rateAt:now,tokens:30,profileAt:0};
     server.serializeAttachment(state);
-    this.send(server,{type:'welcome',id:state.id,self:publicPlayer(state),players:peers.map(p=>publicPlayer(p.state))});
+    this.send(server,{type:'welcome',id:state.id,self:publicPlayer(state),players:peers.map(p=>publicPlayer(p.state)),congregation:this.congregation.snapshot()});
     this.broadcast({type:'join',player:publicPlayer(state)},server);
     return new Response(null,{status:101,webSocket:client});
   }
   async webSocketMessage(ws,message){return this.ctx.blockConcurrencyWhile(()=>this.handleMessage(ws,message));}
   async handleMessage(ws,message){
     if(typeof message!=='string'||message.length>16384){ws.close(1009,'Message too large');return;}
-    const state=ws.deserializeAttachment();if(!state)return;
+    let state=ws.deserializeAttachment();if(!state)return;
     const now=Date.now();
     state.tokens=Math.min(30,state.tokens+Math.max(0,now-state.rateAt)*0.025);
     state.rateAt=now;
@@ -140,6 +144,11 @@ export class PrayerRoom {
     if(!data||typeof data!=='object'){ws.serializeAttachment(state);return;}
     if(typeof data.type==='string'&&data.type.startsWith('party-')||data.type==='voice-signal'){await this.parties.handle(ws,state,data);return;}
     if(message.length>2048){ws.close(1009,'Message too large');return;}
+    if(typeof data.type==='string'&&data.type.startsWith('congregation-')){ws.serializeAttachment(state);await this.congregation.handle(ws,state,data);return;}
+    if(state.congregationId&&(data.type==='move'||data.type==='prayer')){
+      ws.serializeAttachment(state);await this.congregation.ensure(state.map);await this.congregation.synchronize();state=ws.deserializeAttachment();
+      if(state.congregationId){this.send(ws,{type:'state',player:publicPlayer(state)});return;}
+    }
     if(data.type==='greeting'){
       if(state.praying||now-(state.greetingAt||0)<5000){ws.serializeAttachment(state);return;}
       const peers=this.players(),access=await this.access(peers.map(p=>p.state.accountId));
@@ -186,7 +195,8 @@ export class PrayerRoom {
         const elapsed=Math.max(0,now-state.lastMove)/1000;
         const next=constrainedMove(state,data,elapsed,state.map);
         const hosts=this.protectedSockets.size?this.players().filter(p=>p.state.praying&&p.ws!==ws):[];
-        const allowed=hosts.every(p=>prayerAreaAllows(state,next,p.state));
+        if(this.congregation.map&&!this.congregation.session)await this.congregation.ensure(state.map||'mecca');
+        const allowed=hosts.every(p=>prayerAreaAllows(state,next,p.state))&&this.congregation.allowsMovement(state,next);
         if(allowed)Object.assign(state,next);
         if(Number.isFinite(data.yaw))state.yaw=((data.yaw%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
       }
@@ -219,6 +229,8 @@ export class PrayerRoom {
     ws.serializeAttachment(null);
     try{ws.close(code===1006?1000:code,'Disconnected');}catch{}
     if(state)this.broadcast({type:'leave',id:state.id},ws);
+    if(this.congregation.map)this.ctx.waitUntil(this.congregation.closed());
   }
   webSocketError(ws){this.webSocketClose(ws,1011);}
+  async alarm(){await this.ctx.blockConcurrencyWhile(()=>this.congregation.alarm());}
 }

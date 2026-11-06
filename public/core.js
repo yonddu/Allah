@@ -9,7 +9,7 @@ export const DEFAULT_PROFILE = Object.freeze({
   model:'model01',name:'방문자', gender:'male', skin:0, face:'oval', beard:'none', outfit:'thobe',
   cover:'kufi', color:0, rug:0, pattern:'mihrab',character:'face01',wardrobe:'look01'
 });
-export const PRAYER_POSES = ['standing','bowing','prostrating','sitting'];
+export const PRAYER_POSES = ['standing','bowing','prostrating','sitting','qaadah','rising'];
 export const GREETING_DURATION=2800;
 // Local -Z is forward. The invisible area includes the entire mat and its front.
 export const PRAYER_AREA=Object.freeze({halfWidth:1.02,back:1.25,front:2.45});
@@ -91,7 +91,7 @@ export function constrainedMove(current,desired,seconds,mapId='mecca') {
   return {x:current.x,z:current.z};
 }
 export function publicPlayer(p) {
-  return {id:p.id,seq:p.seq||0,accountId:p.accountId,protected:!!p.praying,profile:sanitizeProfile(p.profile),x:p.x,z:p.z,yaw:p.yaw,praying:!!p.praying,pose:p.praying&&PRAYER_POSES.includes(p.pose)?p.pose:'standing'};
+  return {id:p.id,seq:p.seq||0,accountId:p.accountId,protected:!!p.praying,profile:sanitizeProfile(p.profile),x:p.x,z:p.z,yaw:p.yaw,praying:!!p.praying,pose:p.praying&&PRAYER_POSES.includes(p.pose)?p.pose:'standing',congregationId:p.congregationId||null};
 }
 
 export function fenceAllows(from,to,host,actorId,friends=[]) {

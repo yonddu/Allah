@@ -52,3 +52,9 @@ The Makkah courtyard is a simplified architectural interpretation rather than a 
 - [Mataf courtyard, Saudipedia](https://saudipedia.com/en/mataf-of-the-grand-mosque)
 - [Column marble inlays and palm capitals, Sheikh Zayed Grand Mosque Centre](https://www.szgmc.gov.ae/en/islamic-architecture/The%20Columns)
 - [Taj exterior inlays and terrace, official Taj Mahal site](https://tajmahal.gov.in/the-taj-exteriors.aspx)
+
+## Congregation and adhan
+
+- Adhan recording: Adam-synagda, [Beautiful adhan](https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg), CC0 1.0. The unmodified Wikimedia MP3 transcode is downloaded and SHA256-verified during build; its immutable reference is in public/adhan-source.js.
+- Shared prayer follows the venue clock (Makkah for Noor/Makkah, Agra for Taj), independently of each visitor's personal timetable. Participation and sound are optional. The virtual sequence is a social visualization, not an assertion of religious validity or an official mosque broadcast.
+- Centered rows behind the imam are informed by [Dar al-Ifta's prayer-row explanation](https://www.dar-alifta.org/en/fatwa/details/22260/the-start-of-the-prayer-row-behind-the-imam).

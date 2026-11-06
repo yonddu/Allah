@@ -63,7 +63,7 @@ export function makeHumanAvatar(profile,tier='low',local=false){
    const greetingWeight=greeting>=0?Math.min(1,greeting/.20,(1-greeting)/.24):0;
    const state=pose+praying+moving+(greetingWeight>0);if(!local&&!detailed&&state===poseState&&time-poseAt<1/12)return;
    if(!local&&!detailed)dt=Math.min(.25,Math.max(dt,time-poseAt));poseAt=time;poseState=state;
-   const kneeling=pose==='sitting'||pose==='prostrating',prostrating=pose==='prostrating',bowing=pose==='bowing',s=1-Math.exp(-dt*10),hip=prostrating?SUJUD.hipY:kneeling?.39:praying?.965:.92;
+   const kneeling=pose==='sitting'||pose==='qaadah'||pose==='prostrating',prostrating=pose==='prostrating',restingSit=pose==='qaadah',bowing=pose==='bowing',rising=pose==='rising',s=1-Math.exp(-dt*10),hip=prostrating?SUJUD.hipY:kneeling?.39:praying?.965:.92;
    bones[I.hips].position.y=THREE.MathUtils.lerp(bones[I.hips].position.y,hip+(moving?Math.sin(time*10)*.016:0),s);
    bones[I.hips].position.z=THREE.MathUtils.lerp(bones[I.hips].position.z,prostrating?SUJUD.hipZ:0,s);
    bones[I.hips].rotation.x=THREE.MathUtils.lerp(bones[I.hips].rotation.x,prostrating?SUJUD.hipAngle:0,s);
@@ -84,8 +84,8 @@ export function makeHumanAvatar(profile,tier='low',local=false){
     let target,hint;
     if(prostrating){target=v(side*.24,.085,-.40).applyMatrix4(root.matrixWorld);hint=v(side*.45,.23,-.18).applyMatrix4(root.matrixWorld);}
     else if(bowing){target=v(side*.115,.53,-.10).applyMatrix4(root.matrixWorld);hint=v(side*.31,.80,-.20).applyMatrix4(root.matrixWorld);}
-    else if(kneeling){target=v(side*.13,.96,-.29).applyMatrix4(root.matrixWorld);hint=v(side*.30,.66,-.05).applyMatrix4(root.matrixWorld);}
-    else if(praying){target=v(side*-.025,-.22,-.20).applyMatrix4(bones[I.chest].matrixWorld);hint=v(side*.32,-.30,-.06).applyMatrix4(bones[I.chest].matrixWorld);}
+    else if(kneeling){target=v(side*.13,restingSit?.45:.96,restingSit?-.23:-.29).applyMatrix4(root.matrixWorld);hint=v(side*(restingSit?.25:.30),restingSit?.68:.66,restingSit?-.04:-.05).applyMatrix4(root.matrixWorld);}
+    else if(praying&&!rising){target=v(side*-.025,-.22,-.20).applyMatrix4(bones[I.chest].matrixWorld);hint=v(side*.32,-.30,-.06).applyMatrix4(bones[I.chest].matrixWorld);}
     else{
      target=v(side*.24,.045-armReach*(moving?.96:.985),-.025+(moving?Math.sin(time*8+side)*.10:0));
      if(side>0&&greetingWeight>0)target.lerp(v(-.045,-.04,-.22),greetingWeight);
@@ -93,10 +93,10 @@ export function makeHumanAvatar(profile,tier='low',local=false){
      target.applyMatrix4(bones[I.chest].matrixWorld);hint=v(bones[side<0?I.la:I.ra].position.x,-armReach*.48,side>0?THREE.MathUtils.lerp(.12,-.12,greetingWeight):.12).applyMatrix4(bones[I.chest].matrixWorld);
     }
     const rootRotation=root.getWorldQuaternion(new THREE.Quaternion());
-    const normal=prostrating?v(0,-1,0):kneeling?v(0,.34,.94).normalize():praying?v(0,0,1):side>0&&greetingWeight>0?v(0,0,1):v(-side,0,0);
+    const normal=prostrating||restingSit?v(0,-1,0):kneeling?v(0,.34,.94).normalize():praying&&!rising?v(0,0,1):side>0&&greetingWeight>0?v(0,0,1):v(-side,0,0);
     const palm=armNormals[side<0?'left':'right'].lerp(normal,s).normalize().clone().applyQuaternion(rootRotation);
     armIK(bones,side,target,hint,palm);const hand=bones[side<0?I.lh:I.rh],elbow=bones[side<0?I.le:I.re];
-    const direction=kneeling?(prostrating?v(0,0,-1):v(0,.94,-.34).normalize()).applyQuaternion(rootRotation):hand.getWorldPosition(v()).sub(elbow.getWorldPosition(v()));
+    const direction=kneeling?(prostrating||restingSit?v(0,0,-1):v(0,.94,-.34).normalize()).applyQuaternion(rootRotation):hand.getWorldPosition(v()).sub(elbow.getWorldPosition(v()));
     palmFacing(hand,side,direction,palm,s);
     const curl=praying||greetingWeight>0?0:moving?.70:.48,knuckle=side<0?18:20;
     bones[knuckle].rotation.y=THREE.MathUtils.lerp(bones[knuckle].rotation.y,side*curl,s);
