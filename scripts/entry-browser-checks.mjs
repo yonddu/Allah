@@ -59,7 +59,10 @@ export async function checkFirstVisits(browser,origin,output='artifacts'){
         assert.equal(await page.locator('#prayerQuestRows .prayer-quest-row').count(),5);
         const bounds=await page.locator('#prayerQuest').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=390.5);
         await page.screenshot({path:output+'/first-visit-'+test.language+'.png'});
-        await page.locator('#customizeButton').click();assert.equal(await page.locator('#customPanel').isVisible(),true);await page.locator('#closeCustomize').click();
+        await page.locator('#customizeButton').click();assert.equal(await page.locator('#customPanel').isVisible(),true);
+        await page.locator('#displayName').fill('');await page.locator('#displayName').blur();
+        const defaultName=await page.locator('#displayName').inputValue();assert.ok(defaultName.trim());assert.equal(/[\uac00-\ud7a3]/.test(defaultName),false,'Clearing a name must keep the localized visitor name');
+        await page.locator('#closeCustomize').click();
         await page.locator('#mapButton').click();assert.equal(await page.locator('#mapDialog').isVisible(),true);assert.equal(await page.locator('.map-card').count(),2);await page.locator('#mapCloseButton').click();
       }
       assert.deepEqual(errors,[]);report.push({locale:test.locale,language:test.language,fallback:!!test.failedLocale,saved:!!test.saved,legacy:!!test.legacyProfile,full:!!test.full});
