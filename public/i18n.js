@@ -97,7 +97,6 @@ export async function setLanguage(code,persist=true){
   locale=target.code;dictionary=data;document.documentElement.lang=locale;document.documentElement.dir=target.dir||'ltr';
   document.title=t('NOOR — 나만의 평온이 머무는 곳');
   document.getElementById('languageSelect').value=locale;
-  document.getElementById('entryLanguageSelect').value=locale;
   translateTree(document.body);
   if(persist)try{localStorage.setItem('noor-language',locale);}catch{}
   window.dispatchEvent(new CustomEvent('languagechange',{detail:{language:locale}}));
@@ -105,19 +104,19 @@ export async function setLanguage(code,persist=true){
 }
 export function chooseInitialLanguage(query,saved){
   const codes=LANGUAGES.map(l=>l.code);
-  return codes.includes(query)?query:codes.includes(saved)?saved:'id';
+  return codes.includes(query)?query:codes.includes(saved)?saved:'en';
 }
 export async function initI18n(){
-  const select=document.getElementById('languageSelect'),entrySelect=document.getElementById('entryLanguageSelect');
-  for(const lang of LANGUAGES){const option=document.createElement('option');option.value=lang.code;option.textContent=lang.name;select.append(option);entrySelect.append(option.cloneNode(true));}
+  const select=document.getElementById('languageSelect');
+  for(const lang of LANGUAGES){const option=document.createElement('option');option.value=lang.code;option.textContent=lang.name;select.append(option);}
   document.getElementById('languageButton').addEventListener('click',()=>document.getElementById('languageDialog').showModal());
   document.getElementById('closeLanguage').addEventListener('click',()=>document.getElementById('languageDialog').close());
-  for(const picker of [select,entrySelect])picker.addEventListener('change',async()=>{
-    select.disabled=entrySelect.disabled=true;
+  select.addEventListener('change',async()=>{
+    select.disabled=true;
     try{
-      const ok=await setLanguage(picker.value);
+      const ok=await setLanguage(select.value);
       document.getElementById('languageStatus').textContent=ok?t('언어 설정을 저장했습니다.'):'This language could not be loaded. Please try again.';
-    }finally{select.disabled=entrySelect.disabled=false;}
+    }finally{select.disabled=false;}
   });
   let saved;try{saved=localStorage.getItem('noor-language');}catch{}
   const codes=LANGUAGES.map(l=>l.code),query=new URLSearchParams(location.search).get('lang');

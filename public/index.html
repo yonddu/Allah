@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -85,9 +85,8 @@
   <dialog id="mapDialog" class="wide-dialog entry-dialog">
     <button class="dialog-close" id="mapCloseButton" data-close aria-label="닫기">×</button>
     <p class="eyebrow" data-no-i18n>WELCOME TO NOOR</p>
-    <div class="entry-progress" aria-label="기도원 기능"><span data-entry-dot="0"><b>1</b><span>언어</span></span><span data-entry-dot="1"><b>2</b><span>꾸미기</span></span><span data-entry-dot="2"><b>3</b><span>서버 선택</span></span></div>
-    <section id="entryStepLanguage" data-entry-stage="0"><h2>언어 선택</h2><div class="entry-language"><label for="entryLanguageSelect"><span aria-hidden="true">◎</span><span>언어</span><small data-no-i18n>Language</small></label><select id="entryLanguageSelect" data-no-i18n></select></div></section>
-    <section id="entryStepCharacter" data-entry-stage="1" hidden><h2>나의 공간 꾸미기</h2><div id="entryAvatarPreview" class="entry-avatar-preview"></div><div id="entryCharacterHost"></div></section>
+    <div class="entry-progress" aria-label="기도원 기능"><span data-entry-dot="1"><b>1</b><span>꾸미기</span></span><span data-entry-dot="2"><b>2</b><span>서버 선택</span></span></div>
+    <section id="entryStepCharacter" data-entry-stage="1"><h2>나의 공간 꾸미기</h2><div id="entryAvatarPreview" class="entry-avatar-preview"></div><div id="entryCharacterHost"></div></section>
     <section id="entryStepRoom" data-entry-stage="2" hidden><h2>어디에서 머무를까요?</h2><p class="field-note">세계의 유명 장소를 참고한 가상 광장입니다.</p><div id="mapChoices" class="map-choices"></div><h3 class="section-label">서버 선택 <small>서버당 최대 32명</small></h3><div id="serverChoices" class="server-choices"></div><p id="roomStatus" class="field-note" role="status"></p><button id="enterRoomButton" disabled class="small-primary full-width">이 공간으로 입장</button></section>
     <p id="entryLoadingStatus" class="field-note" role="status">평온한 공간을 준비하고 있어요</p>
     <div class="entry-navigation"><button id="entryBackButton" class="small-secondary" hidden>이전</button><button id="entryNextButton" class="small-primary" disabled>다음</button></div>

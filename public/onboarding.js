@@ -1,6 +1,6 @@
 export function initOnboarding(){
   const $=id=>document.getElementById(id),dialog=$('mapDialog');
-  let needsSetup=true,step=0,ready=false;
+  let needsSetup=true,step=1,ready=false;
   try{needsSetup=localStorage.getItem('noor-onboarded')!=='1';}catch{}
   const panel=$('customPanel'),scene=$('scene'),panelHome=document.createComment('customizer home'),sceneHome=document.createComment('scene home');
   panel.before(panelHome);scene.before(sceneHome);
@@ -10,10 +10,10 @@ export function initOnboarding(){
     window.dispatchEvent(new CustomEvent('noor:entry-character',{detail:{active:false}}));
   }
   function show(next){
-    restore();step=Math.max(0,Math.min(2,next));document.documentElement.dataset.entryStep=step;
+    restore();step=Math.max(1,Math.min(2,next));document.documentElement.dataset.entryStep=step;
     for(const section of dialog.querySelectorAll('[data-entry-stage]'))section.hidden=Number(section.dataset.entryStage)!==step;
     for(const indicator of dialog.querySelectorAll('[data-entry-dot]'))indicator.classList.toggle('active',Number(indicator.dataset.entryDot)===step);
-    $('entryBackButton').hidden=step===0||!needsSetup;$('entryNextButton').hidden=step===2;$('entryNextButton').disabled=!ready;
+    $('entryBackButton').hidden=step===1||!needsSetup;$('entryNextButton').hidden=step===2;$('entryNextButton').disabled=!ready;
     $('entryLoadingStatus').hidden=ready;$('mapCloseButton').hidden=needsSetup;
     dialog.classList.toggle('character-step',step===1);
     if(step===1){
@@ -32,5 +32,5 @@ export function initOnboarding(){
     $('mapCloseButton').hidden=false;
   });
   dialog.addEventListener('close',()=>restore());
-  show(needsSetup?0:2);
+  show(needsSetup?1:2);
 }

@@ -22,9 +22,9 @@ test('Right-to-left languages and default message formatting are configured',()=
   assert.equal(t('친구 코드: {code}',{code:'ABC123'}),'Friend code: ABC123');
 });
 
-test('First visits default to Indonesian while explicit and saved preferences take priority',()=>{
-  assert.equal(chooseInitialLanguage(null,null),'id');
-  assert.equal(chooseInitialLanguage('invalid',null),'id');
+test('First visits default to English while explicit and saved preferences take priority',()=>{
+  assert.equal(chooseInitialLanguage(null,null),'en');
+  assert.equal(chooseInitialLanguage('invalid',null),'en');
   assert.equal(chooseInitialLanguage(null,'ko'),'ko');
   assert.equal(chooseInitialLanguage('ar','ko'),'ar');
 });
