@@ -4,7 +4,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
 export async function checkRoomGathering(browser,origin){
  const sockets=[],contexts=[];
  const openVisitor=async()=>{
-  const context=await browser.newContext({locale:'en-US',viewport:{width:390,height:844}});contexts.push(context);const page=await context.newPage();
+  const context=await browser.newContext({locale:'en-US',viewport:{width:390,height:844},extraHTTPHeaders:{'CF-Connecting-IP':'198.18.27.'+(contexts.length+1)}});contexts.push(context);const page=await context.newPage();
   await page.route('**/*',r=>r.request().url().startsWith(origin)?r.continue():r.abort());await page.goto(origin+'/?qa=1');await page.waitForFunction(()=>window.__noorScene?.selfId,null,{timeout:60000});return page;
  };
  try{

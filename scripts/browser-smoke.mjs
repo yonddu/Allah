@@ -159,7 +159,7 @@ try{
     const ctx=await browser.newContext(),peer=await ctx.newPage();peerContexts.push(ctx);
     await peer.goto('http://127.0.0.1:8787/api/health');
     await peer.evaluate(async name=>{
-      const r=await fetch('/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});window.chatIdentity=await r.json();
+      const r=await fetch('/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});if(!r.ok)throw new Error('Chat fixture session: HTTP '+r.status);window.chatIdentity=await r.json();
       window.chatReceived=[];await new Promise((resolve,reject)=>{window.chatSocket=new WebSocket('ws://127.0.0.1:8787/api/room?room=mecca:1');window.chatSocket.onmessage=e=>{const m=JSON.parse(e.data);window.chatReceived.push(m);if(m.type==='welcome')resolve();};window.chatSocket.onerror=reject;});
     },name);
   }

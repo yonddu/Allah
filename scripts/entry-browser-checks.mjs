@@ -12,7 +12,7 @@ export async function checkFirstVisits(browser,origin,output='artifacts'){
   ];
   const report=[];
   for(const [index,test]of cases.entries()){
-    const context=await browser.newContext({locale:test.locale,viewport:{width:390,height:844},isMobile:true,hasTouch:true}),errors=[];
+    const context=await browser.newContext({locale:test.locale,viewport:{width:390,height:844},isMobile:true,hasTouch:true,extraHTTPHeaders:{'CF-Connecting-IP':'198.18.26.'+(index+1)}}),errors=[];
     try{
       await context.addInitScript(test=>{
         if(test.saved)localStorage.setItem('noor-language',test.saved);
