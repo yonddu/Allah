@@ -25,5 +25,18 @@ export function prayerSchedule({lat,lon,zone,method='auto',madhab='Shafi',ishaOf
  const today=new PrayerTimes(coordinates,day(0),params),tomorrow=new PrayerTimes(coordinates,day(1),params);
  const entries=Object.keys(PRAYER_NAMES).map(id=>({id,time:today[id]}));
  const next=entries.find(p=>Number.isFinite(p.time.getTime())&&p.time>now)||(tomorrow.isValid&&tomorrow.fajr>now?{id:'fajr',time:tomorrow.fajr,tomorrow:true}:null);
- return {civil,entries,next,method:actualMethod,zone,valid:today.isValid,highLatitude:Math.abs(lat)>55};
+ const tomorrowEntries=Object.keys(PRAYER_NAMES).map(id=>({id,time:tomorrow[id]}));
+ return {civil,entries,tomorrowEntries,next,method:actualMethod,zone,valid:today.isValid,highLatitude:Math.abs(lat)>55};
+}
+export function prayerCountdowns(schedule,now=new Date()){
+ return schedule.entries.map(entry=>{
+  const tomorrow=entry.time<=now,time=tomorrow?schedule.tomorrowEntries.find(p=>p.id===entry.id)?.time:entry.time;
+  const remainingSeconds=time&&Number.isFinite(+time)?Math.max(0,Math.ceil((time-now)/1000)):null;
+  return {id:entry.id,time,tomorrow,remainingSeconds};
+ });
+}
+export function formatPrayerCountdown(seconds){
+ if(!Number.isFinite(seconds))return '—';
+ const value=Math.max(0,Math.ceil(seconds));
+ return [Math.floor(value/3600),Math.floor(value/60)%60,value%60].map(n=>String(n).padStart(2,'0')).join(':');
 }

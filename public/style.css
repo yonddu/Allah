@@ -174,3 +174,20 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 .donation-message{font-size:14px!important;line-height:1.8!important;color:var(--ink)!important;white-space:pre-line;margin:16px 0}
 
 .location-purpose{margin:16px 0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#d6b57b0b;color:var(--ink);font-size:13px;line-height:1.7;text-align:start}
+
+/* A quiet quest-style timetable stays readable independently of 3D quality. */
+.prayer-quest{position:absolute;top:108px;right:14px;width:260px;max-height:calc(100dvh - 340px);overflow:auto;z-index:5;border-radius:12px;padding:10px 12px;background:#102d27f5;scrollbar-width:thin}
+.prayer-quest summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:32px;cursor:pointer;list-style:none;font-size:14px;color:var(--gold)}
+.prayer-quest summary::-webkit-details-marker{display:none}.prayer-quest details:not([open]) summary>span:last-child{transform:rotate(-90deg)}
+.prayer-quest-location{margin:2px 0 8px;color:var(--muted);font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.prayer-quest-location:empty{display:none}.prayer-quest-empty{margin:8px 0 12px;font-size:12px;line-height:1.6;color:var(--muted)}
+.prayer-quest-clock{display:flex;align-items:center;justify-content:space-between;gap:5px;color:var(--muted);font-size:12px;padding-bottom:6px;font-variant-numeric:tabular-nums;direction:ltr}
+.prayer-quest-columns{display:grid;grid-template-columns:minmax(0,1fr) 40px 65px;gap:7px;padding:2px 7px;color:var(--muted);font-size:9px}.prayer-quest-columns>span:not(:first-child){text-align:end}
+.prayer-quest-row{display:grid;grid-template-columns:minmax(0,1fr) 40px 65px;align-items:center;gap:7px;min-height:37px;margin:3px 0;padding:5px 7px;border:1px solid transparent;border-radius:7px;font-size:12px}
+.prayer-quest-name{min-width:0;overflow-wrap:anywhere}.prayer-quest-name small{display:block;font-size:9px;color:var(--muted);line-height:1.3}
+.prayer-quest-row time,.prayer-quest-row output{direction:ltr;text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums}.prayer-quest-row time{color:var(--muted);font-size:11px}.prayer-quest-row output{font-size:12px}
+.prayer-quest-row.next{color:var(--gold);border-color:#d6b57b77;background:#d6b57b14}.prayer-quest-row.next time{color:var(--gold)}
+.prayer-quest-settings{display:block;min-height:32px;margin:6px 0 0;padding:5px 8px;width:100%;background:#d6b57b0c;border:1px solid var(--line);font-size:11px;color:var(--gold)}
+@media(max-width:600px){.prayer-quest{top:168px;right:8px;width:208px;max-height:calc(100dvh - 410px);padding:7px 9px}.prayer-quest summary{font-size:13px}.prayer-quest-row,.prayer-quest-columns{grid-template-columns:minmax(0,1fr) 33px 58px;gap:4px;padding:4px 5px}.prayer-quest-row{min-height:34px;font-size:11px}.prayer-quest-row output{font-size:11px}.prayer-quest-row time{font-size:10px}.prayer-quest-location{font-size:10px}.prayer-quest-settings{min-height:32px}}
+@media(max-height:600px) and (min-width:601px){.prayer-quest{top:100px;width:238px;max-height:calc(100dvh - 175px)}.prayer-quest-row{min-height:28px;margin:1px 0}.prayer-quest-location{display:none}.prayer-quest-clock{padding-bottom:2px}}
+@media(max-height:650px) and (max-width:600px){.prayer-quest{max-height:calc(100dvh - 365px)}}

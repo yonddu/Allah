@@ -1,7 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dateAt,zoneAt,validZone,prayerSchedule} from '../public/prayer-times-core.js';
+import {dateAt,zoneAt,validZone,prayerSchedule,prayerCountdowns,formatPrayerCountdown} from '../public/prayer-times-core.js';
 const sample={lat:-6.2088,lon:106.8456,zone:'Asia/Jakarta'};
+
+test('Every prayer counts down to its next local occurrence, including exact boundaries and tomorrow',()=>{
+ const schedule=prayerSchedule(sample,new Date('2026-11-06T00:00:00Z'));
+ const noon=schedule.entries[1].time,now=new Date(+noon-1500);
+ const before=prayerCountdowns(schedule,now);
+ assert.equal(before.length,5);assert.equal(before[0].tomorrow,true);
+ assert.equal(+before[0].time,+schedule.tomorrowEntries[0].time);
+ assert.equal(before[1].tomorrow,false);assert.equal(before[1].remainingSeconds,2);
+ assert.equal(prayerCountdowns(schedule,noon)[1].tomorrow,true);
+ const late=prayerCountdowns(schedule,new Date(+schedule.entries[4].time+1));
+ assert.ok(late.every(p=>p.tomorrow&&p.remainingSeconds>0));
+ assert.equal(formatPrayerCountdown(3661),'01:01:01');assert.equal(formatPrayerCountdown(90000),'25:00:00');
+ assert.equal(formatPrayerCountdown(0),'00:00:00');assert.equal(formatPrayerCountdown(null),'—');
+});
+
+test('Prayer countdowns use computed tomorrow times across DST rather than adding 24 hours',()=>{
+ const options={lat:40.7128,lon:-74.006,zone:'America/New_York'},now=new Date('2026-10-31T23:30:00Z');
+ const schedule=prayerSchedule(options,now),rows=prayerCountdowns(schedule,now);
+ assert.ok(rows.every(p=>p.time>now&&p.remainingSeconds>0));
+ for(const row of rows.filter(p=>p.tomorrow))assert.equal(+row.time,+schedule.tomorrowEntries.find(p=>p.id===row.id).time);
+ assert.notEqual(+schedule.tomorrowEntries[0].time-+schedule.entries[0].time,86400000);
+ const midnight=new Date('2026-11-07T05:00:00Z'),next=prayerSchedule(options,midnight);
+ assert.deepEqual(next.civil,{year:2026,month:11,day:7});assert.ok(prayerCountdowns(next,midnight).every(p=>!p.tomorrow));
+});
 test('Prayer times include exactly five prayers, a tomorrow Fajr and the location date across the date line',()=>{
  const now=new Date('2026-11-05T23:30:00Z'),schedule=prayerSchedule(sample,now);
  assert.deepEqual(schedule.civil,{year:2026,month:11,day:6});assert.equal(schedule.valid,true);assert.deepEqual(schedule.entries.map(p=>p.id),['fajr','dhuhr','asr','maghrib','isha']);

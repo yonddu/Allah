@@ -22,6 +22,20 @@
 
     <nav class="utilitybar" aria-label="소통과 소리"><button id="partyButton" data-feature-label="party"><span class="utility-icon" aria-hidden="true">♟</span><span class="utility-label" data-feature="party">Party</span><span id="partyBadge"></span></button><button id="boardButton" aria-label="게시판" title="게시판"><span class="utility-icon" aria-hidden="true">☷</span><span class="utility-label">게시판</span></button><button id="friendsButton" aria-label="친구" title="친구"><span class="utility-icon" aria-hidden="true">♧</span><span class="utility-label">친구</span><span id="friendBadge"></span></button><button id="chatButton" aria-label="채팅" title="채팅"><span class="utility-icon" aria-hidden="true">♙</span><span class="utility-label">채팅</span></button><button id="soundButton" aria-label="소리 설정" title="소리 설정"><span class="utility-icon" aria-hidden="true">♪</span><span class="utility-label">소리 설정</span></button><button id="prayerTimesButton" aria-label="기도 시간" title="기도 시간"><span class="utility-icon" aria-hidden="true">◷</span><span class="utility-label" id="prayerHudText">기도 시간</span></button><a id="quranLink" href="https://quran.com/" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" aria-label="꾸란 읽기 · Quran.com" title="꾸란 읽기 · Quran.com"><span class="utility-icon" aria-hidden="true">▤</span><span class="utility-label" data-no-i18n>Quran.com ↗</span></a></nav>
 
+    <aside id="prayerQuest" class="prayer-quest glass" aria-label="기도 시간">
+      <details open>
+        <summary><span>기도 시간</span><span aria-hidden="true">⌄</span></summary>
+        <p id="prayerQuestLocation" class="prayer-quest-location" data-no-i18n></p>
+        <p id="prayerQuestEmpty" class="prayer-quest-empty">위치를 선택해주세요</p>
+        <div id="prayerQuestBody" hidden data-no-i18n>
+          <div class="prayer-quest-clock"><span>Local time</span><time id="prayerQuestClock" aria-label="Current local time"></time></div>
+          <div class="prayer-quest-columns" aria-hidden="true"><span>Prayer</span><span>Time</span><span>Remaining</span></div>
+          <div id="prayerQuestRows"></div>
+        </div>
+        <button id="prayerQuestSettings" class="prayer-quest-settings">도시 선택</button>
+      </details>
+    </aside>
+
     <aside id="customPanel" class="glass custom-panel">
       <div class="panel-heading"><div><p class="eyebrow">MAKE IT YOURS</p><h2>나의 공간 꾸미기</h2></div><button id="closeCustomize" class="icon-button mobile-only" aria-label="꾸미기 닫기">×</button><span class="tiny-tag desktop-only">로컬 저장</span></div>
       <label class="name-label" for="displayName">나의 이름</label>
