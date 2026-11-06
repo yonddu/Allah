@@ -19,9 +19,9 @@ try{savedRoom=localStorage.getItem('noor-room');}catch{}
 let currentRoom=parseRoom(savedRoom)?.key||'mecca:1',scene,network,community,playerMenu,partyUi;
 let pageGeneration=0,pageLeaving=false;
 function toast(message){
-  $('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),4500);
+  $('toast').textContent=t(message);$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),4500);
 }
-function loadProfile(){try{const raw=JSON.parse(localStorage.getItem('noor-profile'));if(raw)return sanitizeProfile(raw);}catch{}generatedName=true;return {...DEFAULT_PROFILE,name:t('방문자')};}
+function loadProfile(){try{const raw=JSON.parse(localStorage.getItem('noor-profile'));if(raw){if(raw.name===DEFAULT_PROFILE.name){generatedName=true;raw.name=t('방문자');}return sanitizeProfile(raw);}}catch{}generatedName=true;return {...DEFAULT_PROFILE,name:t('방문자')};}
 function persistProfile(){try{localStorage.setItem('noor-profile',JSON.stringify(profile));$('saveStatus').textContent='이 기기에 저장했습니다';}catch{$('saveStatus').textContent='이번 접속에서만 유지됩니다';}}
 function openDialog(id){if(!$(id).open)$(id).showModal();}
 function fatal(message){$('loading').hidden=true;$('fatal').hidden=false;if(message)$('fatalMessage').textContent=message;}
@@ -89,9 +89,9 @@ function prayerUI(){
   document.body.classList.toggle('prayer-mode',scene.praying);
   $('prayerQuranLink').hidden=!scene.praying;$('greetingButton').hidden=scene.praying;
   $('joystickThumb').setAttribute('aria-disabled',String(scene.praying));
-  $('prayerButtonText').textContent=scene.praying?'기도 마치기':'기도 시작';
-  $('poseButton').hidden=!scene.praying;$('poseButton').textContent='다음 자세 · '+poseLabels[poses.indexOf(scene.pose)];
-  $('prayerLabel').textContent=scene.praying?'기도 중 · '+poseLabels[poses.indexOf(scene.pose)]:'가상 공간 기도 방향 ↑';
+  $('prayerButtonText').textContent=t(scene.praying?'기도 마치기':'기도 시작');
+  $('poseButton').hidden=!scene.praying;$('poseButton').textContent=t('다음 자세 · {pose}',{pose:t(poseLabels[poses.indexOf(scene.pose)])});
+  $('prayerLabel').textContent=scene.praying?t('기도 중 · {pose}',{pose:t(poseLabels[poses.indexOf(scene.pose)])}):t('가상 공간 기도 방향 ↑');
 }
 function setPrayer(active){
   if(active&&!canBeginPrayer({id:network?.selfId,...scene.position},[...scene.remote].map(([id,a])=>({id,x:a.target.x,z:a.target.z,yaw:a.targetYaw,praying:a.praying})),scene.mapId)){toast('다른 이용자와 건물에서 조금 떨어진 곳에서 기도를 시작해주세요.');return;}
@@ -153,7 +153,7 @@ $('reconnectButton').addEventListener('click',async()=>{const generation=pageGen
 let chosenMap=parseRoom(currentRoom).map,chosenServer=parseRoom(currentRoom).server,roomsVersion=0;
 function mapLabels(){
   const room=parseRoom(currentRoom),map=MAPS[room.map];
-  $('currentMapName').textContent=map.name+' · '+room.server;
+  $('currentMapName').textContent=t(map.name)+' · '+room.server;
   $('mapCaption').textContent=map.short+' · '+t(map.city);
 }
 function renderMaps(){
@@ -161,9 +161,9 @@ function renderMaps(){
   for(const [id,map]of Object.entries(MAPS)){
     const b=document.createElement('button');b.className='map-card';b.dataset.map=id;b.setAttribute('aria-pressed',String(chosenMap===id));
     const art=document.createElement('span');art.className='map-art '+id;
-    const title=document.createElement('strong');title.textContent=map.name;
-    const city=document.createElement('small');city.textContent=map.city;
-    const desc=document.createElement('p');desc.textContent=map.description;b.append(art,title,city,desc);
+    const title=document.createElement('strong');title.textContent=t(map.name);
+    const city=document.createElement('small');city.textContent=t(map.city);
+    const desc=document.createElement('p');desc.textContent=t(map.description);b.append(art,title,city,desc);
     b.addEventListener('click',()=>{chosenMap=id;chosenServer=1;renderMaps();loadServers();});$('mapChoices').append(b);
   }
 }
@@ -178,19 +178,32 @@ async function loadServers(){
     b.addEventListener('click',()=>{chosenServer=room.server;for(const n of $('serverChoices').children)n.setAttribute('aria-pressed',String(n===b));});$('serverChoices').append(b);
   }
 }
-$('mapButton').addEventListener('click',()=>{window.dispatchEvent(new Event('noor:select-room'));chosenMap=parseRoom(currentRoom).map;chosenServer=parseRoom(currentRoom).server;renderMaps();openDialog('mapDialog');loadServers();});
-$('enterRoomButton').addEventListener('click',async()=>{
+$('mapButton').addEventListener('click',()=>{chosenMap=parseRoom(currentRoom).map;chosenServer=parseRoom(currentRoom).server;renderMaps();openDialog('mapDialog');loadServers();});
+async function enterRoom({automatic=false}={}){
   const generation=pageGeneration;
   $('enterRoomButton').disabled=true;
   try{
-    sound.enable().then(()=>$('soundButton').querySelector('.utility-label').textContent='소리 설정').catch(()=>{});
+    if(!automatic)sound.enable().then(()=>$('soundButton').querySelector('.utility-label').textContent=t('소리 설정')).catch(()=>{});
     await scene.local.human.ready;
+    if(pageLeaving||generation!==pageGeneration)return;
+    if(automatic){
+      try{
+        const r=await fetch('/api/rooms?map='+chosenMap);if(!r.ok)throw new Error('offline');
+        const {rooms}=await r.json(),available=rooms.find(room=>room.server===chosenServer&&room.count<room.capacity)||rooms.find(room=>room.count<room.capacity);
+        if(pageLeaving||generation!==pageGeneration)return;
+        if(!available){toast('기도원이 가득 찼습니다. 잠시 후 다시 입장해주세요.');return;}
+        chosenServer=available.server;
+      }catch{}
+    }
+    if(pageLeaving||generation!==pageGeneration)return;
     if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={...MAPS[chosenMap].spawn};scene.cameraDistance=PLAY_CAMERA.distance;scene.cameraHeight=PLAY_CAMERA.height;scene.cameraAngle=MAPS[chosenMap].cameraAngle;scene.snapCamera();
+    if(pageLeaving||generation!==pageGeneration)return;
     mapLabels();try{localStorage.setItem('noor-room',currentRoom);}catch{}
-    await community.start();if(pageLeaving||generation!==pageGeneration)return;network.resume();network.retry=0;network.connect(currentRoom);window.dispatchEvent(new Event('noor:entered'));$('mapDialog').close();
-  }catch(e){$('roomStatus').textContent=e.message;}
+    await community.start();if(pageLeaving||generation!==pageGeneration)return;network.resume();network.retry=0;network.connect(currentRoom);$('mapDialog').close();
+  }catch(e){$('roomStatus').textContent=t(e.message);if(automatic)toast('온라인 연결을 준비하지 못했습니다. 설정에서 다시 연결할 수 있습니다.');}
   finally{$('enterRoomButton').disabled=false;}
-});
+}
+$('enterRoomButton').addEventListener('click',()=>enterRoom());
 window.addEventListener('pagehide',()=>{
   if(pageLeaving)return;pageLeaving=true;pageGeneration++;
   network.disconnect({notify:true,suspend:true});community.stop();playerMenu.close();
@@ -199,7 +212,7 @@ window.addEventListener('pagehide',()=>{
 window.addEventListener('pageshow',event=>{
   if(!event.persisted)return;pageLeaving=false;
   for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
-  window.dispatchEvent(new Event('noor:select-room'));renderMaps();openDialog('mapDialog');loadServers();
+  chosenMap=parseRoom(currentRoom).map;chosenServer=parseRoom(currentRoom).server;void enterRoom({automatic:true});
 });
 const locationService=initLocation(toast);initPrayerTimes({location:locationService,toast});updateChoices();mapLabels();prayerUI();
 setInterval(()=>{if(!document.hidden)network.movement(scene.position,scene.yaw);},150);
@@ -209,12 +222,9 @@ await scene.environmentReady;
 $('enterRoomButton').disabled=false;
 requestAnimationFrame(()=>{$('loading').hidden=true;});
 if(new URLSearchParams(location.search).has('qa')){window.__noorScene=scene;window.__noorParty=partyUi;}
-renderMaps();openDialog('mapDialog');loadServers();
+void enterRoom({automatic:true});
 
 setInterval(()=>{if(!document.hidden&&community.session)community.refresh().catch(()=>{});},30000);
 
-window.addEventListener('languagechange',()=>{for(const [list,id,label]of [[USER_MODELS,'characterChoices','캐릭터 유형'],[USER_MODELS,'wardrobeChoices','기도 복장']])for(const item of list){const b=document.querySelector('#'+id+' [data-value="'+item.id+'"]');b.lastElementChild.textContent=String(item.index+1);b.setAttribute('aria-label',t(label)+' '+(item.index+1));b.title=t(label)+' '+(item.index+1);}mapLabels();if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;changedProfile();}});
-
-window.addEventListener('noor:entry-character',e=>{scene.portraitMode=e.detail.active;scene.cameraAngle=e.detail.active?scene.yaw+Math.PI:MAPS[scene.mapId].cameraAngle;scene.cameraDistance=e.detail.active?2.65:PLAY_CAMERA.distance;scene.cameraHeight=e.detail.active?1.6:PLAY_CAMERA.height;});
+window.addEventListener('languagechange',()=>{for(const [list,id,label]of [[USER_MODELS,'characterChoices','캐릭터 유형'],[USER_MODELS,'wardrobeChoices','기도 복장']])for(const item of list){const b=document.querySelector('#'+id+' [data-value="'+item.id+'"]');b.lastElementChild.textContent=String(item.index+1);b.setAttribute('aria-label',t(label)+' '+(item.index+1));b.title=t(label)+' '+(item.index+1);}mapLabels();prayerUI();if($('mapDialog').open){renderMaps();loadServers();}if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;changedProfile();}});
 if(generatedName){profile.name=t('방문자');$('displayName').value=profile.name;scene.updateProfile(profile);}
-window.dispatchEvent(new Event('noor:app-ready'));

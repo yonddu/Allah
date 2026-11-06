@@ -6,11 +6,11 @@ try{
  browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});const pages=[],errors=[];
  for(const name of ['Voice A','Voice B','Outside party']){
   const context=await browser.newContext({viewport:{width:390,height:844}});contexts.push(context);await context.grantPermissions(['microphone'],{origin});await context.addInitScript(name=>{
-   localStorage.setItem('noor-language','ko');localStorage.setItem('noor-onboarded','1');localStorage.setItem('noor-room','mecca:2');localStorage.setItem('noor-profile',JSON.stringify({name,model:'model03',gender:'male'}));
+   localStorage.setItem('noor-language','ko');localStorage.setItem('noor-room','mecca:2');localStorage.setItem('noor-profile',JSON.stringify({name,model:'model03',gender:'male'}));
    window.micRequests=0;const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=(...args)=>{window.micRequests++;return get(...args);};
   },name);
   const page=await context.newPage();pages.push(page);page.on('pageerror',error=>errors.push(error.message));await page.route('**/*',route=>route.request().url().startsWith(origin)?route.continue():route.abort());
-  await page.goto(origin+'/?qa=1',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__noorScene?.hallReady,null,{timeout:60000});await page.locator('#enterRoomButton').click();await page.waitForFunction(()=>window.__noorScene?.selfId&&window.__noorParty,null,{timeout:60000});
+  await page.goto(origin+'/?qa=1',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__noorScene?.hallReady,null,{timeout:60000});await page.waitForFunction(()=>window.__noorScene?.selfId&&window.__noorParty,null,{timeout:60000});
   await page.evaluate(()=>window.__noorScene.renderer.setAnimationLoop(null));
  }
  const [a,b,c]=pages,bId=await b.evaluate(()=>window.__noorScene.selfId);

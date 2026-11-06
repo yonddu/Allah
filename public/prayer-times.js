@@ -10,7 +10,7 @@ export function initPrayerTimes({location:locationSource,toast}){
  let clockFormat,hudRows=new Map();
  function renderHud(now){
   const f=timeFormat();clockFormat=new Intl.DateTimeFormat(document.documentElement.lang||'en',{timeZone:location.zone,hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
-  $('prayerQuestLocation').textContent=location.label;$('prayerQuestLocation').title=location.zone;
+  $('prayerQuestLocation').textContent=t(location.label);$('prayerQuestLocation').title=location.zone;
   $('prayerQuestEmpty').hidden=true;$('prayerQuestMeta').hidden=false;
   $('prayerQuestRows').replaceChildren();hudRows.clear();
   for(const entry of prayerCountdowns(schedule,now)){
@@ -38,7 +38,7 @@ export function initPrayerTimes({location:locationSource,toast}){
   try{
    schedule=prayerSchedule({...location,...settings},now);dayKey=Object.values(schedule.civil).join('-');
    const f=timeFormat();$('prayerDate').textContent=new Intl.DateTimeFormat(document.documentElement.lang||'en',{timeZone:location.zone,dateStyle:'full'}).format(now);
-   $('prayerLocation').textContent=location.label+' · '+location.zone;
+   $('prayerLocation').textContent=t(location.label)+' · '+location.zone;
    $('prayerRows').replaceChildren();
    for(const entry of schedule.entries){const row=document.createElement('div');row.className='prayer-time-row';row.dataset.prayer=entry.id;const name=document.createElement('span');name.textContent=t(PRAYER_NAMES[entry.id]);const time=document.createElement('time');time.textContent=Number.isFinite(entry.time.getTime())?f.format(entry.time):'—';if(Number.isFinite(entry.time.getTime()))time.dateTime=entry.time.toISOString();row.append(name,time);$('prayerRows').append(row);}
    $('prayerHighLatitude').hidden=!schedule.highLatitude;$('prayerTimesStatus').textContent=schedule.valid?'':t('현지 모스크 시간표를 확인해주세요.');

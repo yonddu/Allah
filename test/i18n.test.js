@@ -22,9 +22,24 @@ test('Right-to-left languages and default message formatting are configured',()=
   assert.equal(t('친구 코드: {code}',{code:'ABC123'}),'Friend code: ABC123');
 });
 
-test('First visits default to English while explicit and saved preferences take priority',()=>{
+test('First visits follow browser language preferences with English fallback and explicit choices take priority',()=>{
   assert.equal(chooseInitialLanguage(null,null),'en');
   assert.equal(chooseInitialLanguage('invalid',null),'en');
-  assert.equal(chooseInitialLanguage(null,'ko'),'ko');
-  assert.equal(chooseInitialLanguage('ar','ko'),'ar');
+  assert.equal(chooseInitialLanguage(null,null,['ar-SA','en-US']),'ar');
+  assert.equal(chooseInitialLanguage(null,null,['en-GB']),'en');
+  assert.equal(chooseInitialLanguage(null,null,['id-ID']),'id');
+  assert.equal(chooseInitialLanguage(null,null,['de-DE','tr-TR']),'tr');
+  assert.equal(chooseInitialLanguage(null,null,['de-DE']),'en');
+  assert.equal(chooseInitialLanguage(null,null,['AR_sa']),'ar');
+  assert.equal(chooseInitialLanguage(null,null,'ur-PK'),'ur');
+  assert.equal(chooseInitialLanguage('invalid','invalid',['ar-SA']),'ar');
+  assert.equal(chooseInitialLanguage(null,'ko',['ar-SA']),'ko');
+  assert.equal(chooseInitialLanguage('ar','ko',['en-US']),'ar');
+});
+test('The initial HTML is readable English before JavaScript or a locale download completes',async()=>{
+  const html=await readFile(new URL('../public/index.html',import.meta.url),'utf8');
+  assert.equal(/[\uac00-\ud7a3]/.test(html),false);
+  assert.match(html,/>Start prayer</);assert.match(html,/>Noor Grand Sanctuary</);
+  const importmap=html.match(/<script type="importmap">(.*?)<\/script>/s)[1];
+  assert.deepEqual(JSON.parse(importmap),{imports:{three:'/vendor/three.module.js'}});
 });

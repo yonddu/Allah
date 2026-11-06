@@ -74,7 +74,7 @@ html[dir=rtl] .joystick{left:auto;right:28px}html[dir=rtl] .qibla-card{right:aut
 .qibla-card:has(#qiblaDetails:not([hidden])) .bearing-info p,.qibla-card:has(#qiblaDetails:not([hidden])) .bearing-info small{display:block}
 .qibla-card .qibla-expand{width:26px;height:26px;background:#17382c}
 .custom-panel,html[dir=rtl] .custom-panel{display:none;top:94px;bottom:76px;left:12px;right:auto;max-height:calc(100dvh - 170px);width:300px;z-index:15}
-.custom-panel.open{display:block}.custom-panel .mobile-only{display:grid}.custom-panel .desktop-only{display:none}
+.custom-panel.open,html[dir=rtl] .custom-panel.open{display:block}.custom-panel .mobile-only{display:grid}.custom-panel .desktop-only{display:none}
 .actionbar,html:not([lang=ko]) .actionbar{bottom:calc(10px + env(safe-area-inset-bottom));padding:5px 7px;gap:4px!important;max-width:calc(100% - 20px);border-radius:13px;z-index:6;white-space:nowrap}
 .actionbar .action-secondary,html:not([lang=ko]) .action-secondary{font-size:11px;padding:10px 8px;min-height:38px}
 .actionbar .prayer-button,html:not([lang=ko]) .prayer-button{font-size:11px;padding:10px 14px;min-width:110px;min-height:40px}

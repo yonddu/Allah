@@ -1,9 +1,7 @@
 import {initI18n} from './i18n.js';
-import {initOnboarding} from './onboarding.js';
 try{
   await initI18n();
-  initOnboarding();
-  // Language is usable before the larger 3D module is downloaded or initialized.
+  // Translate before loading the 3D scene; room entry needs no setup dialogs.
   await import('./app.js');
 }catch(error){
   console.error(error);

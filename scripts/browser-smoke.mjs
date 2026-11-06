@@ -6,6 +6,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {WebSocket as TestSocket} from 'ws';
+import {checkFirstVisits} from './entry-browser-checks.mjs';
 await mkdir('artifacts',{recursive:true});
 const stateDirectory=await mkdtemp(join(tmpdir(),'noor-browser-test-'));
 let log='';
@@ -17,20 +18,26 @@ try{
   for(let n=0;n<120;n++){try{const r=await fetch('http://127.0.0.1:8787/api/health');if(r.ok){healthy=true;break;}}catch{}await delay(500);}
   if(!healthy)throw new Error('Local Worker did not start.\n'+log);
   browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-  const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
+  await checkFirstVisits(browser,'http://127.0.0.1:8787');
+  const context=await browser.newContext({locale:'en-US',viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
   await context.addInitScript(()=>{Object.defineProperty(navigator,'deviceMemory',{get:()=>4,configurable:true});Object.defineProperty(navigator,'hardwareConcurrency',{get:()=>4,configurable:true});});
   page=await context.newPage();const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   await page.route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:8787')?route.continue():route.abort());
   await page.goto('http://127.0.0.1:8787/?qa=1',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>!!window.__noorScene?.hallReady,null,{timeout:60000});
-  await page.waitForFunction(()=>window.__noorScene?.portraitMode);
+  await page.waitForFunction(()=>document.getElementById('statusDot').classList.contains('connected'),null,{timeout:20000});
   assert.equal(await page.locator('html').getAttribute('lang'),'en');
   assert.equal(await page.locator('#languageSelect').inputValue(),'en');
-  assert.equal(await page.locator('#entryStepLanguage').count(),0);
-  assert.equal(await page.locator('#entryBackButton').isVisible(),false);
-  assert.equal(await page.locator('#entryCharacterHost #customPanel').count(),1);
-  assert.equal(await page.locator('#entryAvatarPreview #scene').count(),1);
+  assert.equal(await page.locator('dialog[open]').count(),0);
+  assert.equal(await page.locator('#customPanel').isVisible(),false);
+  assert.equal(await page.evaluate(()=>window.__noorScene.local.human.assetId),'model01');
+  assert.equal(await page.locator('#currentMapName').textContent(),'Noor Grand Sanctuary · 1');
+  assert.equal(await page.locator('#prayerButtonText').textContent(),'Start prayer');
+  assert.equal(await page.locator('#entryStepCharacter').count(),0);
+  await page.screenshot({path:'artifacts/instant-entry-en.png'});
+  // Customization is optional and available after the default avatar has joined.
+  await page.locator('#customizeButton').click();
   await page.locator('[data-field="gender"] [data-value="female"]').click();
   assert.equal(await page.locator('#characterChoices button:visible').count(),3);
   await page.locator('#tab-outfit').click();
@@ -38,18 +45,12 @@ try{
   await page.locator('#wardrobeChoices [data-value="model09"]').click();
   await page.evaluate(()=>window.__noorScene.local.human.ready);
   assert.equal(await page.evaluate(()=>window.__noorScene.diagnostics().userModel),'model09');
-  await page.screenshot({path:'artifacts/female-character-setup.png'});
+  await page.screenshot({path:'artifacts/optional-character-customization.png'});
   assert.equal(await page.locator('[data-field="cover"] [data-value="none"]').isVisible(),false);
   assert.equal(await page.locator('[data-field="cover"] [data-value="hijab"]').getAttribute('aria-pressed'),'true');
   await page.locator('#displayName').fill('QA visitor');
   await page.locator('#displayName').blur();
-  await page.locator('#entryNextButton').click();
-  await page.locator('#entryBackButton').click();
-  assert.equal(await page.locator('#entryCharacterHost #customPanel').count(),1);
-  await page.locator('#entryNextButton').click();
-  await page.locator('#enterRoomButton').click();
-  await page.waitForFunction(()=>!document.getElementById('mapDialog').open);
-  await page.waitForFunction(()=>document.getElementById('statusDot').classList.contains('connected'),null,{timeout:20000});
+  await page.locator('#closeCustomize').click();
   assert.equal(await page.locator('#app > #scene').count(),1);
   assert.equal(await page.locator('#prayerQuestRows .prayer-quest-row').count(),5);
   assert.equal(await page.locator('#prayerQuest details').count(),0);
@@ -77,7 +78,7 @@ try{
   assert.equal(await page.locator('#prayerQuest').isVisible(),true);
   assert.equal(await page.locator('#prayerQuestRows .prayer-quest-row').count(),5);
   assert.equal(await page.locator('#prayerQuestRows .next').count(),1);
-  assert.equal(await page.locator('#prayerQuestLocation').textContent(),'New York');
+  assert.equal(await page.locator('#prayerQuestLocation').textContent(),'뉴욕');
   assert.equal(await page.locator('#prayerQuestLocation').getAttribute('title'),'America/New_York');
   for(const value of await page.locator('#prayerQuestRows output').allTextContents())assert.match(value,/^\d{2}:\d{2}:\d{2}$/);
   const questClock=await page.locator('#prayerQuestClock').textContent(),questCountdown=await page.locator('#prayerQuestRows output').first().textContent();
@@ -258,26 +259,27 @@ try{
   await page.waitForFunction(()=>window.__noorScene.hallReady&&window.__noorScene.loadedAsset==='high',null,{timeout:30000});
   assert.equal(await page.evaluate(()=>window.__noorScene.renderer.shadowMap.autoUpdate),true);
   await page.locator('#settingsDialog [data-close]').click();
-  // Navigation, refresh and a restored page all require a fresh explicit room entry.
+  // Leaving always removes the old player. Returning joins once, without setup dialogs.
   const retained=await page.evaluate(()=>({room:localStorage.getItem('noor-room'),profile:localStorage.getItem('noor-profile'),account:window.__noorScene.accountId,player:window.__noorScene.selfId}));
   const observerMessages=[],observer=new TestSocket('ws://127.0.0.1:8787/api/room?room='+encodeURIComponent(retained.room),{origin:'http://127.0.0.1:8787',headers:{Cookie:cookie}});
   const waitUntil=async check=>{for(let n=0;n<200;n++){if(await check())return;await delay(100);}throw new Error('Page exit cleanup timed out');};
   const countRoom=async()=>{const r=await fetch('http://127.0.0.1:8787/api/rooms?map='+retained.room.split(':')[0]);return (await r.json()).rooms.find(r=>r.key===retained.room).count;};
-  const verifyLobby=async()=>{
-    await page.waitForFunction(()=>window.__noorScene?.hallReady,null,{timeout:60000});await page.locator('#mapDialog').waitFor({state:'visible'});
-    assert.equal(await page.evaluate(()=>!!window.__noorScene.selfId),false);assert.equal(await page.locator('#statusDot').getAttribute('class'),'status-dot');
-    assert.equal(await page.evaluate(()=>localStorage.getItem('noor-profile')),retained.profile);assert.equal(await countRoom(),1);
-    assert.equal(await page.locator('#prayerQuestRows .prayer-quest-row').count(),5);assert.equal(await page.locator('#prayerQuestLocation').textContent(),'New York');
+  const verifyReturn=async()=>{
+    await page.waitForFunction(()=>window.__noorScene?.hallReady&&window.__noorScene?.selfId&&document.getElementById('statusDot').classList.contains('connected'),null,{timeout:60000});
+    assert.equal(await page.locator('dialog[open]').count(),0);
+    assert.equal(await page.evaluate(()=>localStorage.getItem('noor-profile')),retained.profile);await waitUntil(async()=>await countRoom()===2);
+    assert.equal(await page.evaluate(()=>window.__noorScene.accountId),retained.account);
+    assert.equal(await page.locator('#prayerQuestRows .prayer-quest-row').count(),5);assert.equal(await page.locator('#prayerQuestLocation').textContent(),'نيويورك');
   };
-  const enterAgain=async()=>{await page.locator('#enterRoomButton').click();await page.waitForFunction(()=>document.getElementById('statusDot').classList.contains('connected'));assert.equal(await page.evaluate(()=>window.__noorScene.accountId),retained.account);await waitUntil(async()=>await countRoom()===2);};
   try{
     await new Promise((resolve,reject)=>{observer.once('error',reject);observer.on('message',raw=>{const message=JSON.parse(raw);observerMessages.push(message);if(message.type==='welcome')resolve();});});
     await page.goto('http://127.0.0.1:8787/api/health');
     await waitUntil(()=>observerMessages.some(m=>m.type==='leave'&&m.id===retained.player));await waitUntil(async()=>await countRoom()===1);
-    await page.goBack({waitUntil:'commit'});await verifyLobby();await delay(1200);assert.equal(await countRoom(),1);await enterAgain();
-    await page.reload({waitUntil:'domcontentloaded'});await waitUntil(async()=>await countRoom()===1);await verifyLobby();await enterAgain();
-    await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));await waitUntil(async()=>await countRoom()===1);
-    await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));await verifyLobby();await delay(1200);assert.equal(await countRoom(),1);await enterAgain();
+    await page.goBack({waitUntil:'commit'});await verifyReturn();
+    const oldPlayer=await page.evaluate(()=>window.__noorScene.selfId);
+    await page.reload({waitUntil:'domcontentloaded'});await waitUntil(()=>observerMessages.some(m=>m.type==='leave'&&m.id===oldPlayer));await verifyReturn();
+    await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));await waitUntil(async()=>await countRoom()===1);await delay(1200);assert.equal(await countRoom(),1);
+    await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));await verifyReturn();
     await page.close();await waitUntil(async()=>await countRoom()===1);
   }finally{observer.close();}
   await writeFile('artifacts/browser-report.json',JSON.stringify({capacity50:true,exitLogout:true,note:'Desktop Chromium with software WebGL; these are rendering budgets, not real-phone FPS measurements.',maps,errors},null,2));

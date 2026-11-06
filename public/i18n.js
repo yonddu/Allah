@@ -101,9 +101,10 @@ export async function setLanguage(code,persist=true){
   window.dispatchEvent(new CustomEvent('languagechange',{detail:{language:locale}}));
   return true;
 }
-export function chooseInitialLanguage(query,saved){
-  const codes=LANGUAGES.map(l=>l.code);
-  return codes.includes(query)?query:codes.includes(saved)?saved:'en';
+export function chooseInitialLanguage(query,saved,browserLanguages=[]){
+  const codes=new Set(LANGUAGES.map(l=>l.code));
+  const supported=value=>{if(typeof value!=='string')return;const code=value.trim().toLowerCase().replaceAll('_','-').split('-')[0];return codes.has(code)?code:undefined;};
+  return supported(query)||supported(saved)||(Array.isArray(browserLanguages)?browserLanguages:[browserLanguages]).map(supported).find(Boolean)||'en';
 }
 export async function initI18n(){
   const select=document.getElementById('languageSelect');
@@ -118,9 +119,9 @@ export async function initI18n(){
     }finally{select.disabled=false;}
   });
   let saved;try{saved=localStorage.getItem('noor-language');}catch{}
-  const codes=LANGUAGES.map(l=>l.code),query=new URLSearchParams(location.search).get('lang');
-  await setLanguage(chooseInitialLanguage(query,saved),false);
-  document.getElementById('mapDialog').showModal();
+  const query=new URLSearchParams(location.search).get('lang');
+  const browserLanguages=navigator.languages?.length?navigator.languages:[navigator.language];
+  if(!await setLanguage(chooseInitialLanguage(query,saved,browserLanguages),false))await setLanguage('en',false);
   observer=new MutationObserver(changes=>{
     for(const change of changes){
       if(change.type==='characterData')translateNode(change.target);
