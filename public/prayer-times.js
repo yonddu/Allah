@@ -10,7 +10,7 @@ export function initPrayerTimes({location:locationSource,toast}){
  let clockFormat,hudRows=new Map();
  function renderHud(now){
   const f=timeFormat();clockFormat=new Intl.DateTimeFormat(document.documentElement.lang||'en',{timeZone:location.zone,hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
-  $('prayerQuestLocation').textContent=location.label+' · '+location.zone;
+  $('prayerQuestLocation').textContent=location.label;$('prayerQuestLocation').title=location.zone;
   $('prayerQuestEmpty').hidden=true;$('prayerQuestBody').hidden=false;
   $('prayerQuestRows').replaceChildren();hudRows.clear();
   for(const entry of prayerCountdowns(schedule,now)){

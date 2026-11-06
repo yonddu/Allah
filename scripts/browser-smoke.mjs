@@ -75,7 +75,8 @@ try{
   assert.equal(await page.locator('#prayerQuest').isVisible(),true);
   assert.equal(await page.locator('#prayerQuestRows .prayer-quest-row').count(),5);
   assert.equal(await page.locator('#prayerQuestRows .next').count(),1);
-  assert.ok((await page.locator('#prayerQuestLocation').textContent()).includes('America/New_York'));
+  assert.equal(await page.locator('#prayerQuestLocation').textContent(),'New York');
+  assert.equal(await page.locator('#prayerQuestLocation').getAttribute('title'),'America/New_York');
   for(const value of await page.locator('#prayerQuestRows output').allTextContents())assert.match(value,/^\d{2}:\d{2}:\d{2}$/);
   const questClock=await page.locator('#prayerQuestClock').textContent(),questCountdown=await page.locator('#prayerQuestRows output').first().textContent();
   await page.waitForFunction(previous=>document.getElementById('prayerQuestClock').textContent!==previous,questClock);
