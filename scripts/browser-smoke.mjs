@@ -1,12 +1,15 @@
 import {spawn} from 'node:child_process';
-import {mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,writeFile,mkdtemp} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {WebSocket as TestSocket} from 'ws';
 await mkdir('artifacts',{recursive:true});
+const stateDirectory=await mkdtemp(join(tmpdir(),'noor-browser-test-'));
 let log='';
-const server=spawn(process.execPath,['node_modules/wrangler/bin/wrangler.js','dev','--local','--ip','127.0.0.1','--port','8787'],{stdio:['ignore','pipe','pipe']});
+const server=spawn(process.execPath,['node_modules/wrangler/bin/wrangler.js','dev','--local','--ip','127.0.0.1','--port','8787','--persist-to',stateDirectory],{stdio:['ignore','pipe','pipe']});
 for(const stream of [server.stdout,server.stderr])stream.on('data',b=>log=(log+b.toString()).slice(-14000));
 let browser,page;
 try{

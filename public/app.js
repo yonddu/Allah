@@ -154,7 +154,7 @@ $('enterRoomButton').addEventListener('click',async()=>{
   try{
     sound.enable().then(()=>$('soundButton').querySelector('.utility-label').textContent='소리 설정').catch(()=>{});
     await scene.local.human.ready;
-    if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={...MAPS[chosenMap].spawn};scene.cameraDistance=PLAY_CAMERA.distance;scene.cameraHeight=PLAY_CAMERA.height;scene.cameraAngle=MAPS[chosenMap].cameraAngle;
+    if(scene.praying)setPrayer(false);currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={...MAPS[chosenMap].spawn};scene.cameraDistance=PLAY_CAMERA.distance;scene.cameraHeight=PLAY_CAMERA.height;scene.cameraAngle=MAPS[chosenMap].cameraAngle;scene.snapCamera();
     mapLabels();try{localStorage.setItem('noor-room',currentRoom);}catch{}
     await community.start();network.retry=0;network.connect(currentRoom);window.dispatchEvent(new Event('noor:entered'));$('mapDialog').close();
   }catch(e){$('roomStatus').textContent=e.message;}

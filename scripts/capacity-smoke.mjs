@@ -1,11 +1,14 @@
 import {spawn} from 'node:child_process';
-import {mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,writeFile,mkdtemp} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 import {WebSocket} from 'ws';
 import {chromium} from 'playwright';
 await mkdir('artifacts',{recursive:true});
-const origin='http://127.0.0.1:8788',server=spawn(process.execPath,['node_modules/wrangler/bin/wrangler.js','dev','--local','--ip','127.0.0.1','--port','8788','--var','NOOR_ROOM_CAPACITY:100','--persist-to','work/capacity-state'],{stdio:['ignore','pipe','pipe']});
+const stateDirectory=await mkdtemp(join(tmpdir(),'noor-browser-test-'));
+const origin='http://127.0.0.1:8788',server=spawn(process.execPath,['node_modules/wrangler/bin/wrangler.js','dev','--local','--ip','127.0.0.1','--port','8788','--var','NOOR_ROOM_CAPACITY:100','--persist-to',stateDirectory],{stdio:['ignore','pipe','pipe']});
 let log='',browser;const clients=[];
 for(const s of [server.stdout,server.stderr])s.on('data',b=>log=(log+b).slice(-14000));
 const until=async(fn,limit=20000)=>{const start=Date.now();while(!fn()){if(Date.now()-start>limit)throw new Error('Capacity check timeout');await delay(20);}};

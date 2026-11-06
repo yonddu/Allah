@@ -49,7 +49,7 @@ export class Sanctuary {
     this.raycaster=new THREE.Raycaster();
     this.bindControls();
     this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(container);
-    this.quality('auto');this.resize();
+    this.quality('auto');this.resize();this.snapCamera();
     this.animateFrame=()=>this.frame();
     this.renderer.setAnimationLoop(this.animateFrame);
     document.addEventListener('visibilitychange',()=>{
@@ -189,6 +189,12 @@ export class Sanctuary {
     const w=this.container.clientWidth,h=this.container.clientHeight,budget=QUALITY_BUDGETS[this.qualityTier];
     this.renderer.setPixelRatio(pixelRatioFor(w,h,devicePixelRatio,budget,this.resolutionScale));this.renderer.setSize(w,h,false);
     this.labels.setSize(w,h);this.camera.aspect=w/Math.max(h,1);this.camera.updateProjectionMatrix();
+  }
+  snapCamera(){
+    const focus=avatarFocus(this.pose,this.praying),target=this.cameraTarget.set(this.position.x-Math.sin(this.yaw)*focus.forward,focus.height,this.position.z-Math.cos(this.yaw)*focus.forward);
+    this.local.root.position.set(this.position.x,0,this.position.z);this.local.root.rotation.y=this.yaw;
+    this.camera.fov=this.portraitMode?56:PLAY_CAMERA.fov;this.camera.updateProjectionMatrix();
+    this.camera.position.set(target.x+Math.sin(this.cameraAngle)*this.cameraDistance,this.cameraHeight,target.z+Math.cos(this.cameraAngle)*this.cameraDistance);this.camera.lookAt(target);this.camera.updateMatrixWorld();
   }
   diagnostics(){
     return {tier:this.qualityTier,asset:this.hall?.name||null,ready:this.hallReady,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,textures:this.renderer.info.memory.textures,pixelRatio:this.renderer.getPixelRatio(),position:{...this.position},joystick:{...this.joystickAxis},remoteVisitors:this.remote.size,userModel:this.local.human.assetId,userModelReady:this.local.human.loaded,userModelsReady:[this.local,...this.remote.values()].filter(a=>a.human.loaded).length};
