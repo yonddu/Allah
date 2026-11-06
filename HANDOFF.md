@@ -1,3 +1,19 @@
+## Completed release · 2026-11-06
+
+Live application: https://noorrealm.com (old workers.dev URL also stays active).
+Deployed source: 747ab254fdd2109f56b75d41cd36e223f09f0e02.
+Cloudflare build: 76ae5165-de32-4ae2-8c68-8ba4b8d110d7, stopped/success.
+Worker version: a26437a1-e3ad-4596-9f6f-bf467c7426d5.
+HTTPS DNS and /api/health verification succeeded after deployment.
+
+GitHub Verify run 42202516235, job 127841021097: success. 49 Node tests passed; actual browser flows, public-message bubbles, expiry, literal HTML/Arabic/Korean text, whisper exclusion, privacy-change clearing, character switching from Settings, donation QR and requested Korean support message passed. Synthetic microphone WebRTC sent actual audio to both party peers; outsider received none, prayer ended tracks/peers, no auto microphone restart. Capacity admission stayed50 with51st rejected; isolated100-client network check passed. Real low-end Android FPS remains unmeasured.
+
+Clothing QA: inspected all three contact sheets from this final source (10 models x prostrating/sitting/bowing x front/back/left/right/top =150 views). The first larger ellipsoid design was rejected visually as too bulky; final fitted opaque undergarment and guarded original hip textures cover the previously exposed body without the swollen waist. All10 final views showed covered hips/pelvis/legs; hands/faces/feet remain original. Supplied garments still use automatic weights; no manual cloth simulation or authored garment rig is claimed. Forehead/toes on mat and knees/head separation also pass all10 actual-mesh tests. The emergency three-pose restriction is now lifted: standing/bowing/prostrating/sitting are all enabled.
+
+Taj prayer uses +Z (PI yaw), along the user's marked pool-side path; avatar, mat and invisible barrier share prayerYaw. Noor stays -Z. Settings opens character/outfit customization in-game. Public speech bubbles follow the head, expire4.5–9sec and show only within12m, through the exact public-chat visibility filter; server-authoritative playerId prevents another-avatar attribution. Whispers never become bubbles. Prayer/privacy changes and disconnect clear them. Donor message: “여러분의 후원으로 서버가 유지, 개선 됩니다. 감사합니다. 평화가 있길”, translated into all21 languages. Ko-fi link/QR and six-member same-server private opt-in party voice are deployed.
+
+Only this documentation changes after the validated application source. Reload existing game tabs for fresh modules.
+
 ## Chat bubbles and support message follow-up · 2026-11-06
 
 Public-chat bubbles use the server-authoritative playerId and the same Community visibility filter as the dock. Whispers never become bubbles; prayer, block/privacy changes, disconnect and avatar disposal clear or hide them. They use textContent, auto text direction, a 4.5–9s expiry, head-following labels and a 12m range. The Ko-fi dialog now displays the requested support/peace message in all 21 languages. The first 150-view coverage review found opaque coverage but oversized undergarment ellipsoids; these have been tightened to body proportions and require a second visual review before deploying/restoring prostration.
