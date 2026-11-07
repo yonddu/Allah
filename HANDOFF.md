@@ -1,3 +1,35 @@
+## International reachability audit · 2026-11-08 (Asia/Seoul)
+
+Read-only audit requested by the user; production code, routing and security configuration were not changed.
+
+Two live Globalping measurements used the same13 country probes: HTTPS GET / and HTTPS GET /api/rooms?map=mecca. All26 responses were HTTP200; all TLS certificate validations succeeded. Every home response contained the actual NOOR scene markup, and every room response parsed as the expected three-room directory.
+- Home measurement: 2DM5lKqEwY4NSdD3L00021Slk / https://api.globalping.io/v1/measurements/2DM5lKqEwY4NSdD3L00021Slk
+- Room API measurement: 2CfHuRJMD0TvkyP8q00021Sll / https://api.globalping.io/v1/measurements/2CfHuRJMD0TvkyP8q00021Sll
+- Measurement start UTC: 2026-11-07T23:52:17.739Z
+- These are HTTP/TLS probes, not thirteen full 3D browser/voice tests; country results represent the measured network nodes at this time, not every ISP.
+
+| Country / city | Home HTTP | TLS | Home response | Room API | API response |
+| --- | --- | --- | --- | --- | --- |
+| US / Buffalo | 200 | valid | 155 ms | 200 / 3 rooms | 373 ms |
+| GB / London | 200 | valid | 170 ms | 200 / 3 rooms | 649 ms |
+| DE / Falkenstein | 200 | valid | 88 ms | 200 / 3 rooms | 742 ms |
+| JP / Tokyo | 200 | valid | 121 ms | 200 / 3 rooms | 109 ms |
+| SG / Singapore | 200 | valid | 130 ms | 200 / 3 rooms | 950 ms |
+| ID / Jakarta | 200 | valid | 310 ms | 200 / 3 rooms | 551 ms |
+| MY / Kuala Lumpur | 200 | valid | 77 ms | 200 / 3 rooms | 535 ms |
+| PK / Islamabad | 200 | valid | 662 ms | 200 / 3 rooms | 1553 ms |
+| BD / Dhaka | 200 | valid | 600 ms | 200 / 3 rooms | 869 ms |
+| TR / Istanbul | 200 | valid | 174 ms | 200 / 3 rooms | 866 ms |
+| EG / Cairo | 200 | valid | 334 ms | 200 / 3 rooms | 862 ms |
+| SA / Riyadh | 200 | valid | 342 ms | 200 / 3 rooms | 971 ms |
+| AE / Dubai | 200 | valid | 604 ms | 200 / 3 rooms | 1169 ms |
+
+Cloudflare inspection: noorrealm.com zone active and unpaused, proxied Worker DNS, active certificates, IPv6 on and WebSockets on. No zone/account IP Access rules; no custom firewall or rate-limit entrypoint rulesets; Access is not enabled. Worker source has no country/IP geofence. Same-origin checks protect API writes/WebSockets and are independent of visitor country.
+
+Recent Cloudflare country analytics also showed successful home-page requests from many overseas countries and successful /api/room101 upgrades from US, SG and HK (in addition to KR). Some DE/IE homepage403s were investigated rather than ignored: all inspected firewall events were POST / blocked by managed rule2b5d06e34a814a889bee9a0699702280, description React - RCE - CVE:CVE-2025-55182. This is an attack-pattern rule, not a country restriction; no protection was disabled. A US /api/session403 is consistent with the application's same-origin requirement, but its individual request payload was not inspected. Do not infer unique real-user counts from adaptive request samples.
+
+External Google Fonts import exists with fallback fonts; its availability on every unmeasured network was not tested. There was no demonstrated website/API country-access fault requiring a configuration change.
+
 ## Completed: permanent female foot coverage · 2026-11-08 (Asia/Seoul)
 
 Live: https://noorrealm.com . Application/test source5a2454d3fdbe235278425233d323f805c3578d27 passed GitHub Verify42424244603 (job128558985867). Deployed commita461d889ad6d2a1cc1aa93fd9947ff020c1060a7 adds only the post-deployment image verifier to that validated source. Cloudflare build1fb684d8-535d-47ad-91fa-64cbf57cc7ad stopped/success; Worker versionfeba4a1e-9c64-4228-86ea-4109ac9cd09f. HTTPS health verified. All three new covered PNG URLs and three legacy PNG URLs were fetched from the live domain and SHA256-matched to this build's generated covered renders.
