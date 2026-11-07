@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {mergeGeometries,mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
+export const NOOR_ROOFLINE=Object.freeze({portalHeight:22,domeZ:-52,domeBase:27.7,domeRadius:14.6,domeHeight:14});
 
 // Large outdoor courtyards, authored once and merged by material for mobile rendering.
 export function buildArchitecture(theme='mecca',tier='low'){
@@ -99,12 +100,12 @@ export function buildArchitecture(theme='mecca',tier='low'){
   box('marble',[0,20.3,-59],[86,.7,47]);
   for(const y of [1,18.5,20.8])box('gold',[0,y,front+.13],[84,.13,.20]);
   // Monumental entrance iwan with layered pointed arches and blue tile spandrels.
-  box('plaster',[0,14.5,front+1.2],[24,29,4]);
-  recess([0,.10,front+3.24],16.2,25);
-  arch('tile',[0,.10,front+3.64],19.5,27.6,1.2,.28);
-  arch('gold',[0,.10,front+3.96],17.2,25.8,.13,.09);
-  box('tile',[0,28.7,front+3.25],[24,.55,.15],[0,0,0],[8,1]);
-  for(const x of [-8.8,8.8]){const ornament=new T.Shape();for(let n=0;n<16;n++){const a=n*Math.PI/8,r=n%2?.75:1.45;const px=Math.cos(a)*r,py=Math.sin(a)*r;n?ornament.lineTo(px,py):ornament.moveTo(px,py);}ornament.closePath();emit(new T.ExtrudeGeometry(ornament,{depth:.08,bevelEnabled:false}),'gold',[x,24.1,front+3.35]);}
+  box('plaster',[0,NOOR_ROOFLINE.portalHeight/2,front+1.2],[24,NOOR_ROOFLINE.portalHeight,4]);
+  recess([0,.10,front+3.24],16.2,18.7);
+  arch('tile',[0,.10,front+3.64],19.5,21,1.2,.28);
+  arch('gold',[0,.10,front+3.96],17.2,19.4,.13,.09);
+  box('tile',[0,21.7,front+3.25],[24,.55,.15],[0,0,0],[8,1]);
+  for(const x of [-8.8,8.8]){const ornament=new T.Shape();for(let n=0;n<16;n++){const a=n*Math.PI/8,r=n%2?.75:1.45;const px=Math.cos(a)*r,py=Math.sin(a)*r;n?ornament.lineTo(px,py):ornament.moveTo(px,py);}ornament.closePath();emit(new T.ExtrudeGeometry(ornament,{depth:.08,bevelEnabled:false}),'gold',[x,18.4,front+3.35]);}
   for(const side of [-1,1]){
    for(const x of [side*19,side*29,side*38]){
     recess([x,.15,front+.03],6.7,12);
@@ -118,12 +119,13 @@ export function buildArchitecture(theme='mecca',tier='low'){
     dome(side*31,26,z,4.8,4.0,'teal');
    }
   }
-  cyl('plaster',[0,24,-59],12.0,12.0,7);
-  for(let n=0;n<16;n++){const a=n*Math.PI/8;cyl('marble',[Math.cos(a)*12.08,24,-59+Math.sin(a)*12.08],.24,.29,6,8);}
-  dome(0,27.7,-59,14.6,14,'teal');
+  const {domeZ,domeBase,domeRadius,domeHeight}=NOOR_ROOFLINE;
+  cyl('plaster',[0,24,domeZ],12.0,12.0,7);
+  for(let n=0;n<16;n++){const a=n*Math.PI/8;cyl('marble',[Math.cos(a)*12.08,24,domeZ+Math.sin(a)*12.08],.24,.29,6,8);}
+  dome(0,domeBase,domeZ,domeRadius,domeHeight,'teal');
   // Slim gold ribs articulate the main dome without costly runtime effects.
   for(let n=0;n<12;n++){
-   const a=n*Math.PI/6,points=[[.78,.02],[.85,.12],[.98,.34],[1,.52],[.87,.72],[.58,.88],[.20,1.04],[.03,1.18]].map(([r,h])=>new T.Vector3(Math.cos(a)*r*14.67,27.7+h*14,-59+Math.sin(a)*r*14.67));
+   const a=n*Math.PI/6,points=[[.78,.02],[.85,.12],[.98,.34],[1,.52],[.87,.72],[.58,.88],[.20,1.04],[.03,1.18]].map(([r,h])=>new T.Vector3(Math.cos(a)*r*(domeRadius+.07),domeBase+h*domeHeight,domeZ+Math.sin(a)*r*(domeRadius+.07)));
    emit(new T.TubeGeometry(new T.CatmullRomCurve3(points),high?24:12,.045,4,false),'gold');
   }
   for(const x of [-52,52])for(const z of [-76,-35])minaret(x,z,z===-35?46:40,2.8);

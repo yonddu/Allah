@@ -3,8 +3,16 @@ import assert from 'node:assert/strict';
 import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {buildArchitecture} from '../scripts/hall-geometry.mjs';
+import {buildArchitecture,NOOR_ROOFLINE} from '../scripts/hall-geometry.mjs';
+import {MAPS} from '../public/core.js';
+import {PLAY_CAMERA} from '../public/camera.js';
 import {writeGlb} from '../scripts/write-glb.mjs';
+test('The main Noor dome shoulders clear the entrance portal from the default courtyard camera',()=>{
+  const cameraZ=MAPS.mecca.spawn.z+PLAY_CAMERA.distance,cameraY=PLAY_CAMERA.height;
+  const portalFront=-31.9,domeShoulder=NOOR_ROOFLINE.domeBase+NOOR_ROOFLINE.domeHeight*.52;
+  const projectedY=cameraY+(domeShoulder-cameraY)*(cameraZ-portalFront)/(cameraZ-NOOR_ROOFLINE.domeZ);
+  assert.ok(projectedY>NOOR_ROOFLINE.portalHeight+3,'Both broad dome shoulders must appear above the entrance wall');
+});
 test('All three outdoor courtyard maps compile to bounded valid GLB assets with baked shading',async()=>{
   const dir=await mkdtemp(join(tmpdir(),'noor-assets-'));
   try{
