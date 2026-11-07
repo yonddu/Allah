@@ -8,14 +8,15 @@ import {promisify} from 'node:util';
 import {prepareUserModels,inspectGLB} from './prepare-user-models.mjs';
 import {userRigConfig} from '../public/user-skinning.js';
 import * as THREE from 'three';
+import {thumbnailName} from '../public/footwear.js';
 const run=promisify(execFile);
 export async function ensureUserModels(){
  const sourceText=await readFile('scripts/user-model-sources.json','utf8'),source=JSON.parse(sourceText);
- const fingerprint=createHash('sha256').update(sourceText).update(await readFile('scripts/prepare-user-models.mjs')).update(await readFile('scripts/ensure-user-models.mjs')).update(await readFile('public/user-skinning.js')).digest('hex');
+ const fingerprint=createHash('sha256').update(sourceText).update(await readFile('scripts/prepare-user-models.mjs')).update(await readFile('scripts/ensure-user-models.mjs')).update(await readFile('public/user-skinning.js')).update(await readFile('public/footwear.js')).digest('hex');
  const output='public/user-models',raw='node_modules/.cache/noor-user-models';
  try{
   if((await readFile(output+'/source.sha256','utf8')).trim()===fingerprint){
-   await Promise.all(source.models.flatMap(m=>['full.glb','near.glb','far.glb','png'].map(s=>access(output+'/'+m.id+(s==='png'?'.png':'-'+s)))));await access(output+'/runtime.json');return;
+   await Promise.all(source.models.flatMap(m=>[...['full','near','far'].map(lod=>access(output+'/'+m.id+'-'+lod+'.glb')),access(output+'/'+thumbnailName(m)),access(output+'/'+m.id+'.png')]));await access(output+'/runtime.json');return;
   }
  }catch{}
  await mkdir(raw,{recursive:true});

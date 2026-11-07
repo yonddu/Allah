@@ -14,6 +14,7 @@ import {recommendedRoom,visibleRooms,consolidationTarget} from './room-allocatio
 import {initCommunity} from './social.js';
 import {Soundscape} from './audio.js';
 import {USER_MODELS} from './user-model-catalog.js';
+import {thumbnailName} from './footwear.js';
 import {CongregationUI} from './congregation.js';
 import {congregationText as groupText} from './congregation-i18n.js';
 
@@ -68,7 +69,7 @@ try{
 const sound=new Soundscape(toast);
 for(const [id,label]of [['characterChoices','캐릭터 유형'],['wardrobeChoices','기도 복장']])for(const item of USER_MODELS){
   const b=document.createElement('button');b.type='button';b.dataset.value=item.id;b.dataset.gender=item.gender;
-  const preview=document.createElement('span');preview.className='model-thumb';preview.style.backgroundImage='url(/user-models/'+item.id+'.png)';preview.setAttribute('aria-hidden','true');
+  const preview=document.createElement('span');preview.className='model-thumb';preview.style.backgroundImage='url(/user-models/'+thumbnailName(item)+')';preview.setAttribute('aria-hidden','true');
   const text=document.createElement('span');text.textContent=String(item.index+1);b.append(preview,text);b.setAttribute('aria-label',t(label)+' '+(item.index+1));b.title=t(label)+' '+(item.index+1);$(id).append(b);
 }
 function updateChoices(){

@@ -7,6 +7,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { createCanvas, loadImage, ImageData } from '@napi-rs/canvas';
+import {SOCK_TOP,SOCK_HALF_WIDTH,sockColorFor,thumbnailName,sockShapeParts} from '../public/footwear.js';
+import * as THREE from 'three';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {findBodyContacts} from '../public/avatar-kinematics.js';
 
 const HEIGHT = 1.8;
 // These ten supplied models face +Z. Rotate 180 degrees around Y for the
@@ -70,12 +74,21 @@ export function inspectGLB(bytes) {
 }
 
 /** Orthographic CPU rasterization of the actual textured triangles, not a replacement face or texture crop. */
-export async function renderThumbnail(model, { back = false, size = 640 } = {}) {
-  const { positions: p, normals: n, uv, indices } = model;
+export async function renderThumbnail(model, { back = false, size = 640, footwear = null } = {}) {
+  const frameBounds=boundsOf(model.positions);let rendered=model,sockStart=Infinity;
+  if(footwear){
+    const body=new THREE.BufferGeometry().setAttribute('position',new THREE.BufferAttribute(model.positions,3)).setAttribute('normal',new THREE.BufferAttribute(model.normals,3)).setAttribute('uv',new THREE.BufferAttribute(model.uv,2)).setIndex(new THREE.BufferAttribute(model.indices,1));
+    const parts=sockShapeParts(findBodyContacts(body).feet).map(({center,radii})=>{const g=new THREE.SphereGeometry(1,12,8);g.scale(...radii);g.translate(...center);return g;});
+    sockStart=body.attributes.position.count;const geometry=mergeGeometries([body,...parts],false);
+    rendered={...model,positions:geometry.attributes.position.array,normals:geometry.attributes.normal.array,uv:geometry.attributes.uv.array,indices:geometry.index.array};
+    body.dispose();parts.forEach(g=>g.dispose());geometry.dispose();
+  }
+  const { positions: p, normals: n, uv, indices } = rendered;
   const texture = await loadImage(Buffer.from(model.image));
   const tc = createCanvas(texture.width, texture.height), tx = tc.getContext('2d'); tx.drawImage(texture, 0, 0);
   const tex = tx.getImageData(0, 0, texture.width, texture.height).data, tw = texture.width, th = texture.height;
-  const b = boundsOf(p), scale = size * .86 / Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1]);
+  const sockRgb=footwear?[1,3,5].map(start=>parseInt(footwear.slice(start,start+2),16)):null;
+  const b = frameBounds, scale = size * .86 / Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1]);
   const cx = (b.min[0] + b.max[0]) / 2, cy = (b.min[1] + b.max[1]) / 2;
   const pixel = new Uint8ClampedArray(size * size * 4), depth = new Float32Array(size * size).fill(Infinity);
   const projected = new Float32Array(p.length), sign = back ? 1 : -1;
@@ -97,11 +110,13 @@ export async function renderThumbnail(model, { back = false, size = 640 } = {}) 
       const nz = n[a * 3 + 2] * wa + n[c * 3 + 2] * wb + n[d * 3 + 2] * wc;
       const ny = n[a * 3 + 1] * wa + n[c * 3 + 1] * wb + n[d * 3 + 1] * wc;
       const lighting = .83 + .17 * Math.max(0, (back ? nz : -nz) * .8 + ny * .6);
+      const restY=p[a*3+1]*wa+p[c*3+1]*wb+p[d*3+1]*wc,restX=p[a*3]*wa+p[c*3]*wb+p[d*3]*wc;
+      const coveredFoot=sockRgb&&(a>=sockStart||restY<SOCK_TOP&&Math.abs(restX)<SOCK_HALF_WIDTH);
       for (let k = 0; k < 3; k++) {
         const sample = (sx, sy) => tex[(sy * tw + sx) * 4 + k];
         const top = sample(ix, iy) * (1 - dx) + sample(Math.min(tw - 1, ix + 1), iy) * dx;
         const bot = sample(ix, Math.min(th - 1, iy + 1)) * (1 - dx) + sample(Math.min(tw - 1, ix + 1), Math.min(th - 1, iy + 1)) * dx;
-        pixel[idx * 4 + k] = (top * (1 - dy) + bot * dy) * lighting;
+        pixel[idx * 4 + k] = (coveredFoot?sockRgb[k]:top * (1 - dy) + bot * dy) * lighting;
       }
       pixel[idx * 4 + 3] = 255;
     }
@@ -195,8 +210,11 @@ export async function prepareUserModels(inputDir, outputDir, catalog) {
     if (entry.sha256 && hash !== entry.sha256) throw new Error(`Source checksum mismatch: ${entry.id}`);
     const original = inspectGLB(source), transform = normalization(original.positions);
     normalize(original.positions, original.normals, transform);
-    const canonicalBounds = boundsOf(original.positions), item = { id: entry.id, gender: entry.gender, source: entry.file, sourceSha256: hash, height: HEIGHT, bounds: canonicalBounds, normalization: transform, thumbnail: `${entry.id}.png`, variants: {} };
-    await writeFile(path.join(outputDir, item.thumbnail), await renderThumbnail(original));
+    const canonicalBounds = boundsOf(original.positions), item = { id: entry.id, gender: entry.gender, source: entry.file, sourceSha256: hash, height: HEIGHT, bounds: canonicalBounds, normalization: transform, thumbnail: thumbnailName(entry), footwear:entry.gender==='female'?'opaque socks':undefined, variants: {} };
+    const thumbnail=await renderThumbnail(original,{footwear:entry.gender==='female'?sockColorFor(entry.id):null});
+    await writeFile(path.join(outputDir, item.thumbnail),thumbnail);
+    // Replace legacy image URLs too; new selection URLs also invalidate old browser caches.
+    if(entry.gender==='female')await writeFile(path.join(outputDir, `${entry.id}.png`),thumbnail);
     const referenceMasks = [];
     for (const back of [false, true]) referenceMasks.push(await alphaMask(await renderThumbnail(original, { back, size: QA_SIZE }))); 
     for (const [lod, budget] of Object.entries(BUDGETS)) {
@@ -249,8 +267,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       for (const entry of catalog.models) {
         const model = inspectGLB(new Uint8Array(await readFile(path.join(input, entry.file)))), t = normalization(model.positions);
         normalize(model.positions, model.normals, t);
-        await writeFile(path.join(output, `${entry.id}-front.png`), await renderThumbnail(model));
-        await writeFile(path.join(output, `${entry.id}-back.png`), await renderThumbnail(model, { back: true }));
+        const footwear=entry.gender==='female'?sockColorFor(entry.id):null;
+        await writeFile(path.join(output, `${entry.id}-front.png`), await renderThumbnail(model,{footwear}));
+        await writeFile(path.join(output, `${entry.id}-back.png`), await renderThumbnail(model, { back: true,footwear }));
         console.log(entry.id, model.indices.length / 3, 'triangles', JSON.stringify(t));
       }
     } else {

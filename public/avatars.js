@@ -44,8 +44,8 @@ export function makeHumanAvatar(profile,tier='low',local=false){
  const root=new THREE.Group(),hips=new THREE.Group(),simple=new THREE.Group(),bones=rig({armY:1.42,shoulder:.21,upper:.25,lower:.24});root.add(hips,simple);hips.add(bones[0]);
  let poseAt=-Infinity,poseState=null,armReach=.49,contacts={forehead:v(0,1.72,-.08),toes:{left:v(-.1,.025,-.14),right:v(.1,.025,-.14)}};
  const armNormals={left:v(1,0,0),right:v(-1,0,0)};
- let skeleton=new THREE.Skeleton(bones),mesh=null,cover=null,coverage=null,sockMesh=null,sockAsset=null,stages=null,detailed=true,disposed=false,lastCovered=-Infinity,lastPrayer=-Infinity;
- const female=selectedModel(profile).gender==='female',active={value:0},sockActive={value:0},materialCopies=new Map();
+ let skeleton=new THREE.Skeleton(bones),mesh=null,cover=null,coverage=null,sockMesh=null,sockAsset=null,stages=null,detailed=true,disposed=false,lastCovered=-Infinity;
+ const female=selectedModel(profile).gender==='female',active={value:0},sockActive={value:female?1:0},materialCopies=new Map();
  const materialFor=source=>{if(!materialCopies.has(source.material))materialCopies.set(source.material,coveredMaterial(source.material,active,coverage.color,sockActive,sockAsset?.color));return materialCopies.get(source.material);};
  const human={
   skeleton,bones,assetId:selectedModel(profile).id,loaded:false,
@@ -59,7 +59,7 @@ export function makeHumanAvatar(profile,tier='low',local=false){
    if(!praying)pose='standing';
    if(praying&&pose!=='standing')lastCovered=time;
    active.value=time-lastCovered<.8?1:0;if(cover)cover.visible=active.value===1;
-   if(praying)lastPrayer=time;sockActive.value=female&&time-lastPrayer<.8?1:0;if(sockMesh)sockMesh.visible=sockActive.value===1;
+   if(sockMesh)sockMesh.visible=female;
    const greetingWeight=greeting>=0?Math.min(1,greeting/.20,(1-greeting)/.24):0;
    const state=pose+praying+moving+(greetingWeight>0);if(!local&&!detailed&&state===poseState&&time-poseAt<1/12)return;
    if(!local&&!detailed)dt=Math.min(.25,Math.max(dt,time-poseAt));poseAt=time;poseState=state;
@@ -115,7 +115,7 @@ export function makeHumanAvatar(profile,tier='low',local=false){
   skeleton.dispose();skeleton=new THREE.Skeleton(bones);human.skeleton=skeleton;stages=asset.meshes;
   const source=stages[local?0:(detailed?1:2)];coverage=modestyAsset(source,human.assetId);if(female)sockAsset=prayerSockAsset(source,human.assetId,c);mesh=new THREE.SkinnedMesh(source.geometry,materialFor(source));mesh.frustumCulled=true;mesh.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.9,0),1.8);mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.userModel=human.assetId;hips.add(mesh);mesh.bind(skeleton);
   cover=new THREE.SkinnedMesh(coverage.geometry,coverage.material);cover.name='Closed prayer undergarment';cover.frustumCulled=true;cover.boundingSphere=new THREE.Sphere(v(0,.9,0),1.8);cover.castShadow=true;cover.receiveShadow=true;hips.add(cover);cover.bind(skeleton,mesh.bindMatrix);cover.visible=active.value===1;human.loaded=true;
-  if(sockAsset){sockMesh=new THREE.SkinnedMesh(sockAsset.geometry,sockAsset.material);sockMesh.name='Opaque prayer socks';sockMesh.frustumCulled=true;sockMesh.boundingSphere=new THREE.Sphere(v(0,.9,0),1.8);sockMesh.castShadow=true;sockMesh.receiveShadow=true;hips.add(sockMesh);sockMesh.bind(skeleton,mesh.bindMatrix);sockMesh.visible=false;}
+  if(sockAsset){sockMesh=new THREE.SkinnedMesh(sockAsset.geometry,sockAsset.material);sockMesh.name='Opaque socks';sockMesh.frustumCulled=true;sockMesh.boundingSphere=new THREE.Sphere(v(0,.9,0),1.8);sockMesh.castShadow=true;sockMesh.receiveShadow=true;hips.add(sockMesh);sockMesh.bind(skeleton,mesh.bindMatrix);sockMesh.visible=true;}
   human.update('standing',false,0,false,1);
  });
  return {root,hips,simple,human,head:bones[I.head],torso:bones[I.spine],arms:[bones[I.la],bones[I.ra]],legs:[bones[I.ll],bones[I.rl]],materials:[]};

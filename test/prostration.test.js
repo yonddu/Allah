@@ -61,7 +61,7 @@ test('All ten supplied meshes plant forehead, knees and toes on the mat with hea
    // Leaving prayer must release foot placement and restore walking, including the lateral knee rotation.
    a.human.update('standing',false,time+=.1,false,.1);if(n>=8)assert.equal(a.human.socks.enabled,true,'Keep covered while getting up');
    for(let frame=0;frame<180;frame++)a.human.update('standing',false,time+=1/60,false,1/60);
-   assert.equal(a.human.socks.enabled,false);if(n>=8)assert.equal(a.human.socks.mesh.visible,false);
+   assert.equal(a.human.socks.enabled,n>=8);if(n>=8)assert.equal(a.human.socks.mesh.visible,true,'Socks remain on outside prayer');
    for(const boneId of [12,13,15,16])assert.ok(a.human.bones[boneId].quaternion.angleTo(new THREE.Quaternion())<.0001,id+' natural non-prayer stance');
    a.human.dispose();
   }

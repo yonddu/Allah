@@ -1,3 +1,11 @@
+## Permanent female socks and covered selection previews · 2026-11-08 (Asia/Seoul) — validation pending
+
+User requires female feet to stay covered at selection/T-pose, immediately after spawning and during every action, not only prayer. Women08–10 now enable the foot shader from construction and always show their opaque sock shells; prayer mode no longer toggles footwear. Male behavior is unchanged. A shared footwear module keeps runtime and thumbnails aligned.
+
+The build regenerates female T-pose previews from actual source geometry plus the same closed sock/cuff shapes and foot-color guard. Selection uses model08/09/10-covered.png to invalidate stale browser thumbnails; legacy modelNN.png images are replaced with the same covered render. Original supplied model geometry, UVs and full/near/far texture assets remain unmodified; the original foot surface is always covered by its runtime material and opaque shell. The generated-asset fingerprint includes the footwear policy, so builds cannot reuse old preview images.
+
+Local checks passed creation, untouched T-pose, idle, walking, greeting, six prayer poses, post-prayer and both visitor detail levels for all10 models. Front/rear thumbnail foot pixels have opaque sock colors; all three rendered PNGs were visually inspected. Integration checks add creation/selection image loading and36 non-prayer female foot closeups alongside the existing200 full-body prayer views. Full GitHub validation and production deployment are recorded after completion. Current base main was cb763b4f983f3d087c2e933a8657865427dab243; preserve its newer prayer reminder/tasbih/Sheikh Zayed features.
+
 ## Completed: prayer socks and joined feet · 2026-11-06
 
 Live: https://noorrealm.com . Deployed source a2f62d7615a7ab42afa436cc0e74ca19a8ba2c8f; Cloudflare build c064af29-ad5e-4196-81f4-67145dffc20b stopped/success; Worker version ad2a57d3-c4d0-40ea-a084-8ea4b867e50d. HTTPS DNS and health verification succeeded.

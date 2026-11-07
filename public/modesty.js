@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {mergeGeometries} from './utils/BufferGeometryUtils.js';
 import {skinUserGeometry} from './user-skinning.js';
+import {SOCK_TOP,SOCK_HALF_WIDTH,sockColorFor,sockShapeParts} from './footwear.js';
 const FALLBACK=['#e6e2d8','#e9e5dd','#262b30','#56483b','#3d5175','#b8d1d8','#3e4653','#202226','#c5bdae','#687b56'];
 function clothColor(source,id){
  const fallback=new THREE.Color(FALLBACK[Number(id.slice(-2))-1]||'#464d48'),image=[source.material].flat()[0]?.map?.image;
@@ -37,14 +38,8 @@ export function modestyAsset(source,id){
 }
 export function prayerSockAsset(source,id,config){
  if(source.userData.prayerSocks)return source.userData.prayerSocks;
- const parts=[],feet=source.userData.contacts.feet,color=new THREE.Color(id==='model08'?'#303235':'#e9e5dc');
- for(const key of ['left','right']){
-  const foot=feet[key],width=(foot.max.x-foot.min.x)/2;
-  for(const [center,radii]of [
-   [[foot.center.x,.043,foot.center.z],[width+.003,.046,(foot.max.z-foot.min.z)/2+.005]],
-   [[foot.center.x,.12,.005],[Math.max(.038,width*.70),.075,.054]]
-  ]){const g=new THREE.SphereGeometry(1,12,8);g.scale(...radii);g.translate(...center);parts.push(g);}
- }
+ const parts=[],feet=source.userData.contacts.feet,color=new THREE.Color(sockColorFor(id));
+ for(const {center,radii}of sockShapeParts(feet)){const g=new THREE.SphereGeometry(1,12,8);g.scale(...radii);g.translate(...center);parts.push(g);}
  const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());skinUserGeometry(geometry,config);geometry.userData.shared=true;
  const material=new THREE.MeshStandardMaterial({color,roughness:1,metalness:0,side:THREE.DoubleSide});
  source.userData.prayerSocks={geometry,material,color};return source.userData.prayerSocks;
@@ -55,7 +50,7 @@ export function coveredMaterial(base,active,color,socks={value:0},sockColor=new 
  material.onBeforeCompile=shader=>{
   shader.uniforms.noorCovered=active;shader.uniforms.noorCloth={value:color};shader.uniforms.noorSocks=socks;shader.uniforms.noorSockCloth={value:sockColor};
   shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vNoorRestBody;').replace('#include <begin_vertex>','#include <begin_vertex>\nvNoorRestBody=vec2(position.x,position.y);');
-  shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vNoorRestBody;uniform float noorCovered;uniform vec3 noorCloth;uniform float noorSocks;uniform vec3 noorSockCloth;').replace('#include <map_fragment>','#include <map_fragment>\nif(noorCovered>.5 && vNoorRestBody.y>.52 && vNoorRestBody.y<1.23 && abs(vNoorRestBody.x)<.46 && diffuseColor.r>diffuseColor.g*1.04 && diffuseColor.g>diffuseColor.b*.98 && diffuseColor.r-diffuseColor.b>.008){diffuseColor.rgb=noorCloth;diffuseColor.a=1.;}\nif(noorSocks>.5 && vNoorRestBody.y<.18 && abs(vNoorRestBody.x)<.4){diffuseColor.rgb=noorSockCloth;diffuseColor.a=1.;}');
+  shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vNoorRestBody;uniform float noorCovered;uniform vec3 noorCloth;uniform float noorSocks;uniform vec3 noorSockCloth;').replace('#include <map_fragment>','#include <map_fragment>\nif(noorCovered>.5 && vNoorRestBody.y>.52 && vNoorRestBody.y<1.23 && abs(vNoorRestBody.x)<.46 && diffuseColor.r>diffuseColor.g*1.04 && diffuseColor.g>diffuseColor.b*.98 && diffuseColor.r-diffuseColor.b>.008){diffuseColor.rgb=noorCloth;diffuseColor.a=1.;}\nif(noorSocks>.5 && vNoorRestBody.y<'+SOCK_TOP+' && abs(vNoorRestBody.x)<'+SOCK_HALF_WIDTH+'){diffuseColor.rgb=noorSockCloth;diffuseColor.a=1.;}');
  };
- material.customProgramCacheKey=()=> 'noor-modest-cloth-v2';return material;
+ material.customProgramCacheKey=()=> 'noor-modest-cloth-v3';return material;
 }

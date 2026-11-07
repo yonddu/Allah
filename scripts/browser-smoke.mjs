@@ -42,6 +42,18 @@ try{
   await page.locator('#customizeButton').click();
   await page.locator('[data-field="gender"] [data-value="female"]').click();
   assert.equal(await page.locator('#characterChoices button:visible').count(),3);
+  for(const id of ['model08','model09','model10']){
+    await page.locator('#characterChoices [data-value="'+id+'"]').click();
+    assert.equal(await page.evaluate(()=>window.__noorScene.local.human.socks.enabled),true,'Covered before the new mesh finishes loading');
+    await page.evaluate(()=>window.__noorScene.local.human.ready);
+    assert.equal(await page.evaluate(()=>window.__noorScene.local.human.socks.mesh.visible),true,'Covered on creation outside prayer');
+    for(const group of ['characterChoices','wardrobeChoices']){
+      const preview=page.locator('#'+group+' [data-value="'+id+'"] .model-thumb');
+      const background=await preview.evaluate(el=>el.style.backgroundImage);assert.ok(background.includes(id+'-covered.png'));
+    }
+    await page.evaluate(async id=>{const image=new Image();image.src='/user-models/'+id+'-covered.png';await image.decode();if(image.naturalWidth!==640)throw new Error('Covered selection image missing');},id);
+  }
+
   await page.locator('#tab-outfit').click();
   assert.equal(await page.locator('#wardrobeChoices button:visible').count(),3);
   await page.locator('#wardrobeChoices [data-value="model09"]').click();
