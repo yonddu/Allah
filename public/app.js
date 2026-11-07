@@ -1,3 +1,5 @@
+import {initTasbih} from './tasbih.js';
+import {initReminders} from './reminders.js';
 import {t} from './i18n.js';
 import {PLAY_CAMERA} from './camera.js';
 import {DEFAULT_PROFILE,COLORS,sanitizeProfile,MAPS,parseRoom,canBeginPrayer} from './core.js';
@@ -258,6 +260,7 @@ window.addEventListener('pageshow',event=>{
   for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
   chosenMap=parseRoom(currentRoom).map;chosenServer=parseRoom(currentRoom).server;void enterRoom({automatic:true});
 });
+initTasbih(scene);initReminders({toast});
 const locationService=initLocation(toast);initPrayerTimes({location:locationService,toast});updateChoices();mapLabels();prayerUI();
 setInterval(()=>{if(!document.hidden)network.movement(scene.position,scene.yaw);},150);
 await scene.ready;

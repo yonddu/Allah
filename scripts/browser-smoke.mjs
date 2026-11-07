@@ -241,7 +241,7 @@ try{
   assert.equal(crowd.remoteVisitors,31);assert.equal(crowd.userModelsReady,32);assert.ok(crowd.drawCalls>=35,'Crowd body meshes must be rendered: '+JSON.stringify(crowd));assert.ok(crowd.drawCalls<180,JSON.stringify(crowd));assert.ok(crowd.triangles<300000,JSON.stringify(crowd));
   await page.screenshot({path:'artifacts/mobile-32-visitors.png'});
   const maps=[{map:'mecca',...crowd}];
-  for(const map of ['taj','makkah']){
+  for(const map of ['taj','makkah','abudhabi']){
     await page.locator('#mapButton').click();
     await page.locator('.map-card[data-map="'+map+'"]').click();
     await page.locator('#enterRoomButton').click();

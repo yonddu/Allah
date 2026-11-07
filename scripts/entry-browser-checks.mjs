@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 
 export async function checkFirstVisits(browser,origin,output='artifacts'){
   const cases=[
-    {locale:'ar-SA',language:'ar',dir:'rtl',nextServer:true},
-    {locale:'id-ID',language:'id'},
+    {locale:'ar-SA',language:'en',nextServer:true},
+    {locale:'id-ID',language:'en'},
     {locale:'de-DE',language:'en'},
-    {locale:'ar-SA',language:'en',failedLocale:true},
+    {locale:'ar-SA',language:'en',saved:'ar',failedLocale:true},
     {locale:'ar-SA',language:'en',saved:'en'},
-    {locale:'ar-SA',language:'ar',dir:'rtl',legacyProfile:true},
+    {locale:'ar-SA',language:'ar',dir:'rtl',saved:'ar',legacyProfile:true},
     {locale:'en-US',language:'en',full:true}
   ];
   const report=[];
@@ -63,7 +63,7 @@ export async function checkFirstVisits(browser,origin,output='artifacts'){
         await page.locator('#displayName').fill('');await page.locator('#displayName').blur();
         const defaultName=await page.locator('#displayName').inputValue();assert.ok(defaultName.trim());assert.equal(/[\uac00-\ud7a3]/.test(defaultName),false,'Clearing a name must keep the localized visitor name');
         await page.locator('#closeCustomize').click();
-        await page.locator('#mapButton').click();assert.equal(await page.locator('#mapDialog').isVisible(),true);assert.equal(await page.locator('.map-card').count(),3);await page.locator('#mapCloseButton').click();
+        await page.locator('#mapButton').click();assert.equal(await page.locator('#mapDialog').isVisible(),true);assert.equal(await page.locator('.map-card').count(),4);await page.locator('#mapCloseButton').click();
       }
       assert.deepEqual(errors,[]);report.push({locale:test.locale,language:test.language,fallback:!!test.failedLocale,saved:!!test.saved,legacy:!!test.legacyProfile,full:!!test.full});
     }finally{await context.close();}

@@ -1,4 +1,6 @@
 export {Community} from './community.js';
+export {PrayerReminders} from './reminders.js';
+import {reminderBody} from './reminders.js';
 import {RoomParties} from './party-room.js';
 import {RoomCongregation} from './congregation-room.js';
 import {recommendedRoom} from './public/room-allocation.js';
@@ -23,6 +25,15 @@ async function leavePayload(request){
 export default {
   async fetch(request,env) {
     const url=new URL(request.url);
+    if(url.pathname==='/api/reminder-config')return Response.json({publicKey:env.NOOR_PUSH_PUBLIC_KEY||null},{headers:{'Cache-Control':'no-store'}});
+    if(url.pathname==='/api/reminders'||url.pathname==='/api/reminders/test'&&env.NOOR_PUSH_TEST_MODE==='1'){
+      if(!['GET','POST','DELETE'].includes(request.method))return new Response('Method not allowed',{status:405});
+      if(request.method!=='GET'&&request.headers.get('Origin')!==url.origin)return new Response('Origin not allowed',{status:403});
+      const identity=await env.COMMUNITY.get(env.COMMUNITY.idFromName('community')).fetch(new Request('https://community.internal/session',{headers:{Cookie:request.headers.get('Cookie')||''}}));
+      if(!identity.ok)return Response.json({error:'Connect to Noor first.'},{status:401});const user=await identity.json();
+      let body;if(request.method==='POST'){try{body=JSON.stringify(await reminderBody(request));}catch(e){return Response.json({error:e.message},{status:400});}}
+      return env.REMINDERS.get(env.REMINDERS.idFromName(user.id)).fetch(new Request('https://reminder.internal/'+(url.pathname.endsWith('/test')?'test':'subscription'),{method:request.method,headers:{'Content-Type':'application/json'},body}));
+    }
     if(url.pathname==='/api/health')return Response.json({ok:true,mode:'anonymous-prototype',payments:false});
     if(url.pathname==='/api/leave'&&request.method==='POST'){
       if(request.headers.get('Origin')!==url.origin)return new Response('Origin not allowed',{status:403});

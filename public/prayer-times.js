@@ -1,8 +1,7 @@
 import {t} from './i18n.js';
 import {PRAYER_NAMES,PRAYER_METHODS,zoneAt,validZone,prayerSchedule,prayerCountdowns,formatPrayerCountdown} from './prayer-times-core.js';
-export const PRAYER_CITIES=[
- ['Jakarta','ID',-6.2088,106.8456,'Asia/Jakarta'],['Makkah','SA',21.422487,39.826206,'Asia/Riyadh'],['Madinah','SA',24.4672,39.6111,'Asia/Riyadh'],['Dubai','AE',25.2048,55.2708,'Asia/Dubai'],['Karachi','PK',24.8607,67.0011,'Asia/Karachi'],['Dhaka','BD',23.8103,90.4125,'Asia/Dhaka'],['New Delhi','IN',28.6139,77.2090,'Asia/Kolkata'],['Kuala Lumpur','MY',3.1390,101.6869,'Asia/Kuala_Lumpur'],['Istanbul','TR',41.0082,28.9784,'Europe/Istanbul'],['Cairo','EG',30.0444,31.2357,'Africa/Cairo'],['Tehran','IR',35.6892,51.3890,'Asia/Tehran'],['Lagos','NG',6.5244,3.3792,'Africa/Lagos'],['Lahore','PK',31.5204,74.3587,'Asia/Karachi'],['Tashkent','UZ',41.2995,69.2401,'Asia/Tashkent'],['Seoul','KR',37.5665,126.978,'Asia/Seoul'],['London','GB',51.5074,-.1278,'Europe/London'],['New York','US',40.7128,-74.006,'America/New_York']
-];
+import {PRAYER_CITIES} from './prayer-cities.js';
+export {PRAYER_CITIES} from './prayer-cities.js';
 // Keep stored city IDs stable: 15 is retired; London remains 16 and New York 17.
 const retiredCityId=15;
 export function initPrayerTimes({location:locationSource,toast}){

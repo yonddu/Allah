@@ -14,14 +14,15 @@
     "test:capacity": "node scripts/capacity-smoke.mjs"
   },
   "dependencies": {
-    "three": "0.180.0"
+    "three": "0.180.0",
+    "web-push": "4.0.0"
   },
   "devDependencies": {
-    "wrangler": "4.158.0",
-    "@napi-rs/canvas": "0.1.80",
-    "playwright": "1.56.1",
     "@gltf-transform/core": "4.2.1",
+    "@napi-rs/canvas": "0.1.80",
     "meshoptimizer": "0.25.0",
+    "playwright": "1.56.1",
+    "wrangler": "4.158.0",
     "ws": "8.21.0"
   },
   "engines": {

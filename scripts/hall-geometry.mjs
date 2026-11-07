@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {mergeGeometries,mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
+import {ABU_YAW} from '../public/map-frame.js';
 export const NOOR_ROOFLINE=Object.freeze({portalHeight:22,domeZ:-52,domeBase:27.7,domeRadius:14.6,domeHeight:14});
 
 // Large outdoor courtyards, authored once and merged by material for mobile rendering.
@@ -92,6 +93,15 @@ export function buildArchitecture(theme='mecca',tier='low'){
   }
   for(const x of [-64,64])for(const z of [-75,60])minaret(x,z,42,2.2);
   for(const radius of [18,28,42])emit(new T.RingGeometry(radius,radius+.035,high?128:80),'joint',[0,.012,-12],[1,1,1],[-Math.PI/2,0,0]);
+ }else if(theme==='abudhabi'){
+  // SZGMC reference: white domes, four corner minarets, floral columns and open sahan.
+  box('plaster',[0,9,-59],[84,18,46]);box('marble',[0,18.3,-59],[86,.6,47]);
+  for(const x of [-28,-14,0,14,28]){recess([x,.1,-35.9],x===0?12:9,x===0?16:13);arch('gold',[x,.1,-35.4],x===0?13:10,x===0?17:14,.15,.12);}
+  cyl('marble',[0,23,-55],12,12,9);dome(0,27.5,-55,14.5,17,'marble');
+  for(const x of [-26,26])for(const z of [-50,-72]){cyl('marble',[x,20.5,z],7,7,5);dome(x,23,z,8.2,9.8,'marble');}
+  for(const x of [-58,58])for(const z of [-76,72])minaret(x,z,48,2.9);
+  for(const side of [-1,1]){box('plaster',[side*80,5,12],[2,10,151]);box('marble',[side*70,10.6,12],[20,.7,151]);for(let z=-54;z<=72;z+=12){column(side*64,z,10.2);arch('marble',[side*64,0,z+6],10.8,9.6,.45,.4,[0,side*Math.PI/2,0]);dome(side*71,11.1,z,3.9,3.2,'marble');}for(const z of [-16,16,48,76])plane('water',[side*75,.03,z],5,17);}
+  for(const x of [-32,0,32])for(const z of [-12,20,52]){for(let n=0;n<8;n++){const a=n*Math.PI/4;emit(new T.SphereGeometry(1,high?14:8,6),n%2?'joint':'gold',[x+Math.sin(a)*2.2,.032,z+Math.cos(a)*2.2],[.68,.012,2.3],[0,a,0]);}emit(new T.RingGeometry(.45,.8,16),'inlay',[x,.05,z],[1,1,1],[-Math.PI/2,0,0]);}
  }else if(theme==='mecca'){
   // An original Islamic-style sanctuary; no Kaaba or sacred figurative imagery.
   // The broad central court remains completely open to sky and pedestrians.
@@ -181,7 +191,7 @@ export function buildArchitecture(theme='mecca',tier='low'){
   for(let z=2;z<65;z+=9){cyl('water',[0,.75,z],.035,.075,1.45,6);emit(new T.SphereGeometry(.11,6,4),'water',[0,1.5,z]);}
  }
  const batches=[];
- for(const [material,geometries]of parts){const merged=mergeGeometries(geometries,false);if(!merged)throw new Error('Cannot merge '+material);const indexed=mergeVertices(merged,1e-5);indexed.computeBoundingBox();
+ for(const [material,geometries]of parts){const merged=mergeGeometries(geometries,false);if(!merged)throw new Error('Cannot merge '+material);const indexed=mergeVertices(merged,1e-5);if(theme==='abudhabi')indexed.rotateY(ABU_YAW);indexed.computeBoundingBox();
   const normal=indexed.attributes.normal,colors=new Float32Array(normal.count*3);
   for(let n=0;n<normal.count;n++){const light=Math.min(1,.80+.18*Math.max(0,normal.getY(n))+.035*normal.getZ(n)+.02*normal.getX(n));colors[n*3]=colors[n*3+1]=colors[n*3+2]=light;}
   indexed.setAttribute('color',new T.BufferAttribute(colors,3));

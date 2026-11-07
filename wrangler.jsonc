@@ -19,6 +19,10 @@
       {
         "name": "COMMUNITY",
         "class_name": "Community"
+      },
+      {
+        "name": "REMINDERS",
+        "class_name": "PrayerReminders"
       }
     ]
   },
@@ -28,6 +32,12 @@
       "new_sqlite_classes": [
         "PrayerRoom",
         "Community"
+      ]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": [
+        "PrayerReminders"
       ]
     }
   ],
@@ -43,5 +53,8 @@
       "custom_domain": true
     }
   ],
-  "workers_dev": true
+  "workers_dev": true,
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
 }

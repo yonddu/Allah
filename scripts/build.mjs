@@ -2,6 +2,7 @@ import {mkdir,copyFile,readFile,writeFile} from 'node:fs/promises';
 import {bakeHalls} from './bake-halls.mjs';
 import {ensureUserModels} from './ensure-user-models.mjs';
 import {ensureAdhan} from './ensure-adhan.mjs';
+import {ensurePwa} from './ensure-pwa.mjs';
 import {createRequire} from 'node:module';
 import {dirname,join} from 'node:path';
 const require=createRequire(import.meta.url);
@@ -18,5 +19,6 @@ if(info.version!=='0.180.0')throw new Error('Unexpected Three.js version');
 console.log('Static assets ready: Three.js '+info.version);
 
 await bakeHalls();
+await ensurePwa();
 await ensureAdhan();
 await ensureUserModels();

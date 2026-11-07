@@ -1,5 +1,6 @@
 import {avatarSelection} from './avatar-catalog.js';
 import {LANTERN_LAYOUT} from './lantern-layout.js';
+import {ABU_YAW,ABU_QIBLA_BEARING,rotateMapPoint} from './map-frame.js';
 export const KAABA = Object.freeze({lat:21.422487, lon:39.826206});
 export const COLORS = Object.freeze({
   skin: ['#f1c9a7','#d9a078','#ad7351','#774c38','#473029'],
@@ -78,7 +79,8 @@ export function relativeBearing(bearing,heading) {
 }
 export function legalPosition(x,z,mapId='mecca') {
   const map=MAPS[mapId]||MAPS.mecca;
-  return Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x)<=map.bounds.x&&Math.abs(z)<=map.bounds.z&&(LANTERN_LAYOUT[mapId]||LANTERN_LAYOUT.mecca).every(p=>Math.hypot(x-p.x,z-p.z)>.83)&&map.obstacles.every(o=>o.kind==='circle'?Math.hypot(x-o.x,z-o.z)>o.r+.45:!(x>o.x1-.45&&x<o.x2+.45&&z>o.z1-.45&&z<o.z2+.45));
+  const p=map.rotation?rotateMapPoint({x,z},-map.rotation):{x,z},bounds=map.localBounds||map.bounds;
+  return Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(p.x)<=bounds.x&&Math.abs(p.z)<=bounds.z&&(LANTERN_LAYOUT[mapId]||LANTERN_LAYOUT.mecca).every(l=>Math.hypot(x-l.x,z-l.z)>.83)&&map.obstacles.every(o=>o.kind==='circle'?Math.hypot(p.x-o.x,p.z-o.z)>o.r+.45:!(p.x>o.x1-.45&&p.x<o.x2+.45&&p.z>o.z1-.45&&p.z<o.z2+.45));
 }
 export function constrainedMove(current,desired,seconds,mapId='mecca') {
   if(!desired||!Number.isFinite(desired.x)||!Number.isFinite(desired.z)) return {x:current.x,z:current.z};
@@ -114,15 +116,17 @@ export function validatePost(raw) {
 }
 
 export const MAPS = Object.freeze({
+ abudhabi:{name:'Sheikh Zayed Grand Mosque',city:'Abu Dhabi · United Arab Emirates',short:'SHEIKH ZAYED',description:'White domes · Floral marble · Qibla-aligned courtyard',stone:0xf3f0e7,green:0x53675a,bounds:{x:110,z:110},localBounds:{x:74,z:84},rotation:ABU_YAW,qiblaBearing:ABU_QIBLA_BEARING,cameraAngle:ABU_YAW,spawn:rotateMapPoint({x:0,z:18}),obstacles:[{kind:'box',x1:-43,x2:43,z1:-83,z2:-31.5},...[-58,58].flatMap(x=>[-76,72].map(z=>({kind:'circle',x,z,r:3.2})))]},
  makkah:{name:'Makkah courtyard',city:'Makkah · Saudi Arabia',short:'MASJID AL-HARAM',description:'Kaaba · marble courtyard · layered arcades',stone:0xf1efdf,green:0x3a5143,bounds:{x:74,z:80},cameraAngle:.12,spawn:{x:0,z:21},sacredCenter:{x:0,z:-12},obstacles:[{kind:'box',x1:-6.1,x2:6.1,z1:-18,z2:-6},{kind:'box',x1:-8.4,x2:8.4,z1:-27,z2:-18},{kind:'circle',x:11,z:-10,r:1.5}]},
  mecca:{name:'누르 대기도원',city:'하늘이 열린 기도 광장',short:'NOOR SANCTUARY',description:'대형 돔 · 아치 회랑 · 대리석 광장',stone:0xf0eee5,green:0x32544b,bounds:{x:74,z:84},cameraAngle:.08,spawn:{x:0,z:18},obstacles:[{kind:'box',x1:-43,x2:43,z1:-83,z2:-31.5},...[-52,52].flatMap(x=>[-76,-35].map(z=>({kind:'circle',x,z,r:3.2})))]},
  taj:{name:'타지마할 광장',city:'아그라 · 인도',short:'TAJ MAHAL',description:'돔 · 정원 · 반사 연못',stone:0xf3f0e6,green:0x3e744b,bounds:{x:74,z:84},cameraAngle:.13,spawn:{x:10,z:24},obstacles:[{kind:'box',x1:-38,x2:38,z1:-77,z2:-26},{kind:'box',x1:-6.2,x2:6.2,z1:-6.2,z2:66.2},...[-1,1].map(side=>({kind:'box',x1:side<0?-80:58,x2:side<0?-58:80,z1:-78,z2:-28})),...[-13,13,-46,46].flatMap(x=>Array.from({length:8},(_,i)=>({kind:'circle',x,z:i*10,r:.35})))]}
 });
 export function parseRoom(value){
- const match=typeof value==='string'?value.match(/^(mecca|makkah|taj|zayed|blue|nabawi):([1-3])$/):null;
+ const match=typeof value==='string'?value.match(/^(mecca|makkah|taj|abudhabi|zayed|blue|nabawi):([1-3])$/):null;
  if(!match)return null;const map=({zayed:'mecca',nabawi:'mecca',blue:'taj'})[match[1]]||match[1],server=Number(match[2]);return {map,server,key:map+':'+server};
 }
 export function prayerYaw(mapId,position){
+ if(mapId==='abudhabi')return ABU_YAW;
  if(mapId==='makkah')return Math.atan2(position.x-MAPS.makkah.sacredCenter.x,position.z-MAPS.makkah.sacredCenter.z);
  if(mapId==='mecca')return 0;
  // Virtual Taj courtyard: along the pool toward its entrance (+Z), as marked by the user.

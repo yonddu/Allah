@@ -22,17 +22,17 @@ test('Right-to-left languages and default message formatting are configured',()=
   assert.equal(t('친구 코드: {code}',{code:'ABC123'}),'Friend code: ABC123');
 });
 
-test('First visits follow browser language preferences with English fallback and explicit choices take priority',()=>{
+test('First visits use English regardless of browser locale; explicit choices take priority',()=>{
   assert.equal(chooseInitialLanguage(null,null),'en');
   assert.equal(chooseInitialLanguage('invalid',null),'en');
-  assert.equal(chooseInitialLanguage(null,null,['ar-SA','en-US']),'ar');
+  assert.equal(chooseInitialLanguage(null,null,['ar-SA','en-US']),'en');
   assert.equal(chooseInitialLanguage(null,null,['en-GB']),'en');
-  assert.equal(chooseInitialLanguage(null,null,['id-ID']),'id');
-  assert.equal(chooseInitialLanguage(null,null,['de-DE','tr-TR']),'tr');
+  assert.equal(chooseInitialLanguage(null,null,['id-ID']),'en');
+  assert.equal(chooseInitialLanguage(null,null,['de-DE','tr-TR']),'en');
   assert.equal(chooseInitialLanguage(null,null,['de-DE']),'en');
-  assert.equal(chooseInitialLanguage(null,null,['AR_sa']),'ar');
-  assert.equal(chooseInitialLanguage(null,null,'ur-PK'),'ur');
-  assert.equal(chooseInitialLanguage('invalid','invalid',['ar-SA']),'ar');
+  assert.equal(chooseInitialLanguage(null,null,['AR_sa']),'en');
+  assert.equal(chooseInitialLanguage(null,null,'ur-PK'),'en');
+  assert.equal(chooseInitialLanguage('invalid','invalid',['ar-SA']),'en');
   assert.equal(chooseInitialLanguage(null,'ko',['ar-SA']),'ko');
   assert.equal(chooseInitialLanguage('ar','ko',['en-US']),'ar');
 });

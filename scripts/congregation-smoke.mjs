@@ -7,7 +7,7 @@ try{
  browser=await chromium.launch({headless:true,...(process.env.NOOR_CHROME?{executablePath:process.env.NOOR_CHROME}:{}),args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--mute-audio']});const pages=[],errors=[];
  for(const locale of ['en-US','ar']){
   const context=await browser.newContext({locale,viewport:{width:locale==='ar'?320:390,height:844},isMobile:true,hasTouch:true});contexts.push(context);
-  await context.addInitScript(()=>{localStorage.setItem('noor-room','mecca:1');localStorage.setItem('noor-profile',JSON.stringify({name:'Together QA',model:'model02',gender:'male'}));Object.defineProperty(navigator,'deviceMemory',{get:()=>4});Object.defineProperty(navigator,'hardwareConcurrency',{get:()=>4});});
+  await context.addInitScript(()=>{localStorage.setItem('noor-language',navigator.language.startsWith('ar')?'ar':'en');localStorage.setItem('noor-room','mecca:1');localStorage.setItem('noor-profile',JSON.stringify({name:'Together QA',model:'model02',gender:'male'}));Object.defineProperty(navigator,'deviceMemory',{get:()=>4});Object.defineProperty(navigator,'hardwareConcurrency',{get:()=>4});});
   const page=await context.newPage();pages.push(page);page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>r.request().url().startsWith(origin)?r.continue():r.abort());await page.goto(origin+'/?qa=1',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__noorScene?.selfId&&window.__noorScene?.hallReady&&window.__noorCongregation?.session,null,{timeout:60000});
   await page.evaluate(()=>window.__noorScene.renderer.setAnimationLoop(null));
  }

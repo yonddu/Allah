@@ -8,7 +8,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,6 +24,7 @@ jobs:
       - run: node scripts/party-voice-smoke.mjs
       - run: node scripts/congregation-smoke.mjs
       - run: node scripts/dua-smoke.mjs
+      - run: node scripts/practice-smoke.mjs
       - run: node scripts/modesty-smoke.mjs
       - run: npm run test:capacity
       - uses: actions/upload-artifact@v4

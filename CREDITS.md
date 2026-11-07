@@ -55,6 +55,14 @@ The Makkah courtyard is a simplified architectural interpretation rather than a 
 - [Column marble inlays and palm capitals, Sheikh Zayed Grand Mosque Centre](https://www.szgmc.gov.ae/en/islamic-architecture/The%20Columns)
 - [Taj exterior inlays and terrace, official Taj Mahal site](https://tajmahal.gov.in/the-taj-exteriors.aspx)
 
+## Sheikh Zayed courtyard and Qibla frame
+
+The Abu Dhabi map is an authored mobile-scale interpretation, not a measured survey. The official [visitor plan](https://www.szgmc.gov.ae/Files/uploads/pdf/otherpages/MapEnglish.pdf), [Qibla Wall description](https://www.szgmc.gov.ae/en/islamic-architecture/The%20Qibla%20Wall) and column references guide the prayer-hall/courtyard relationship, white domes, corner minarets and floral inlays. No reference photos or sacred inscriptions are reproduced as assets. For the approximate mosque location (24.4128 N, 54.475 E), a great-circle calculation to the Kaaba gives 260.4374 degrees clockwise from true north. The entire virtual building, mihrab, collision layout, imam, rows and prayer mats use this same geographic frame. Rotation is not an independent setting per avatar.
+
+## Background prayer reminders
+
+Web Push encryption and VAPID request creation use web-push 4.0.0 (MIT), https://github.com/web-push-libs/web-push . Push subscriptions and chosen-city settings are stored per device identity only after an explicit enable action. Exact device coordinates are not uploaded. Notifications and new practice controls use English by default. Browser and operating-system notification permissions still apply; iOS/iPadOS support requires a Home Screen web app, as documented by [WebKit](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/).
+
 ## Congregation and adhan
 
 - Adhan recording: Adam-synagda, [Beautiful adhan](https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg), CC0 1.0. The unmodified Wikimedia MP3 transcode is downloaded and SHA256-verified during build; its immutable reference is in public/adhan-source.js.

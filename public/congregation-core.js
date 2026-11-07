@@ -1,9 +1,11 @@
 import {prayerSchedule,dateAt} from './prayer-times-core.js';
 import {legalPosition,prayerYaw} from './core.js';
+import {ABU_DHABI,ABU_YAW,rotateMapPoint} from './map-frame.js';
 
 export const PRAYER_RAKAHS=Object.freeze({fajr:2,dhuhr:4,asr:4,maghrib:3,isha:4});
 export const ADHAN_MS=154000,GATHER_MS=240000,FOLLOW_DELAY=650,COMPLETE_MS=45000;
 export const CONGREGATION_VENUES=Object.freeze({
+ abudhabi:{...ABU_DHABI,imam:rotateMapPoint({x:0,z:-10}),yaw:ABU_YAW},
  mecca:{label:'Makkah',lat:21.422487,lon:39.826206,zone:'Asia/Riyadh',imam:{x:0,z:-10},yaw:0},
  makkah:{label:'Makkah',lat:21.422487,lon:39.826206,zone:'Asia/Riyadh',imam:{x:0,z:3},yaw:0},
  taj:{label:'Agra',lat:27.175,lon:78.0421,zone:'Asia/Kolkata',imam:{x:29,z:58},yaw:Math.PI}

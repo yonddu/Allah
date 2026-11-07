@@ -119,7 +119,7 @@ export async function bakeHalls(){
     }
   }
   if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;
-  for(const map of ['mecca','taj','makkah'])for(const tier of ['low','high']){
+  for(const map of ['mecca','taj','makkah','abudhabi'])for(const tier of ['low','high']){
     const model=buildArchitecture(map,tier),path='halls/'+map+'-'+tier+'.glb',stats=await writeGlb('public/assets/'+path,model,tier);
     model.batches.forEach(p=>p.geometry.dispose());models[map+'-'+tier]=stats;files.push(path);
     if(stats.drawCalls>16||stats.triangles>(tier==='low'?60000:200000)||stats.bytes>(tier==='low'?3500000:9000000))throw new Error('Architecture exceeds budget: '+map+' '+tier+' '+JSON.stringify(stats));

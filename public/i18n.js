@@ -104,7 +104,7 @@ export async function setLanguage(code,persist=true){
 export function chooseInitialLanguage(query,saved,browserLanguages=[]){
   const codes=new Set(LANGUAGES.map(l=>l.code));
   const supported=value=>{if(typeof value!=='string')return;const code=value.trim().toLowerCase().replaceAll('_','-').split('-')[0];return codes.has(code)?code:undefined;};
-  return supported(query)||supported(saved)||(Array.isArray(browserLanguages)?browserLanguages:[browserLanguages]).map(supported).find(Boolean)||'en';
+  return supported(query)||supported(saved)||'en';
 }
 export async function initI18n(){
   const select=document.getElementById('languageSelect');

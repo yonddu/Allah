@@ -16,7 +16,7 @@ test('The main Noor dome shoulders clear the entrance portal from the default co
 test('All three outdoor courtyard maps compile to bounded valid GLB assets with baked shading',async()=>{
   const dir=await mkdtemp(join(tmpdir(),'noor-assets-'));
   try{
-    for(const map of ['mecca','taj','makkah'])for(const tier of ['low','high']){
+    for(const map of ['mecca','taj','makkah','abudhabi'])for(const tier of ['low','high']){
       const model=buildArchitecture(map,tier),path=join(dir,map+'-'+tier+'.glb');
       for(const batch of model.batches){
         for(const name of ['position','normal','uv','color'])for(const value of batch.geometry.getAttribute(name).array)assert.ok(Number.isFinite(value),map+' invalid '+name);

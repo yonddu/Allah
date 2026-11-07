@@ -1,0 +1,23 @@
+export function initReminders({toast}){
+ const $=id=>document.getElementById(id);let registration=null,installedPrompt=null,enabled=false,busy=false;
+ const supported='serviceWorker'in navigator&&'PushManager'in window&&'Notification'in window;
+ if(matchMedia('(display-mode: standalone)').matches||navigator.standalone)$('installNoor').hidden=true;window.addEventListener('appinstalled',()=>$('installNoor').hidden=true);
+ const status=text=>$('reminderStatus').textContent=text;
+ if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(r=>{registration=r;}).catch(()=>status('Unable to prepare reminders. Please try again.'));
+ window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installedPrompt=event;});
+ $('installNoor').addEventListener('click',async()=>{if(installedPrompt){await installedPrompt.prompt();installedPrompt=null;}else status(/iPad|iPhone|iPod/.test(navigator.userAgent)?'In Safari, tap Share, then Add to Home Screen. Open Noor from that icon to enable reminders.':'Open your browser menu and choose Install app or Add to Home Screen.');});
+ async function api(method,body){const response=await fetch('/api/reminders',{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const data=await response.json();if(!response.ok)throw new Error(data.error||'Unable to update reminders.');return data;}
+ function preferences(){let city;try{city=localStorage.getItem('noor-prayer-city');}catch{}if(city===null||city===undefined||city===''||city==='15')return null;return {cityId:Number(city),zone:$('prayerZone').value,method:$('prayerMethod').value,madhab:$('prayerMadhab').value,ishaOffset:Number($('prayerIshaOffset').value)};}
+ function render(){ $('enableReminders').disabled=busy||!supported;$('enableReminders').hidden=enabled;$('disableReminders').hidden=!enabled;$('disableReminders').disabled=busy;}
+ function keyBytes(key){return Uint8Array.from(atob(key.replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0));}
+ async function update(){if(!supported)return;try{const data=await api('GET');enabled=data.enabled;status(enabled?'Reminders on · '+data.city+' · 5 minutes before prayer.':'Reminders are off. Choose a city and tap Enable reminders.');}catch{}render();}
+ $('enableReminders').addEventListener('click',async()=>{
+  const prefs=preferences();if(!prefs){status('Choose a city above before enabling reminders.');$('prayerCity').focus();return;}if(!supported)return;
+  // Ask in the direct click handler. No permission prompt on entry.
+  const permission=Notification.requestPermission();busy=true;render();try{if(await permission!=='granted')throw new Error('Notifications are blocked. Allow them in browser settings to receive reminders.');registration??=await navigator.serviceWorker.ready;const config=await(await fetch('/api/reminder-config')).json();if(!config.publicKey)throw new Error('Reminders are temporarily unavailable. Please try again.');let subscription=await registration.pushManager.getSubscription();subscription??=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:keyBytes(config.publicKey)});const data=await api('POST',{...prefs,subscription:subscription.toJSON()});enabled=true;status('Reminders on · '+data.city+' · 5 minutes before prayer.');}catch(e){status(e.message);}finally{busy=false;render();}
+ });
+ $('disableReminders').addEventListener('click',async()=>{busy=true;render();try{await api('DELETE');registration??=await navigator.serviceWorker.ready;const sub=await registration.pushManager.getSubscription();await sub?.unsubscribe();enabled=false;status('Prayer reminders turned off.');}catch(e){status(e.message);}finally{busy=false;render();}});
+ for(const id of ['prayerCity','prayerMethod','prayerMadhab','prayerIshaOffset','prayerZone'])$(id).addEventListener('change',()=>queueMicrotask(async()=>{if(!enabled||busy)return;const prefs=preferences();if(!prefs){status('Reminders still use your last selected city. Choose a city to update them.');return;}try{registration??=await navigator.serviceWorker.ready;const sub=await registration.pushManager.getSubscription();if(sub){const data=await api('POST',{...prefs,subscription:sub.toJSON()});status('Reminders updated · '+data.city+'.');}}catch(e){status(e.message);}}));
+ $('prayerTimesDialog').addEventListener('close',render);$('prayerTimesButton').addEventListener('click',()=>void update());$('prayerQuestSettings').addEventListener('click',()=>void update());
+ if(!supported)status('On iPhone or iPad, add Noor to Home Screen, open it there and enable reminders. Other browsers need Web Push support.');else status('Reminders are off until you enable them.');render();
+}
