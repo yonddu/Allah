@@ -216,8 +216,8 @@ function renderMaps(){
 async function loadServers(){
   const version=++roomsVersion;$('serverChoices').replaceChildren();$('roomStatus').textContent='서버 상태를 확인하고 있습니다…';
   let rooms=[1,2,3].map(server=>({server,count:null,capacity:50}));
-  try{const r=await fetch('/api/rooms?map='+chosenMap);if(!r.ok){serverNotice.show(availabilityIssue({status:r.status}));throw new Error('offline');}rooms=(await r.json()).rooms;if(availabilityIssue({rooms})==='full')serverNotice.show('full');if(version!==roomsVersion)return;$('roomStatus').textContent='같은 모스크와 서버를 선택한 이용자끼리 만납니다.';}
-  catch{if(version!==roomsVersion)return;$('roomStatus').textContent='서버 상태를 불러오지 못했습니다. 입장은 다시 시도할 수 있습니다.';}
+  try{const r=await fetch('/api/rooms?map='+chosenMap,{cache:'no-store',signal:AbortSignal.timeout(6000)});if(version!==roomsVersion||pageLeaving)return;if(!r.ok){serverNotice.show(availabilityIssue({status:r.status}));throw new Error('offline');}rooms=(await r.json()).rooms;if(version!==roomsVersion||pageLeaving)return;if(availabilityIssue({rooms})==='full')serverNotice.show('full');$('roomStatus').textContent='같은 모스크와 서버를 선택한 이용자끼리 만납니다.';}
+  catch{if(version!==roomsVersion||pageLeaving)return;$('roomStatus').textContent='서버 상태를 불러오지 못했습니다. 입장은 다시 시도할 수 있습니다.';}
   const shown=rooms.some(r=>r.count===null)?rooms:visibleRooms(rooms);
   if(!shown.some(r=>r.server===chosenServer))chosenServer=recommendedRoom(rooms)?.server||chosenServer;
   if(shown.length===1&&rooms.every(r=>r.count!==null))$('roomStatus').textContent=f('gatheringHint');
