@@ -35,7 +35,7 @@ export async function checkFirstVisits(browser,origin,output='artifacts'){
       // Even while a language download is delayed or unavailable, no Korean is painted.
       assert.equal(/[\uac00-\ud7a3]/.test(await page.locator('body').innerText()),false);
       await page.waitForFunction(()=>window.__noorScene?.hallReady&&document.getElementById('loading').hidden,null,{timeout:60000});
-      if(test.full){await page.waitForFunction(()=>document.getElementById('toast').classList.contains('visible'));assert.equal(await page.evaluate(()=>window.__noorScene.selfId||null),null);}
+      if(test.full){await page.locator('#serverNotice').waitFor({state:'visible'});assert.match(await page.locator('#serverNoticeMessage').textContent(),/Server expansion is needed/);assert.equal(await page.locator('#serverNotice a').getAttribute('href'),'https://ko-fi.com/solh130919');assert.equal(await page.evaluate(()=>window.__noorScene.selfId||null),null);}
       else await page.waitForFunction(()=>window.__noorScene?.selfId&&document.getElementById('statusDot').classList.contains('connected'),null,{timeout:30000});
       assert.equal(await page.locator('html').getAttribute('lang'),test.language);
       assert.equal(await page.locator('html').getAttribute('dir'),test.dir||'ltr');
