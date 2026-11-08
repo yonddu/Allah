@@ -8,7 +8,8 @@ export function initCommunity({getName,toast,onSession,sendChat,reconnect,onPubl
   const date=value=>new Intl.DateTimeFormat(document.documentElement.lang||'en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(value));
   const element=(tag,className,text)=>Object.assign(document.createElement(tag),{className:className||'',textContent:text||''});
   async function api(path,method='GET',data){
-    const response=await fetch(path,{method,credentials:'same-origin',headers:data?{'Content-Type':'application/json'}:{},body:data?JSON.stringify(data):undefined});
+    const response=await fetch(path,{signal:AbortSignal.timeout(15000),method,credentials:'same-origin',headers:data?{'Content-Type':'application/json'}:{},body:data?JSON.stringify(data):undefined});
+    if(response.status===429||response.status>=500)throw Object.assign(new Error('서버에 연결되지 않았습니다. 잠시 후 다시 시도해주세요.'),{status:response.status});
     let result;try{result=await response.json();}catch{throw new Error('서버에 연결되지 않았습니다. 잠시 후 다시 시도해주세요.');}
     if(!response.ok)throw new Error(result.error||'요청을 처리하지 못했습니다.');
     return result;

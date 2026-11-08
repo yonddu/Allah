@@ -1,3 +1,5 @@
+import {availabilityIssue,initServerNotice} from './server-availability.js';
+import {availabilityText} from './availability-i18n.js';
 import {initTasbih} from './tasbih.js';
 import {initReminders} from './reminders.js';
 import {t} from './i18n.js';
@@ -19,6 +21,7 @@ import {CongregationUI} from './congregation.js';
 import {congregationText as groupText} from './congregation-i18n.js';
 
 const $=id=>document.getElementById(id);
+const serverNotice=initServerNotice({text:availabilityText,retry:()=>enterRoom({automatic:true})});
 let generatedName=false;
 let toastTimer,profile=loadProfile(),savedRoom;
 try{savedRoom=localStorage.getItem('noor-room');}catch{}
@@ -41,7 +44,7 @@ function removePresenceSelf(){
 async function refreshPresence({gather=false}={}){
  if(pageLeaving||document.hidden)return null;const generation=pageGeneration;
  try{
-  presenceRequest??=fetch('/api/presence').then(r=>{if(!r.ok)throw new Error('Presence unavailable');return r.json();}).finally(()=>{presenceRequest=null;});
+  presenceRequest??=fetch('/api/presence',{cache:'no-store',signal:AbortSignal.timeout(6000)}).then(r=>{if(!r.ok)throw new Error('Presence unavailable');return r.json();}).finally(()=>{presenceRequest=null;});
   const snapshot=await presenceRequest;if(pageLeaving||generation!==pageGeneration)return null;presence=snapshot;renderPresence();
   if(gather&&network?.selfId&&!entryBusy&&!scene.praying&&!scene.congregationJoined&&!scene.moving&&!partyUi?.diagnostics().partyId&&!$('customPanel').classList.contains('open')&&!document.querySelector('dialog[open]')&&!document.activeElement?.matches('input,textarea,[contenteditable=true]')){
    const room=parseRoom(currentRoom),target=consolidationTarget(presence.maps[room.map]?.rooms||[],room.server);
@@ -151,7 +154,9 @@ function greetPlayer(to=null){
 $('greetingButton').addEventListener('click',()=>greetPlayer());
 network=new RoomConnection({
   profile:()=>profile,
+  unavailable:issue=>{if(!pageLeaving)serverNotice.show(issue);},
   status:state=>{
+    if(state==='connected')serverNotice.hide();
     $('statusDot').classList.toggle('connected',state==='connected');
     if(state==='offline'&&roomCount>0)removePresenceSelf();if(state!=='connected')setRoomCount(0);
     if(state==='offline'){scene.protected=false;$('roomStatus').textContent='온라인 연결이 끊어져 재연결 중입니다. 개인 미리보기는 계속 이용할 수 있습니다.';}
@@ -188,7 +193,7 @@ scene.onPlayerMenu=(id,x,y)=>{
   playerMenu.open({id,accountId:avatar.accountId,name:avatar.profile.name,praying:avatar.praying},x,y);
 };
 scene.onPlayerMenuClose=()=>playerMenu.close();
-$('reconnectButton').addEventListener('click',async()=>{const generation=pageGeneration;try{await community.start();if(pageLeaving||generation!==pageGeneration)return;network.resume();network.retry=0;network.connect(currentRoom);$('settingsDialog').close();}catch(e){toast(e.message);}});
+$('reconnectButton').addEventListener('click',async()=>{const generation=pageGeneration;try{await community.start();if(pageLeaving||generation!==pageGeneration)return;network.resume();network.retry=0;network.connect(currentRoom);$('settingsDialog').close();}catch(e){serverNotice.show(availabilityIssue({status:e.status}));toast(e.message);}});
 let chosenMap=parseRoom(currentRoom).map,chosenServer=parseRoom(currentRoom).server,roomsVersion=0;
 const mapText=(id,field)=>id==='makkah'?f(({name:'makkah',city:'makkahCity',description:'makkahDescription'})[field]):t(MAPS[id][field]);
 function mapLabels(){
@@ -211,7 +216,7 @@ function renderMaps(){
 async function loadServers(){
   const version=++roomsVersion;$('serverChoices').replaceChildren();$('roomStatus').textContent='서버 상태를 확인하고 있습니다…';
   let rooms=[1,2,3].map(server=>({server,count:null,capacity:50}));
-  try{const r=await fetch('/api/rooms?map='+chosenMap);if(!r.ok)throw new Error('offline');rooms=(await r.json()).rooms;if(version!==roomsVersion)return;$('roomStatus').textContent='같은 모스크와 서버를 선택한 이용자끼리 만납니다.';}
+  try{const r=await fetch('/api/rooms?map='+chosenMap);if(!r.ok){serverNotice.show(availabilityIssue({status:r.status}));throw new Error('offline');}rooms=(await r.json()).rooms;if(availabilityIssue({rooms})==='full')serverNotice.show('full');if(version!==roomsVersion)return;$('roomStatus').textContent='같은 모스크와 서버를 선택한 이용자끼리 만납니다.';}
   catch{if(version!==roomsVersion)return;$('roomStatus').textContent='서버 상태를 불러오지 못했습니다. 입장은 다시 시도할 수 있습니다.';}
   const shown=rooms.some(r=>r.count===null)?rooms:visibleRooms(rooms);
   if(!shown.some(r=>r.server===chosenServer))chosenServer=recommendedRoom(rooms)?.server||chosenServer;
@@ -224,6 +229,7 @@ async function loadServers(){
 }
 $('mapButton').addEventListener('click',()=>{chosenMap=parseRoom(currentRoom).map;chosenServer=parseRoom(currentRoom).server;renderMaps();openDialog('mapDialog');loadServers();refreshPresence().then(()=>{if($('mapDialog').open)renderMaps();});});
 async function enterRoom({automatic=false}={}){
+  if(entryBusy||pageLeaving)return;
   const generation=pageGeneration;
   $('enterRoomButton').disabled=true;entryBusy=true;
   try{
@@ -231,23 +237,21 @@ async function enterRoom({automatic=false}={}){
     await scene.local.human.ready;
     if(pageLeaving||generation!==pageGeneration)return;
     if(automatic){
-      try{
         const directory=await refreshPresence();
         if(preferBusyMap&&directory){const busy=Object.entries(directory.maps).filter(([,m])=>m.total>0&&recommendedRoom(m.rooms)).sort((a,b)=>b[1].total-a[1].total)[0];if(busy)chosenMap=busy[0];}
         preferBusyMap=false;
-        const r=await fetch('/api/rooms?map='+chosenMap);if(!r.ok)throw new Error('offline');
+        const r=await fetch('/api/rooms?map='+chosenMap,{cache:'no-store',signal:AbortSignal.timeout(10000)});if(!r.ok)throw Object.assign(new Error('Server unavailable'),{status:r.status});
         const {rooms}=await r.json(),available=recommendedRoom(rooms);
         if(pageLeaving||generation!==pageGeneration)return;
-        if(!available){toast('기도원이 가득 찼습니다. 잠시 후 다시 입장해주세요.');return;}
+        if(!available){serverNotice.show(availabilityIssue({rooms}));return;}
         chosenServer=available.server;
-      }catch{}
     }
     if(pageLeaving||generation!==pageGeneration)return;
     if(scene.praying)setPrayer(false);if(network.selfId){removePresenceSelf();roomCount=0;network.disconnect({notify:true,suspend:true});}currentRoom=chosenMap+':'+chosenServer;await scene.setMap(chosenMap);scene.position={...MAPS[chosenMap].spawn};scene.cameraDistance=PLAY_CAMERA.distance;scene.cameraHeight=PLAY_CAMERA.height;scene.cameraAngle=MAPS[chosenMap].cameraAngle;scene.snapCamera();
     if(pageLeaving||generation!==pageGeneration)return;
     mapLabels();try{localStorage.setItem('noor-room',currentRoom);}catch{}
     await community.start();if(pageLeaving||generation!==pageGeneration)return;network.resume();network.retry=0;network.connect(currentRoom);$('mapDialog').close();
-  }catch(e){$('roomStatus').textContent=t(e.message);if(automatic)toast('온라인 연결을 준비하지 못했습니다. 설정에서 다시 연결할 수 있습니다.');}
+  }catch(e){if(!pageLeaving&&generation===pageGeneration)serverNotice.show(availabilityIssue({status:e.status}));$('roomStatus').textContent=t(e.message);if(automatic)toast('온라인 연결을 준비하지 못했습니다. 설정에서 다시 연결할 수 있습니다.');}
   finally{$('enterRoomButton').disabled=false;entryBusy=false;}
 }
 $('enterRoomButton').addEventListener('click',()=>enterRoom());

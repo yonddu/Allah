@@ -2,6 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {RoomConnection} from '../public/network.js';
 
+test('Failed socket connections diagnose capacity, while stale or suspended probes never show a notice',async()=>{
+ const previous={WebSocket:globalThis.WebSocket,location:globalThis.location,fetch:globalThis.fetch,setTimeout:globalThis.setTimeout,clearTimeout:globalThis.clearTimeout};
+ const sockets=[],probes=[],notices=[];
+ class Socket{constructor(){sockets.push(this);}close(){}}
+ Object.assign(globalThis,{WebSocket:Socket,location:{href:'https://noor.example/',protocol:'https:'},fetch:()=>new Promise(resolve=>probes.push(resolve)),setTimeout:()=>1,clearTimeout:()=>{}});
+ const full=()=>Response.json({rooms:[{server:1,count:50,capacity:50}]});
+ try{
+  const connection=new RoomConnection({status(){},clear(){},unavailable:issue=>notices.push(issue)});
+  connection.connect();sockets[0].onclose();connection.connect('taj:1');
+  probes[0](full());await new Promise(setImmediate);assert.deepEqual(notices,[]);
+  sockets[1].onclose();probes[1](full());await new Promise(setImmediate);assert.deepEqual(notices,['full']);
+  connection.connect();sockets[2].onclose();connection.disconnect({suspend:true});probes[2](full());await new Promise(setImmediate);assert.deepEqual(notices,['full']);
+ }finally{Object.assign(globalThis,previous);}
+});
+
 test('Leaving a page sends only its own leave beacon, clears state and prevents late reconnections',async()=>{
  const previousSocket=globalThis.WebSocket,previousLocation=globalThis.location,nav=Object.getOwnPropertyDescriptor(globalThis,'navigator'),oldFetch=globalThis.fetch;
  const sockets=[],beacons=[],fallback=[];

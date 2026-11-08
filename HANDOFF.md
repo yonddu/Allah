@@ -288,3 +288,11 @@ scripts/browser-smoke.mjs는 로컬 Worker + Chromium에서 입장3단계/여성
 
 ## 최종 검증
 2026-11-06: Node검사19개통과. 로컬Chromium실행에서언어→캐릭터→입장,여성히잡강제,나침반왼쪽위/카바표시,조이스틱드래그/리셋,3개맵전환,RTL통과. 화면앞밀집한32명렌더는199draws/53,794tri기록. 이것은소프트웨어WebGL의렌더예산검사이며실제3~4GB폰의FPS측정이아님. 보급폰가로화면도coarse포인터및RAM4GB이하로저사양판별. 평균프레임지연시해상도뿐아니라상세원격캐릭터수도최소2명까지하향.
+
+
+## 2026-11-08 — Traffic/capacity notice and existing support link
+- Request: show a server-expansion notice and the existing Ko-fi link when visitors cannot connect due to heavy traffic.
+- Main UI: localized nonblocking connection card with dismiss, retry and the existing optional https://ko-fi.com/solh130919 link. Confirmed room-capacity failures explicitly explain that expansion is needed; 429/503 and temporary server failures say capacity may need expanding. Offline/auth failures do not assert traffic as the cause. All 21 in-game languages covered.
+- Detects initial directory/session failures, full directories, and lost/rejected WebSockets via a bounded directory probe. Stale probes cannot reopen the card after recovery, a room switch or page exit. Success hides it; retry selects an available room. Directory/session/handshake waits are bounded.
+- Lightweight /server-busy.html includes the existing support link and QR, with no API or 3D dependencies. Previously installed service workers cache only this status page and show it for navigation HTTP 429/503. Offline navigation retains its separate offline page. New visitors cannot receive a site-authored page if Cloudflare itself cannot deliver any HTML; no plan/security/capacity changes were made.
+- Local targeted tests and Chromium mobile/RTL card checks pass. Full repository Verify and production Build pending at implementation commit; completion evidence will follow. Local Wrangler cannot start because this sandbox rejects uv_interface_addresses; the managed GitHub runner executes the real Worker browser tests.

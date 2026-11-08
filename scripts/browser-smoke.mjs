@@ -6,6 +6,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {WebSocket as TestSocket} from 'ws';
+import {checkServerAvailability} from './availability-browser-checks.mjs';
 import {checkFirstVisits} from './entry-browser-checks.mjs';
 import {checkRoomGathering} from './gathering-browser-checks.mjs';
 await mkdir('artifacts',{recursive:true});
@@ -19,6 +20,7 @@ try{
   for(let n=0;n<120;n++){try{const r=await fetch('http://127.0.0.1:8787/api/health');if(r.ok){healthy=true;break;}}catch{}await delay(500);}
   if(!healthy)throw new Error('Local Worker did not start.\n'+log);
   browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  await checkServerAvailability(browser,'http://127.0.0.1:8787');
   await checkFirstVisits(browser,'http://127.0.0.1:8787');
   await checkRoomGathering(browser,'http://127.0.0.1:8787');
   const context=await browser.newContext({locale:'en-US',viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});

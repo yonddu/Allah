@@ -1,10 +1,11 @@
+import {probeRoomIssue} from './server-availability.js';
 import {PRAYER_POSES} from './core.js';
 export class RoomConnection {
   constructor(handlers){this.handlers=handlers;this.socket=null;this.generation=0;this.retry=0;this.timer=null;this.lastState='';this.selfId=null;this.room='mecca:1';this.sequence=0;this.pending=new Map();this.known=new Map();}
   connect(room=this.room){
     if(this.suspended)return false;
     this.room=room;this.generation++;const generation=this.generation;
-    clearTimeout(this.timer);if(this.socket){this.socket.onclose=null;this.socket.close();}this.socket=null;this.selfId=null;this.lastState='';this.pending.clear();this.known.clear();
+    clearTimeout(this.handshakeTimer);clearTimeout(this.timer);if(this.socket){this.socket.onclose=null;this.socket.close();}this.socket=null;this.selfId=null;this.lastState='';this.pending.clear();this.known.clear();
     this.handlers.status('connecting');this.handlers.clear();
     const url=new URL('/api/room',location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';url.searchParams.set('room',room);
     const ws=new WebSocket(url);this.socket=ws;
@@ -12,7 +13,7 @@ export class RoomConnection {
       if(generation!==this.generation)return;
       let msg;try{msg=JSON.parse(e.data);}catch{return;}
       if(msg.type==='welcome'){
-        this.retry=0;this.selfId=msg.id;this.handlers.status('connected');this.handlers.welcome(msg.self);this.known.set(msg.self.id,msg.self);
+        clearTimeout(this.handshakeTimer);this.retry=0;this.selfId=msg.id;this.handlers.status('connected');this.handlers.welcome(msg.self);this.known.set(msg.self.id,msg.self);
         for(const player of msg.players){this.known.set(player.id,player);this.handlers.player(player);}this.send({type:'profile',motionProtocol:2,profile:this.handlers.profile()});
         this.handlers.count(msg.players.length+1);
         if(msg.congregation)this.handlers.congregation?.(msg.congregation);
@@ -29,10 +30,12 @@ export class RoomConnection {
     };
     ws.onclose=()=>{
       if(generation!==this.generation)return;
-      this.socket=null;this.selfId=null;this.handlers.clear();this.handlers.status('offline');
+      clearTimeout(this.handshakeTimer);this.socket=null;this.selfId=null;this.handlers.clear();this.handlers.status('offline');
+      if(this.handlers.unavailable)void probeRoomIssue(room).then(issue=>{if(!this.suspended&&generation===this.generation&&!this.selfId)this.handlers.unavailable(issue);});
       if(this.retry<5){const delay=Math.min(15000,1000*2**this.retry++);this.timer=setTimeout(()=>{if(!this.suspended&&generation===this.generation)this.connect();},delay);}
     };
     ws.onerror=()=>{};
+    this.handshakeTimer=setTimeout(()=>{if(generation===this.generation&&!this.selfId)ws.close();},10000);
   }
   resume(){this.suspended=false;}
   disconnect({notify=false,suspend=false}={}){
@@ -42,7 +45,7 @@ export class RoomConnection {
       if(!queued)try{fetch('/api/leave',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body,keepalive:true}).catch(()=>{});}catch{}
     }
     if(suspend)this.suspended=true;
-    this.generation++;clearTimeout(this.timer);this.timer=null;
+    this.generation++;clearTimeout(this.handshakeTimer);clearTimeout(this.timer);this.timer=null;
     const ws=this.socket;this.socket=null;this.selfId=null;this.lastState='';this.pending.clear();this.known.clear();
     if(ws){ws.onclose=null;try{ws.close(1000,'Page left');}catch{}}
     this.handlers.clear();this.handlers.status('offline');
